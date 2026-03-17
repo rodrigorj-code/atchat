@@ -42,6 +42,10 @@ sudo -u postgres psql -tc "SELECT 1 FROM pg_database WHERE datname='${DB_NAME}'"
 
 sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE ${DB_NAME} TO ${DB_USER};" 2>/dev/null || true
 
+echo "==> Habilitando extensões do PostgreSQL (uuid-ossp, pgcrypto)"
+sudo -u postgres psql -d "${DB_NAME}" -c 'CREATE EXTENSION IF NOT EXISTS "uuid-ossp";'
+sudo -u postgres psql -d "${DB_NAME}" -c 'CREATE EXTENSION IF NOT EXISTS "pgcrypto";' 2>/dev/null || true
+
 echo "==> Instalando Redis"
 apt install -y redis-server
 systemctl enable redis-server
@@ -180,6 +184,7 @@ systemctl restart atendechat-backend
 ###############################################################################
 if [ -n "$DOMAIN" ] && [ -n "$API_DOMAIN" ]; then
   echo "==> Configurando Nginx (domínio + subdomínio)"
+  rm -f /etc/nginx/sites-enabled/default 2>/dev/null || true
   cat > /etc/nginx/sites-available/atendechat-frontend << EOF
 server {
     listen 80;
@@ -212,6 +217,7 @@ EOF
   ln -sf /etc/nginx/sites-available/atendechat-backend /etc/nginx/sites-enabled/
 else
   echo "==> Configurando Nginx (acesso por IP ${SERVER_IP})"
+  rm -f /etc/nginx/sites-enabled/default 2>/dev/null || true
   cat > /etc/nginx/sites-available/atendechat << EOF
 server {
     listen 80 default_server;
@@ -226,12 +232,11 @@ EOF
   ln -sf /etc/nginx/sites-available/atendechat /etc/nginx/sites-enabled/
 fi
 
-# Remove default do Nginx se existir
-rm -f /etc/nginx/sites-enabled/default 2>/dev/null || true
-
-echo "==> Testando Nginx"
-nginx -t
-systemctl reload nginx
+echo "==> Testando e reiniciando Nginx"
+nginx -t && systemctl restart nginx || {
+  echo ">> AVISO: Nginx não reiniciou. Verifique: systemctl status nginx; journalctl -u nginx -n 30"
+  echo "   Se a porta 80 estiver em uso: ss -tlnp | grep :80"
+}
 
 ###############################################################################
 echo ""
