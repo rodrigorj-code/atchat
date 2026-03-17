@@ -1,4 +1,4 @@
-import { WAMessage, AnyMessageContent } from "@whiskeysockets/baileys";
+import { WAMessage, AnyMessageContent, jidNormalizedUser } from "@whiskeysockets/baileys";
 import * as Sentry from "@sentry/node";
 import fs from "fs";
 import { exec } from "child_process";
@@ -123,6 +123,14 @@ const SendWhatsAppMedia = async ({
 }: Request): Promise<WAMessage> => {
   try {
     const wbot = await GetTicketWbot(ticket);
+    // Evitar enviar para o próprio número da conexão
+    if (!ticket.isGroup && ticket.contact?.number && wbot.user?.id) {
+      const destNumber = String(ticket.contact.number).replace(/\D/g, "");
+      const myNumber = jidNormalizedUser(wbot.user.id).replace(/\D/g, "");
+      if (destNumber && myNumber && destNumber === myNumber) {
+        throw new AppError("Não é possível enviar mídia para o próprio número da conexão. Verifique o contato do ticket.");
+      }
+    }
 
     const pathMedia = media.path;
     const typeMessage = media.mimetype.split("/")[0];
@@ -178,12 +186,13 @@ const SendWhatsAppMedia = async ({
       };
     }
 
-    const sentMessage = await wbot.sendMessage(
-      `${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`,
-      {
-        ...options
-      }
-    );
+    const destNumber = String(ticket.contact.number || "").replace(/\D/g, "");
+    const number = ticket.isGroup
+      ? `${destNumber}@g.us`
+      : `${destNumber}@s.whatsapp.net`;
+    const sentMessage = await wbot.sendMessage(number, {
+      ...options
+    });
 
     await ticket.update({ lastMessage: bodyMessage });
 

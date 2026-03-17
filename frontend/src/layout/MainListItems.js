@@ -46,17 +46,41 @@ import usePlans from "../hooks/usePlans";
 import Typography from "@material-ui/core/Typography";
 import { ShapeLine } from "@mui/icons-material";
 
+const SIDEBAR_GREEN = "#2e7d32";
+
 const useStyles = makeStyles((theme) => ({
   ListSubheader: {
     height: 26,
     marginTop: "-15px",
     marginBottom: "-10px",
+    color: "rgba(0, 0, 0, 0.87)",
+  },
+  listItemIcon: {
+    color: SIDEBAR_GREEN,
+    minWidth: 40,
+  },
+  listItemText: {
+    color: "rgba(0, 0, 0, 0.87)",
+    "&.MuiListItemText-primary": {
+      fontWeight: 500,
+    },
+  },
+  listItem: {
+    "&:hover": {
+      backgroundColor: "rgba(46, 125, 50, 0.06)",
+    },
+    "&.Mui-selected": {
+      backgroundColor: "rgba(46, 125, 50, 0.12)",
+      "& .MuiListItemIcon-root": {
+        color: SIDEBAR_GREEN,
+      },
+    },
   },
 }));
 
 
 function ListItemLink(props) {
-  const { icon, primary, to, className } = props;
+  const { icon, primary, to, className, listItemClassName, listItemIconClassName, listItemTextClassName } = props;
 
   const renderLink = React.useMemo(
     () =>
@@ -68,9 +92,9 @@ function ListItemLink(props) {
 
   return (
     <li>
-      <ListItem button dense component={renderLink} className={className}>
-        {icon ? <ListItemIcon>{icon}</ListItemIcon> : null}
-        <ListItemText primary={primary} />
+      <ListItem button dense component={renderLink} className={listItemClassName || className}>
+        {icon ? <ListItemIcon className={listItemIconClassName}>{icon}</ListItemIcon> : null}
+        <ListItemText primary={primary} className={listItemTextClassName} />
       </ListItem>
     </li>
   );
@@ -284,6 +308,9 @@ const MainListItems = (props) => {
             to="/"
             primary="Dashboard"
             icon={<DashboardOutlinedIcon />}
+            listItemClassName={classes.listItem}
+            listItemIconClassName={classes.listItemIcon}
+            listItemTextClassName={classes.listItemText}
           />
         )}
       />
@@ -292,47 +319,62 @@ const MainListItems = (props) => {
         to="/tickets"
         primary={i18n.t("mainDrawer.listItems.tickets")}
         icon={<WhatsAppIcon />}
+        listItemClassName={classes.listItem}
+        listItemIconClassName={classes.listItemIcon}
+        listItemTextClassName={classes.listItemText}
       />
-	  
-	{showKanban && (  
+	{showKanban && (
 	  <ListItemLink
         to="/kanban"
-        primary={`Kanban`}
+        primary="Kanban"
         icon={<TableChartIcon />}
+        listItemClassName={classes.listItem}
+        listItemIconClassName={classes.listItemIcon}
+        listItemTextClassName={classes.listItemText}
       />
-	  )}
+	)}
 
 
       <ListItemLink
         to="/quick-messages"
         primary={i18n.t("mainDrawer.listItems.quickMessages")}
         icon={<FlashOnIcon />}
+        listItemClassName={classes.listItem}
+        listItemIconClassName={classes.listItemIcon}
+        listItemTextClassName={classes.listItemText}
       />
-	  
-	  <ListItemLink
+      <ListItemLink
         to="/todolist"
         primary={i18n.t("mainDrawer.listItems.tasks")}
         icon={<BorderColorIcon />}
+        listItemClassName={classes.listItem}
+        listItemIconClassName={classes.listItemIcon}
+        listItemTextClassName={classes.listItemText}
       />
-
       <ListItemLink
         to="/contacts"
         primary={i18n.t("mainDrawer.listItems.contacts")}
         icon={<ContactPhoneOutlinedIcon />}
+        listItemClassName={classes.listItem}
+        listItemIconClassName={classes.listItemIcon}
+        listItemTextClassName={classes.listItemText}
       />
-
       <ListItemLink
         to="/schedules"
         primary={i18n.t("mainDrawer.listItems.schedules")}
         icon={<EventIcon />}
+        listItemClassName={classes.listItem}
+        listItemIconClassName={classes.listItemIcon}
+        listItemTextClassName={classes.listItemText}
       />
-
       <ListItemLink
         to="/tags"
         primary={i18n.t("mainDrawer.listItems.tags")}
         icon={<LocalOfferIcon />}
+        listItemClassName={classes.listItem}
+        listItemIconClassName={classes.listItemIcon}
+        listItemTextClassName={classes.listItemText}
       />
-
       <ListItemLink
         to="/chats"
         primary={i18n.t("mainDrawer.listItems.chats")}
@@ -341,12 +383,17 @@ const MainListItems = (props) => {
             <ForumIcon />
           </Badge>
         }
+        listItemClassName={classes.listItem}
+        listItemIconClassName={classes.listItemIcon}
+        listItemTextClassName={classes.listItemText}
       />
-
       <ListItemLink
         to="/helps"
         primary={i18n.t("mainDrawer.listItems.helps")}
         icon={<HelpOutlineIcon />}
+        listItemClassName={classes.listItem}
+        listItemIconClassName={classes.listItemIcon}
+        listItemTextClassName={classes.listItemText}
       />
 
       <Can
@@ -373,17 +420,19 @@ const MainListItems = (props) => {
                 <ListItem
                   button
                   onClick={() => setOpenCampaignSubmenu((prev) => !prev)}
+                  className={classes.listItem}
                 >
-                  <ListItemIcon>
+                  <ListItemIcon className={classes.listItemIcon}>
                     <EventAvailableIcon />
                   </ListItemIcon>
                   <ListItemText
                     primary={i18n.t("mainDrawer.listItems.campaigns")}
+                    className={classes.listItemText}
                   />
                   {openCampaignSubmenu ? (
-                    <ExpandLessIcon />
+                    <ExpandLessIcon style={{ color: SIDEBAR_GREEN }} />
                   ) : (
-                    <ExpandMoreIcon />
+                    <ExpandMoreIcon style={{ color: SIDEBAR_GREEN }} />
                   )}
                 </ListItem>
                 <Collapse
@@ -393,75 +442,34 @@ const MainListItems = (props) => {
                   unmountOnExit
                 >
                   <List component="div" disablePadding>
-                    <ListItem onClick={() => history.push("/campaigns")} button>
-                      <ListItemIcon>
-                        <ListIcon />
-                      </ListItemIcon>
-                      <ListItemText primary="Listagem" />
+                    <ListItem onClick={() => history.push("/campaigns")} button className={classes.listItem}>
+                      <ListItemIcon className={classes.listItemIcon}><ListIcon /></ListItemIcon>
+                      <ListItemText primary="Listagem" className={classes.listItemText} />
                     </ListItem>
-                    <ListItem
-                      onClick={() => history.push("/contact-lists")}
-                      button
-                    >
-                      <ListItemIcon>
-                        <PeopleIcon />
-                      </ListItemIcon>
-                      <ListItemText primary="Listas de Contatos" />
+                    <ListItem onClick={() => history.push("/contact-lists")} button className={classes.listItem}>
+                      <ListItemIcon className={classes.listItemIcon}><PeopleIcon /></ListItemIcon>
+                      <ListItemText primary="Listas de Contatos" className={classes.listItemText} />
                     </ListItem>
-                    <ListItem
-                      onClick={() => history.push("/campaigns-config")}
-                      button
-                    >
-                      <ListItemIcon>
-                        <SettingsOutlinedIcon />
-                      </ListItemIcon>
-                      <ListItemText primary="Configurações" />
+                    <ListItem onClick={() => history.push("/campaigns-config")} button className={classes.listItem}>
+                      <ListItemIcon className={classes.listItemIcon}><SettingsOutlinedIcon /></ListItemIcon>
+                      <ListItemText primary="Configurações" className={classes.listItemText} />
                     </ListItem>
                   </List>
                 </Collapse>
-                {/* Flow builder */}
-                <ListItem
-                    button
-                    onClick={() => setOpenFlowsSubmenu((prev) => !prev)}
-                >
-                  <ListItemIcon>
-                    <AccountTree />
-                  </ListItemIcon>
-                  <ListItemText
-                      primary={i18n.t("mainDrawer.listItems.flows")}
-                  />
-                  {openCampaignSubmenu ? (
-                      <ExpandLessIcon />
-                  ) : (
-                      <ExpandMoreIcon />
-                  )}
+                <ListItem button onClick={() => setOpenFlowsSubmenu((prev) => !prev)} className={classes.listItem}>
+                  <ListItemIcon className={classes.listItemIcon}><AccountTree /></ListItemIcon>
+                  <ListItemText primary={i18n.t("mainDrawer.listItems.flows")} className={classes.listItemText} />
+                  {openFlowsSubmenu ? <ExpandLessIcon style={{ color: SIDEBAR_GREEN }} /> : <ExpandMoreIcon style={{ color: SIDEBAR_GREEN }} />}
                 </ListItem>
-
-                <Collapse
-                    style={{ paddingLeft: 15 }}
-                    in={openFlowsSubmenu}
-                    timeout="auto"
-                    unmountOnExit
-                >
+                <Collapse style={{ paddingLeft: 15 }} in={openFlowsSubmenu} timeout="auto" unmountOnExit>
                   <List component="div" disablePadding>
-                    <ListItem
-                        onClick={() => history.push("/phrase-lists")}
-                        button
-                    >
-                      <ListItemIcon>
-                        <EventAvailableIcon />
-                      </ListItemIcon>
-                      <ListItemText primary="Campanha" />
+                    <ListItem onClick={() => history.push("/phrase-lists")} button className={classes.listItem}>
+                      <ListItemIcon className={classes.listItemIcon}><EventAvailableIcon /></ListItemIcon>
+                      <ListItemText primary="Campanha" className={classes.listItemText} />
                     </ListItem>
-
-                    <ListItem
-                        onClick={() => history.push("/flowbuilders")}
-                        button
-                    >
-                      <ListItemIcon>
-                        <ShapeLine />
-                      </ListItemIcon>
-                      <ListItemText primary="Conversa" />
+                    <ListItem onClick={() => history.push("/flowbuilders")} button className={classes.listItem}>
+                      <ListItemIcon className={classes.listItemIcon}><ShapeLine /></ListItemIcon>
+                      <ListItemText primary="Conversa" className={classes.listItemText} />
                     </ListItem>
                   </List>
                 </Collapse>
@@ -473,6 +481,9 @@ const MainListItems = (props) => {
                 to="/announcements"
                 primary={i18n.t("mainDrawer.listItems.annoucements")}
                 icon={<AnnouncementIcon />}
+                listItemClassName={classes.listItem}
+                listItemIconClassName={classes.listItemIcon}
+                listItemTextClassName={classes.listItemText}
               />
             )}
             {showOpenAi && (
@@ -480,59 +491,78 @@ const MainListItems = (props) => {
                 to="/prompts"
                 primary={i18n.t("mainDrawer.listItems.prompts")}
                 icon={<AllInclusive />}
+                listItemClassName={classes.listItem}
+                listItemIconClassName={classes.listItemIcon}
+                listItemTextClassName={classes.listItemText}
               />
             )}
-
             {showIntegrations && (
               <ListItemLink
                 to="/queue-integration"
                 primary={i18n.t("mainDrawer.listItems.queueIntegration")}
                 icon={<DeviceHubOutlined />}
+                listItemClassName={classes.listItem}
+                listItemIconClassName={classes.listItemIcon}
+                listItemTextClassName={classes.listItemText}
               />
             )}
             <ListItemLink
               to="/connections"
               primary={i18n.t("mainDrawer.listItems.connections")}
-              icon={
-                <Badge badgeContent={connectionWarning ? "!" : 0} color="error">
-                  <SyncAltIcon />
-                </Badge>
-              }
+              icon={<Badge badgeContent={connectionWarning ? "!" : 0} color="error"><SyncAltIcon /></Badge>}
+              listItemClassName={classes.listItem}
+              listItemIconClassName={classes.listItemIcon}
+              listItemTextClassName={classes.listItemText}
             />
             <ListItemLink
               to="/files"
               primary={i18n.t("mainDrawer.listItems.files")}
               icon={<AttachFile />}
+              listItemClassName={classes.listItem}
+              listItemIconClassName={classes.listItemIcon}
+              listItemTextClassName={classes.listItemText}
             />
             <ListItemLink
               to="/queues"
               primary={i18n.t("mainDrawer.listItems.queues")}
               icon={<AccountTreeOutlinedIcon />}
+              listItemClassName={classes.listItem}
+              listItemIconClassName={classes.listItemIcon}
+              listItemTextClassName={classes.listItemText}
             />
             <ListItemLink
               to="/users"
               primary={i18n.t("mainDrawer.listItems.users")}
               icon={<PeopleAltOutlinedIcon />}
+              listItemClassName={classes.listItem}
+              listItemIconClassName={classes.listItemIcon}
+              listItemTextClassName={classes.listItemText}
             />
             {showExternalApi && (
-              <>
-                <ListItemLink
-                  to="/messages-api"
-                  primary={i18n.t("mainDrawer.listItems.messagesAPI")}
-                  icon={<CodeRoundedIcon />}
-                />
-              </>
+              <ListItemLink
+                to="/messages-api"
+                primary={i18n.t("mainDrawer.listItems.messagesAPI")}
+                icon={<CodeRoundedIcon />}
+                listItemClassName={classes.listItem}
+                listItemIconClassName={classes.listItemIcon}
+                listItemTextClassName={classes.listItemText}
+              />
             )}
             <ListItemLink
               to="/financeiro"
               primary={i18n.t("mainDrawer.listItems.financeiro")}
               icon={<LocalAtmIcon />}
+              listItemClassName={classes.listItem}
+              listItemIconClassName={classes.listItemIcon}
+              listItemTextClassName={classes.listItemText}
             />
-
             <ListItemLink
               to="/settings"
               primary={i18n.t("mainDrawer.listItems.settings")}
               icon={<SettingsOutlinedIcon />}
+              listItemClassName={classes.listItem}
+              listItemIconClassName={classes.listItemIcon}
+              listItemTextClassName={classes.listItemText}
             />
 			
 			

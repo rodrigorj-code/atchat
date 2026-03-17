@@ -87,6 +87,23 @@ const messages = {
 			dashboard: {
 				title: "Dashboard",
 				subtitle: "Overview of attendances and metrics",
+				header: {
+					filters: "Filters",
+					createReport: "Create Report (BETA)",
+				},
+				cards: {
+					totalAttendances: "Total Attendances",
+					inAttendance: "In Progress",
+					resolutionRate: "Resolution Rate",
+					ofTotal: "Of Total",
+					statusWaiting: "Status: Waiting for Support",
+					avgFirstResponse: "Avg. First Response Time",
+					inMinutes: "In Minutes",
+					status: "Status",
+					totalMessages: "Total Messages",
+					sent: "Sent",
+					received: "Received",
+				},
 				toasts: {
 					selectFilterError: "Set filter parameters",
 					userChartError: "Error getting conversation information",

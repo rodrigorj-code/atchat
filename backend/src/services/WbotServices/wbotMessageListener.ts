@@ -466,16 +466,34 @@ const getSenderMessage = (
   return senderId && jidNormalizedUser(senderId);
 };
 
+/**
+ * Para chat 1:1, retorna sempre o JID no formato @s.whatsapp.net (número real).
+ * Quando a mensagem vem com @lid (Linked Identity), usa key.senderPn para obter o número real,
+ * evitando que respostas sejam enviadas para o destino errado (ex.: para o próprio número).
+ */
+const getContactJidForChat = (msg: proto.IWebMessageInfo): string => {
+  const remoteJid = msg.key.remoteJid || "";
+  if (remoteJid.endsWith("@lid")) {
+    const senderPn = (msg.key as { senderPn?: string }).senderPn;
+    if (senderPn) {
+      const phone = String(senderPn).replace(/\D/g, "");
+      if (phone) return `${phone}@s.whatsapp.net`;
+    }
+  }
+  return remoteJid;
+};
+
 const getContactMessage = async (msg: proto.IWebMessageInfo, wbot: Session) => {
   const isGroup = msg.key.remoteJid.includes("g.us");
-  const rawNumber = msg.key.remoteJid.replace(/\D/g, "");
+  const contactJid = isGroup ? msg.key.remoteJid : getContactJidForChat(msg);
+  const rawNumber = contactJid.replace(/\D/g, "");
   return isGroup
     ? {
         id: getSenderMessage(msg, wbot),
         name: msg.pushName
       }
     : {
-        id: msg.key.remoteJid,
+        id: contactJid,
         name: msg.key.fromMe ? rawNumber : msg.pushName
       };
 };
@@ -2289,6 +2307,17 @@ const handleMessage = async (
     }
 
     if (msgIsGroupBlock?.value === "enabled" && isGroup) return;
+
+    // Nunca criar/atualizar ticket para o próprio número (evita resposta ir para "si mesmo")
+    if (!isGroup && msg.key.remoteJid) {
+      const myId = (wbot as WASocket).user?.id;
+      if (myId) {
+        const contactJid = getContactJidForChat(msg);
+        const remoteNumber = contactJid.replace(/\D/g, "");
+        const myNumber = jidNormalizedUser(myId).replace(/\D/g, "");
+        if (remoteNumber && myNumber && remoteNumber === myNumber) return;
+      }
+    }
 
     if (isGroup) {
       const grupoMeta = await wbot.groupMetadata(msg.key.remoteJid);

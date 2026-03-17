@@ -88,6 +88,23 @@ const messages = {
       dashboard: {
         title: "Dashboard",
         subtitle: "Visión general de atenciones e indicadores",
+        header: {
+          filters: "Filtros",
+          createReport: "Crear Informe (BETA)",
+        },
+        cards: {
+          totalAttendances: "Total de Atenciones",
+          inAttendance: "En Atención",
+          resolutionRate: "Tasa de Resolución",
+          ofTotal: "Del Total",
+          statusWaiting: "Estado: Esperando Atención",
+          avgFirstResponse: "Tiempo Medio 1ª Respuesta",
+          inMinutes: "En Minutos",
+          status: "Estado",
+          totalMessages: "Total de Mensajes",
+          sent: "Enviadas",
+          received: "Recibidas",
+        },
         toasts: {
           selectFilterError: "Parametrice el filtro",
               userChartError: "Error al obtener información de la conversación",

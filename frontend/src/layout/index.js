@@ -115,6 +115,8 @@ const useStyles = makeStyles((theme) => ({
     position: "relative",
     whiteSpace: "nowrap",
     width: drawerWidth,
+    backgroundColor: "#ffffff",
+    borderRight: "1px solid rgba(0, 0, 0, 0.08)",
     transition: theme.transitions.create("width", {
       easing: theme.transitions.easing.sharp,
       duration: theme.transitions.duration.enteringScreen,
@@ -124,8 +126,15 @@ const useStyles = makeStyles((theme) => ({
     },
     ...theme.scrollbarStylesSoft
   },
+  drawerToolbar: {
+    "& .MuiIconButton-root": {
+      color: "rgba(0, 0, 0, 0.54)",
+    },
+  },
   drawerPaperClose: {
     overflowX: "hidden",
+    backgroundColor: "#ffffff",
+    borderRight: "1px solid rgba(0, 0, 0, 0.08)",
     transition: theme.transitions.create("width", {
       easing: theme.transitions.easing.sharp,
       duration: theme.transitions.duration.leavingScreen,
@@ -360,7 +369,7 @@ const LoggedInLayout = ({ children, themeToggle }) => {
         }}
         open={drawerOpen}
       >
-        <div className={classes.toolbarIcon}>
+        <div className={clsx(classes.toolbarIcon, classes.drawerToolbar)}>
           <img src={logo} className={classes.logo} alt="logo" />
           <IconButton onClick={() => setDrawerOpen(!drawerOpen)}>
             <ChevronLeftIcon />
