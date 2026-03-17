@@ -16,6 +16,7 @@ import UpdateTicketService from "../services/TicketServices/UpdateTicketService"
 import DeleteWhatsAppMessage from "../services/WbotServices/DeleteWhatsAppMessage";
 import SendWhatsAppMedia from "../services/WbotServices/SendWhatsAppMedia";
 import SendWhatsAppMessage from "../services/WbotServices/SendWhatsAppMessage";
+import { verifyMessage } from "../services/WbotServices/wbotMessageListener";
 import CheckContactNumber from "../services/WbotServices/CheckNumber";
 import CheckIsValidContact from "../services/WbotServices/CheckIsValidContact";
 import GetProfilePicUrl from "../services/WbotServices/GetProfilePicUrl";
@@ -83,7 +84,16 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
       })
     );
   } else {
-    const send = await SendWhatsAppMessage({ body, ticket, quotedMsg });
+    const sentMessage = await SendWhatsAppMessage({ body, ticket, quotedMsg });
+    const bodyToSave = formatBody(body, ticket.contact);
+    if (sentMessage && ticket.contact) {
+      await verifyMessage(
+        sentMessage as any,
+        ticket,
+        ticket.contact,
+        bodyToSave
+      );
+    }
   }
 
   return res.send();

@@ -21,7 +21,11 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  InputAdornment,
+  Box,
+  Typography,
 } from "@material-ui/core";
+import { ContentCopy, Refresh } from "@material-ui/icons";
 
 import api from "../../services/api";
 import { i18n } from "../../translate/i18n";
@@ -91,7 +95,32 @@ const WhatsAppModal = ({ open, onClose, whatsAppId }) => {
   const [prompts, setPrompts] = useState([]);
   const [integrations, setIntegrations] = useState([]);
   const [selectedIntegration, setSelectedIntegration] = useState(null);
-  
+  const [tokenDialogOpen, setTokenDialogOpen] = useState(false);
+  const [createdToken, setCreatedToken] = useState("");
+  const [generatingToken, setGeneratingToken] = useState(false);
+
+  const copyToClipboard = (text) => {
+    if (!text) return;
+    navigator.clipboard.writeText(text).then(() => {
+      toast.success(i18n.t("whatsappModal.form.tokenCopied"));
+    }).catch(() => toastError(new Error("Falha ao copiar")));
+  };
+
+  const handleGenerateToken = async (setFieldValue) => {
+    if (!whatsAppId) return;
+    setGeneratingToken(true);
+    try {
+      const { data } = await api.put(`/whatsapp/${whatsAppId}/token`);
+      setFieldValue("token", data.token);
+      setWhatsApp(prev => ({ ...prev, token: data.token }));
+      copyToClipboard(data.token);
+    } catch (err) {
+      toastError(err);
+    } finally {
+      setGeneratingToken(false);
+    }
+  };
+
     useEffect(() => {
       const fetchSession = async () => {
         if (!whatsAppId) return;
@@ -148,15 +177,25 @@ const WhatsAppModal = ({ open, onClose, whatsAppId }) => {
     };
     delete whatsappData["queues"];
     delete whatsappData["session"];
+    if (!whatsAppId) {
+      delete whatsappData["token"];
+    }
 
     try {
       if (whatsAppId) {
         await api.put(`/whatsapp/${whatsAppId}`, whatsappData);
+        toast.success(i18n.t("whatsappModal.success"));
+        handleClose();
       } else {
-        await api.post("/whatsapp", whatsappData);
+        const { data } = await api.post("/whatsapp", whatsappData);
+        toast.success(i18n.t("whatsappModal.success"));
+        if (data.token) {
+          setCreatedToken(data.token);
+          setTokenDialogOpen(true);
+        } else {
+          handleClose();
+        }
       }
-      toast.success(i18n.t("whatsappModal.success"));
-      handleClose();
     } catch (err) {
       toastError(err);
     }
@@ -181,6 +220,14 @@ const WhatsAppModal = ({ open, onClose, whatsAppId }) => {
     setWhatsApp(initialState);
 	  setSelectedQueueId(null);
     setSelectedQueueIds([]);
+    setTokenDialogOpen(false);
+    setCreatedToken("");
+  };
+
+  const handleCloseTokenDialog = () => {
+    setTokenDialogOpen(false);
+    setCreatedToken("");
+    handleClose();
   };
 
   return (
@@ -208,7 +255,7 @@ const WhatsAppModal = ({ open, onClose, whatsAppId }) => {
             }, 400);
           }}
         >
-          {({ values, touched, errors, isSubmitting }) => (
+          {({ values, touched, errors, isSubmitting, setFieldValue }) => (
             <Form>
               <DialogContent dividers>
                 <div className={classes.multFieldLine}>
@@ -318,15 +365,47 @@ const WhatsAppModal = ({ open, onClose, whatsAppId }) => {
                   />
                 </div>
                 <div>
-                  <Field
-                    as={TextField}
-                    label={i18n.t("queueModal.form.token")}
-                    type="token"
-                    fullWidth
-                    name="token"
-                    variant="outlined"
-                    margin="dense"
-                  />
+                  {whatsAppId ? (
+                    <Box display="flex" alignItems="flex-start" gap={1} flexWrap="wrap">
+                      <Field
+                        as={TextField}
+                        label={i18n.t("whatsappModal.form.token")}
+                        name="token"
+                        variant="outlined"
+                        margin="dense"
+                        fullWidth
+                        InputProps={{
+                          readOnly: true,
+                          endAdornment: (
+                            <InputAdornment position="end">
+                              <Button
+                                size="small"
+                                startIcon={<ContentCopy />}
+                                onClick={() => copyToClipboard(values.token)}
+                                disabled={!values.token}
+                              >
+                                {i18n.t("whatsappModal.form.copyToken")}
+                              </Button>
+                              <Button
+                                size="small"
+                                startIcon={generatingToken ? <CircularProgress size={16} /> : <Refresh />}
+                                onClick={() => handleGenerateToken(setFieldValue)}
+                                disabled={generatingToken}
+                                style={{ marginLeft: 8 }}
+                              >
+                                {i18n.t("whatsappModal.form.generateToken")}
+                              </Button>
+                            </InputAdornment>
+                          ),
+                        }}
+                        helperText={i18n.t("whatsappModal.form.tokenReadOnly")}
+                      />
+                    </Box>
+                  ) : (
+                    <Typography variant="body2" color="textSecondary" style={{ marginTop: 8, marginBottom: 8 }}>
+                      {i18n.t("whatsappModal.form.tokenReadOnly")} {i18n.t("whatsappModal.form.tokenCreatedMessage").split(".")[0]}.
+                    </Typography>
+                  )}
                 </div>
                 <QueueSelect
                   selectedQueueIds={selectedQueueIds}
@@ -503,6 +582,41 @@ const WhatsAppModal = ({ open, onClose, whatsAppId }) => {
             </Form>
           )}
         </Formik>
+      </Dialog>
+
+      <Dialog open={tokenDialogOpen} onClose={handleCloseTokenDialog} maxWidth="sm" fullWidth>
+        <DialogTitle>{i18n.t("whatsappModal.form.tokenCreatedTitle")}</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" paragraph>
+            {i18n.t("whatsappModal.form.tokenCreatedMessage")}
+          </Typography>
+          <TextField
+            fullWidth
+            label={i18n.t("whatsappModal.form.token")}
+            value={createdToken}
+            InputProps={{
+              readOnly: true,
+              endAdornment: (
+                <InputAdornment position="end">
+                  <Button
+                    size="small"
+                    startIcon={<ContentCopy />}
+                    onClick={() => copyToClipboard(createdToken)}
+                  >
+                    {i18n.t("whatsappModal.form.copyToken")}
+                  </Button>
+                </InputAdornment>
+              ),
+            }}
+            variant="outlined"
+            margin="dense"
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseTokenDialog} color="primary" variant="contained">
+            {i18n.t("whatsappModal.buttons.close")}
+          </Button>
+        </DialogActions>
       </Dialog>
     </div>
   );

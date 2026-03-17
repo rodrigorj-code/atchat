@@ -4,9 +4,22 @@ import { QueryTypes } from "sequelize";
 import * as _ from "lodash";
 import sequelize from "../../database";
 
+export interface SeriesPoint {
+  date: string;
+  total: number;
+  pending: number;
+  closed: number;
+  avgWait: number;
+  avgSupport: number;
+  sent: number;
+  received: number;
+}
+
 export interface DashboardData {
   counters: any;
   attendants: [];
+  messageStats?: { sent: number; received: number };
+  series?: SeriesPoint[];
 }
 
 export interface Params {
@@ -139,6 +152,115 @@ export default async function DashboardDataService(
     type: QueryTypes.SELECT,
     plain: true
   });
+
+  let startDate: string;
+  let endDate: string;
+  if (_.has(params, "days") && params.days) {
+    const days = parseInt(`${params.days}`.replace(/\D/g, ""), 10) || 7;
+    const end = new Date();
+    const start = new Date();
+    start.setDate(start.getDate() - days);
+    endDate = end.toISOString().slice(0, 10);
+    startDate = start.toISOString().slice(0, 10);
+  } else if (_.has(params, "date_from") && _.has(params, "date_to")) {
+    startDate = `${params.date_from}`.slice(0, 10);
+    endDate = `${params.date_to}`.slice(0, 10);
+  } else {
+    startDate = endDate = new Date().toISOString().slice(0, 10);
+  }
+
+  const msgReplacements: (string | number)[] = [companyId, `${startDate} 00:00:00`, `${endDate} 23:59:59`];
+  const [messageStatsRow] = await sequelize.query<{ sent: string; received: string }>(
+    `select
+      (select count(*) from "Messages" m where m."companyId" = ? and m."createdAt" >= ? and m."createdAt" <= ? and m."fromMe" = true) as sent,
+      (select count(*) from "Messages" m where m."companyId" = ? and m."createdAt" >= ? and m."createdAt" <= ? and m."fromMe" = false) as received`,
+    { replacements: [...msgReplacements, companyId, `${startDate} 00:00:00`, `${endDate} 23:59:59`], type: QueryTypes.SELECT }
+  );
+  const messageStats = messageStatsRow
+    ? { sent: parseInt(messageStatsRow.sent || "0", 10), received: parseInt(messageStatsRow.received || "0", 10) }
+    : { sent: 0, received: 0 };
+  responseData.messageStats = messageStats;
+
+  const seriesRows = await sequelize.query<{
+    d: string;
+    total: string;
+    pending: string;
+    closed: string;
+    avgwait: number | null;
+    avgsupport: number | null;
+    sent: string;
+    received: string;
+  }>(
+    `with days as (
+      select generate_series(?::date, ?::date, '1 day'::interval)::date as d
+    ),
+    tt_by_day as (
+      select
+        tt."queuedAt"::date as qdate,
+        count(*) as total,
+        count(*) filter (where t.status = 'pending') as pending,
+        count(*) filter (where tt."finishedAt" is not null) as closed,
+        avg(
+          (date_part('day', age(coalesce(tt."ratingAt", tt."finishedAt"), tt."startedAt")) * 24 * 60) +
+          (date_part('hour', age(coalesce(tt."ratingAt", tt."finishedAt"), tt."startedAt")) * 60) +
+          (date_part('minutes', age(coalesce(tt."ratingAt", tt."finishedAt"), tt."startedAt")))
+        ) filter (where tt."finishedAt" is not null) as avg_support,
+        avg(
+          (date_part('day', age(tt."startedAt", tt."queuedAt")) * 24 * 60) +
+          (date_part('hour', age(tt."startedAt", tt."queuedAt")) * 60) +
+          (date_part('minutes', age(tt."startedAt", tt."queuedAt")))
+        ) filter (where tt."startedAt" is not null) as avg_wait
+      from "TicketTraking" tt
+      left join "Tickets" t on t.id = tt."ticketId"
+      where tt."companyId" = ? and tt."queuedAt" >= ?::date and tt."queuedAt" <= ?::date + interval '1 day'
+      group by tt."queuedAt"::date
+    ),
+    msg_by_day as (
+      select
+        m."createdAt"::date as mdate,
+        count(*) filter (where m."fromMe" = true) as sent,
+        count(*) filter (where m."fromMe" = false) as received
+      from "Messages" m
+      where m."companyId" = ? and m."createdAt" >= ?::timestamp and m."createdAt" <= ?::timestamp + interval '1 day'
+      group by m."createdAt"::date
+    )
+    select
+      days.d::text as d,
+      (coalesce(tt.total, 0))::int as total,
+      (coalesce(tt.pending, 0))::int as pending,
+      (coalesce(tt.closed, 0))::int as closed,
+      (coalesce(tt.avg_wait, 0))::float as avgwait,
+      (coalesce(tt.avg_support, 0))::float as avgsupport,
+      (coalesce(m.sent, 0))::int as sent,
+      (coalesce(m.received, 0))::int as received
+    from days
+    left join tt_by_day tt on tt.qdate = days.d
+    left join msg_by_day m on m.mdate = days.d
+    order by days.d`,
+    {
+      replacements: [
+        startDate,
+        endDate,
+        companyId,
+        startDate,
+        endDate,
+        companyId,
+        `${startDate} 00:00:00`,
+        `${endDate} 23:59:59`
+      ],
+      type: QueryTypes.SELECT
+    }
+  );
+  responseData.series = (seriesRows || []).map((row) => ({
+    date: row.d,
+    total: parseInt(String(row.total), 10) || 0,
+    pending: parseInt(String(row.pending), 10) || 0,
+    closed: parseInt(String(row.closed), 10) || 0,
+    avgWait: Number(row.avgwait) || 0,
+    avgSupport: Number(row.avgsupport) || 0,
+    sent: parseInt(String(row.sent), 10) || 0,
+    received: parseInt(String(row.received), 10) || 0
+  }));
 
   return responseData;
 }

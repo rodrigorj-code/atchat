@@ -1,4 +1,5 @@
 import * as Yup from "yup";
+import crypto from "crypto";
 
 import AppError from "../../errors/AppError";
 import Whatsapp from "../../models/Whatsapp";
@@ -123,7 +124,11 @@ const CreateWhatsAppService = async ({
     throw new AppError("ERR_WAPP_GREETING_REQUIRED");
   }
 
-  if (token !== null && token !== "") {
+  const finalToken = token && String(token).trim() !== ""
+    ? String(token).trim()
+    : crypto.randomBytes(24).toString("hex");
+
+  if (token && String(token).trim() !== "") {
     const tokenSchema = Yup.object().shape({
       token: Yup.string()
         .required()
@@ -142,7 +147,7 @@ const CreateWhatsAppService = async ({
     });
 
     try {
-      await tokenSchema.validate({ token });
+      await tokenSchema.validate({ token: finalToken });
     } catch (err: any) {
       throw new AppError(err.message);
     }
@@ -158,7 +163,7 @@ const CreateWhatsAppService = async ({
       ratingMessage,
       isDefault,
       companyId,
-      token,
+      token: finalToken,
       provider,
       //timeSendQueue,
       //sendIdQueue,

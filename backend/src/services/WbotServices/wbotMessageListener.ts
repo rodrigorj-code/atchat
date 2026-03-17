@@ -980,15 +980,35 @@ export const verifyMediaMessage = async (
   return newMessage;
 };
 
+/** Texto de "stub" que o WhatsApp envia quando a mensagem ainda está pendente; não usar para salvar. */
+const isWhatsAppPendingStub = (text: string | null): boolean => {
+  if (!text || typeof text !== "string") return false;
+  const t = text.trim().toLowerCase();
+  return (
+    t.includes("aguardando mensagem") ||
+    t.includes("saiba mais") ||
+    t.includes("pode levar alguns instantes")
+  );
+};
+
 export const verifyMessage = async (
   msg: proto.IWebMessageInfo,
   ticket: Ticket,
-  contact: Contact
+  contact: Contact,
+  bodyOverride?: string
 ) => {
   const io = getIO();
   const quotedMsg = await verifyQuotedMessage(msg);
-  const body = getBodyMessage(msg);
+  const extractedBody = getBodyMessage(msg);
+  const body =
+    bodyOverride && msg.key.fromMe
+      ? bodyOverride
+      : extractedBody;
   const isEdited = getTypeMessage(msg) == "editedMessage";
+
+  if (msg.key.fromMe && !bodyOverride && isWhatsAppPendingStub(extractedBody)) {
+    return;
+  }
 
   const messageData = {
     id: isEdited

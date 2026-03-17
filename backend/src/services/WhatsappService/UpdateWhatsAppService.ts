@@ -101,7 +101,7 @@ const UpdateWhatsAppService = async ({
 
   const whatsapp = await ShowWhatsAppService(whatsappId, companyId);
 
-  await whatsapp.update({
+  const updateData: any = {
     name,
     status,
     session,
@@ -111,18 +111,22 @@ const UpdateWhatsAppService = async ({
     ratingMessage,
     isDefault,
     companyId,
-    token,
     //timeSendQueue,
     //sendIdQueue,
-    transferQueueId,	
-	  timeToTransfer,	
+    transferQueueId,
+    timeToTransfer,
     promptId,
     maxUseBotQueues,
     timeUseBotQueues,
     expiresTicket,
     expiresInactiveMessage,
     integrationId
-  });
+  };
+  if (token !== undefined) {
+    updateData.token = token;
+  }
+
+  await whatsapp.update(updateData);
 
   await AssociateWhatsappQueue(whatsapp, queueIds);
 

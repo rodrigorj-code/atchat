@@ -171,21 +171,26 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-// Gera dados simples para o mini gráfico de área (tendência)
-function makeSparkData(base, variance = 2, points = 7) {
-  return Array.from({ length: points }, (_, i) => ({
-    name: `${i + 1}`,
-    value: Math.max(0, base + (Math.random() - 0.5) * variance * (i + 1)),
-  }));
+// Converte série real (por dia) em dados para o mini gráfico. Se não houver série, usa valor único (linha estável).
+function seriesToSparkData(series, valueKey, fallbackValue = 0) {
+  if (isArray(series) && series.length > 0) {
+    return series.map((p, i) => ({
+      name: p.date ? String(p.date).slice(0, 10) : `${i + 1}`,
+      value: Number(p[valueKey]) || 0,
+    }));
+  }
+  const v = Number(fallbackValue) || 0;
+  return [{ name: "1", value: v }, { name: "2", value: v }];
 }
 
 const Dashboard = () => {
   const classes = useStyles();
   const [counters, setCounters] = useState({});
   const [attendants, setAttendants] = useState([]);
+  const [series, setSeries] = useState([]);
   const [period, setPeriod] = useState(0);
   const [filterType, setFilterType] = useState(1);
-  const [dateFrom, setDateFrom] = useState(moment("1", "D").format("YYYY-MM-DD"));
+  const [dateFrom, setDateFrom] = useState(moment().startOf("month").format("YYYY-MM-DD"));
   const [dateTo, setDateTo] = useState(moment().format("YYYY-MM-DD"));
   const [loading, setLoading] = useState(false);
   const [messageStats, setMessageStats] = useState({ sent: 0, received: 0 });
@@ -241,9 +246,11 @@ const Dashboard = () => {
       setCounters(data.counters || {});
       setAttendants(isArray(data.attendants) ? data.attendants : []);
       setMessageStats(data.messageStats || { sent: 0, received: 0 });
+      setSeries(isArray(data.series) ? data.series : []);
     } catch (e) {
       setCounters({});
       setAttendants([]);
+      setSeries([]);
     }
     setLoading(false);
   }
@@ -331,12 +338,18 @@ const Dashboard = () => {
     );
   }
 
-  const sparkTotal = makeSparkData(totalAtendimentos || 5, 2);
-  const sparkPendentes = makeSparkData(pendentes, 1);
-  const sparkFechados = makeSparkData(fechados || 5, 2);
-  const sparkWait = makeSparkData(avgWaitMin || 3, 1);
-  const sparkSupport = makeSparkData(avgSupportMin || 10, 2);
-  const sparkMsg = makeSparkData(totalMensagens || 50, 10);
+  const sparkTotal = seriesToSparkData(series, "total", totalAtendimentos);
+  const sparkPendentes = seriesToSparkData(series, "pending", pendentes);
+  const sparkFechados = seriesToSparkData(series, "closed", fechados);
+  const sparkWait = seriesToSparkData(series, "avgWait", avgWaitMin);
+  const sparkSupport = seriesToSparkData(series, "avgSupport", avgSupportMin);
+  const sparkMsg =
+    series.length > 0
+      ? series.map((p, i) => ({
+          name: p.date ? String(p.date).slice(0, 10) : `${i + 1}`,
+          value: (Number(p.sent) || 0) + (Number(p.received) || 0),
+        }))
+      : [{ name: "1", value: totalMensagens }, { name: "2", value: totalMensagens }];
 
   return (
     <div>
