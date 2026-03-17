@@ -85,6 +85,8 @@ const messages = {
 				},
 			},
 			dashboard: {
+				title: "Dashboard",
+				subtitle: "Overview of attendances and metrics",
 				toasts: {
 					selectFilterError: "Set filter parameters",
 					userChartError: "Error getting conversation information",
@@ -127,6 +129,7 @@ const messages = {
 					filter: "Filter",
 				},
 				onlineTable: {
+					title: "Attendants status",
 					ratingLabel: "1 - Unsatisfied, 2 - Satisfied, 3 - Very Satisfied",
 					name: "Name",
 					ratings: "Ratings",
@@ -140,6 +143,7 @@ const messages = {
 						start: "Start",
 						end: "End",
 						filter: "Filter",
+						tickets: "tickets",
 					},
 					date: {
 						label: "Conversations Chart",
@@ -147,6 +151,7 @@ const messages = {
 						start: "Start",
 						end: "End",
 						filter: "Filter",
+						tickets: "tickets",
 					},
 				},
 			},
@@ -305,8 +310,25 @@ const messages = {
 			},
 			connections: {
 				title: "Connections",
+				guide: {
+					title: "How to connect WhatsApp",
+					intro: "No paid API needed. Connection is via QR Code (like WhatsApp Web).",
+					step1: "Click \"Add WhatsApp\", give it a name and save.",
+					step2: "In the list, click \"View QR Code\" when status is \"Waiting for QR\".",
+					step3: "On your phone: WhatsApp → Menu (⋮) or Settings → Linked devices → Link a device.",
+					step4: "Point your camera at the QR Code on screen. When connected, status will show green \"Connected\".",
+				},
+				statusLabel: {
+					CONNECTED: "Connected",
+					qrcode: "Waiting for QR",
+					OPENING: "Connecting...",
+					DISCONNECTED: "Disconnected",
+					TIMEOUT: "No connection",
+					PAIRING: "Pairing",
+				},
 				toasts: {
 					deleted: "WhatsApp connection deleted successfully!",
+					connected: "WhatsApp connected successfully!",
 				},
 				confirmationModal: {
 					deleteTitle: "Delete",
@@ -392,18 +414,20 @@ const messages = {
 				success: "WhatsApp saved successfully.",
 			},
 			qrCodeModal: {
-				title: "Use your WhatsApp:",
+				title: "Connect WhatsApp via QR Code",
 				steps: {
-					one: "1 - Open WhatsApp on your phone",
+					one: "Open WhatsApp on your phone",
 					two: {
-						partOne: "2 - Tap More options on Android",
+						partOne: "Tap More options (⋮) on Android",
 						partTwo: "or Settings",
 						partThree: "on iPhone",
 					},
-					three: "3 - Tap Linked Devices and then Link a Device",
-					four: "4 - Point your phone at this screen to capture the QR Code",
+					three: "Tap \"Linked devices\" then \"Link a device\"",
+					four: "Point your phone camera at the QR Code below",
 				},
-				waiting: "Waiting for QR Code scan",
+				waiting: "Waiting for QR Code scan...",
+				newQr: "Generate new QR Code",
+				connected: "Connected! You can close this window.",
 			},
 			qrCode: {
 				message: "Scan the QR Code to start the session",
@@ -1493,6 +1517,8 @@ const messages = {
 				placeholderOpen: "Type a message",
 				placeholderClosed: "Reopen or accept this ticket to send a message.",
 				signMessage: "Sign",
+				sticker: "Send sticker (WebP)",
+				stickerOnlyWebp: "Sticker must be a .webp file",
 			},
 			contactDrawer: {
 				header: "Contact Information",

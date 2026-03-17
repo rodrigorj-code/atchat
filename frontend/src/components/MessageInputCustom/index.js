@@ -12,6 +12,7 @@ import InputBase from "@material-ui/core/InputBase";
 import CircularProgress from "@material-ui/core/CircularProgress";
 import { green } from "@material-ui/core/colors";
 import AttachFileIcon from "@material-ui/icons/AttachFile";
+import ImageIcon from "@material-ui/icons/Image";
 import IconButton from "@material-ui/core/IconButton";
 import MoodIcon from "@material-ui/icons/Mood";
 import SendIcon from "@material-ui/icons/Send";
@@ -223,7 +224,7 @@ const SignSwitch = (props) => {
 };
 
 const FileInput = (props) => {
-  const { handleChangeMedias, disableOption } = props;
+  const { handleChangeMedias, handleChangeSticker, disableOption } = props;
   const classes = useStyles();
   return (
     <>
@@ -235,6 +236,14 @@ const FileInput = (props) => {
         className={classes.uploadInput}
         onChange={handleChangeMedias}
       />
+      <input
+        type="file"
+        id="sticker-upload-custom"
+        accept=".webp,image/webp"
+        disabled={disableOption()}
+        className={classes.uploadInput}
+        onChange={handleChangeSticker}
+      />
       <label htmlFor="upload-button">
         <IconButton
           aria-label="upload"
@@ -242,6 +251,16 @@ const FileInput = (props) => {
           disabled={disableOption()}
         >
           <AttachFileIcon className={classes.sendMessageIcons} />
+        </IconButton>
+      </label>
+      <label htmlFor="sticker-upload-custom">
+        <IconButton
+          aria-label={i18n.t("messagesInput.sticker")}
+          component="span"
+          disabled={disableOption()}
+          title={i18n.t("messagesInput.sticker")}
+        >
+          <ImageIcon className={classes.sendMessageIcons} />
         </IconButton>
       </label>
     </>
@@ -473,6 +492,7 @@ const MessageInputCustom = (props) => {
   const [loading, setLoading] = useState(false);
   const [recording, setRecording] = useState(false);
   const inputRef = useRef();
+  const uploadAsStickerRef = useRef(false);
   const { setReplyingMessage, replyingMessage } =
     useContext(ReplyMessageContext);
   const { user } = useContext(AuthContext);
@@ -521,6 +541,17 @@ const MessageInputCustom = (props) => {
     }
   };
 
+  const handleChangeSticker = (e) => {
+    const file = e.target.files?.[0];
+    if (file && (file.type === "image/webp" || file.name.toLowerCase().endsWith(".webp"))) {
+      uploadAsStickerRef.current = true;
+      setMedias([file]);
+    } else if (file) {
+      toastError(new Error(i18n.t("messagesInput.stickerOnlyWebp")));
+    }
+    e.target.value = "";
+  };
+
   const handleUploadQuickMessageMedia = async (blob, message) => {
     setLoading(true);
     try {
@@ -566,6 +597,9 @@ const MessageInputCustom = (props) => {
 
     const formData = new FormData();
     formData.append("fromMe", true);
+    if (uploadAsStickerRef.current) {
+      formData.append("asSticker", "true");
+    }
     medias.forEach((media) => {
       formData.append("medias", media);
       formData.append("body", media.name);
@@ -579,6 +613,7 @@ const MessageInputCustom = (props) => {
 
     setLoading(false);
     setMedias([]);
+    uploadAsStickerRef.current = false;
   };
 
   const handleSendMessage = async () => {
@@ -733,6 +768,7 @@ const MessageInputCustom = (props) => {
           <FileInput
             disableOption={disableOption}
             handleChangeMedias={handleChangeMedias}
+            handleChangeSticker={handleChangeSticker}
           />
 
           <SignSwitch

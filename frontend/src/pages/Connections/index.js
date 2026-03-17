@@ -16,6 +16,7 @@ import {
 	Tooltip,
 	Typography,
 	CircularProgress,
+	Box,
 } from "@material-ui/core";
 import {
 	Edit,
@@ -50,6 +51,27 @@ const useStyles = makeStyles(theme => ({
 		padding: theme.spacing(1),
 		overflowY: "scroll",
 		...theme.scrollbarStyles,
+	},
+	guideBox: {
+		padding: theme.spacing(2),
+		marginBottom: theme.spacing(2),
+		backgroundColor: theme.palette.type === "light" ? "#f5f5f5" : "rgba(255,255,255,0.06)",
+		borderRadius: theme.shape.borderRadius,
+		border: `1px solid ${theme.palette.divider}`,
+	},
+	guideTitle: {
+		fontWeight: 600,
+		marginBottom: theme.spacing(1),
+	},
+	guideStep: {
+		marginBottom: theme.spacing(0.5),
+		paddingLeft: theme.spacing(1),
+	},
+	statusCell: {
+		display: "flex",
+		alignItems: "center",
+		justifyContent: "center",
+		gap: theme.spacing(1),
 	},
 	customTableCell: {
 		display: "flex",
@@ -254,9 +276,17 @@ const Connections = () => {
 		);
 	};
 
+	const getStatusLabel = (status) => {
+		const key = status === "qrcode" ? "qrcode" : status;
+		const label = i18n.t(`connections.statusLabel.${key}`);
+		return typeof label === "string" && !label.startsWith("connections.") ? label : status;
+	};
+
 	const renderStatusToolTips = whatsApp => {
+		const statusLabel = getStatusLabel(whatsApp.status);
+		const isConnected = whatsApp.status === "CONNECTED";
 		return (
-			<div className={classes.customTableCell}>
+			<div className={classes.statusCell}>
 				{whatsApp.status === "DISCONNECTED" && (
 					<CustomToolTip
 						title={i18n.t("connections.toolTips.disconnected.title")}
@@ -289,6 +319,9 @@ const Connections = () => {
 						<SignalCellularConnectedNoInternet2Bar color="secondary" />
 					</CustomToolTip>
 				)}
+				<Typography variant="body2" style={{ color: isConnected ? green[600] : undefined }}>
+					{statusLabel}
+				</Typography>
 			</div>
 		);
 	};
@@ -332,6 +365,26 @@ const Connections = () => {
 				</MainHeaderButtonsWrapper>
 			</MainHeader>
 			<Paper className={classes.mainPaper} variant="outlined">
+				<Box className={classes.guideBox}>
+					<Typography className={classes.guideTitle} variant="subtitle1">
+						{i18n.t("connections.guide.title")}
+					</Typography>
+					<Typography variant="body2" color="textSecondary" paragraph>
+						{i18n.t("connections.guide.intro")}
+					</Typography>
+					<Typography className={classes.guideStep} variant="body2">
+						1. {i18n.t("connections.guide.step1")}
+					</Typography>
+					<Typography className={classes.guideStep} variant="body2">
+						2. {i18n.t("connections.guide.step2")}
+					</Typography>
+					<Typography className={classes.guideStep} variant="body2">
+						3. {i18n.t("connections.guide.step3")}
+					</Typography>
+					<Typography className={classes.guideStep} variant="body2">
+						4. {i18n.t("connections.guide.step4")}
+					</Typography>
+				</Box>
 				<Table size="small">
 					<TableHead>
 						<TableRow>

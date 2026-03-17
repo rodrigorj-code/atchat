@@ -1,5 +1,5 @@
-import { WAMessage } from "baileys";
-import WALegacySocket from "baileys"
+import { WAMessage } from "@whiskeysockets/baileys";
+import WALegacySocket from "@whiskeysockets/baileys"
 import * as Sentry from "@sentry/node";
 import AppError from "../../errors/AppError";
 import GetTicketWbot from "../../helpers/GetTicketWbot";

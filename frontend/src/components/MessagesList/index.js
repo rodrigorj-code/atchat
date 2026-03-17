@@ -475,7 +475,7 @@ const MessagesList = ({ ticket, ticketId, isGroup }) => {
         )
       } else return (<></>)
     }*/
-    else if (message.mediaType === "image") {
+    else if (message.mediaType === "image" || message.mediaType === "sticker") {
       return <ModalImageCors imageUrl={message.mediaUrl} />;
     } else if (message.mediaType === "audio") {
       return (

@@ -63,6 +63,7 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
 export const store = async (req: Request, res: Response): Promise<Response> => {
   const { ticketId } = req.params;
   const { body, quotedMsg }: MessageData = req.body;
+  const asSticker = req.body.asSticker === "true" || req.body.asSticker === "1";
   const medias = req.files as Express.Multer.File[];
   const { companyId } = req.user;
 
@@ -73,7 +74,12 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
   if (medias) {
     await Promise.all(
       medias.map(async (media: Express.Multer.File, index) => {
-        await SendWhatsAppMedia({ media, ticket, body: Array.isArray(body) ? body[index] : body });
+        await SendWhatsAppMedia({
+          media,
+          ticket,
+          body: Array.isArray(body) ? body[index] : body,
+          asSticker
+        });
       })
     );
   } else {

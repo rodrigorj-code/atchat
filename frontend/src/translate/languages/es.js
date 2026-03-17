@@ -86,6 +86,8 @@ const messages = {
         },
       },
       dashboard: {
+        title: "Dashboard",
+        subtitle: "Visión general de atenciones e indicadores",
         toasts: {
           selectFilterError: "Parametrice el filtro",
               userChartError: "Error al obtener información de la conversación",
@@ -128,6 +130,7 @@ const messages = {
           filter: "Filtrar",
         },
         onlineTable: {
+          title: "Estado de los atendentes",
           ratingLabel: "1 - Insatisfecho, 2 - Satisfecho, 3 - Muy Satisfecho",
               name: "Nombre",
               ratings: "Evaluaciones",
@@ -141,6 +144,7 @@ const messages = {
                 start: "Inicio",
                 end: "Fin",
                 filter: "Filtrar",
+                tickets: "atenciones",
           },
           date: {
             label: "Gráfico de Conversaciones",
@@ -148,6 +152,7 @@ const messages = {
                 start: "Inicio",
                 end: "Fin",
                 filter: "Filtrar",
+                tickets: "atenciones",
           },
         },
       },
@@ -306,8 +311,25 @@ const messages = {
       },
       connections: {
         title: "Conexiones",
+        guide: {
+          title: "Cómo conectar WhatsApp",
+          intro: "No se necesita API de pago. La conexión es por código QR (como WhatsApp Web).",
+          step1: "Haga clic en \"Agregar WhatsApp\", asigne un nombre y guarde.",
+          step2: "En la lista, haga clic en \"Ver código QR\" cuando el estado sea \"Esperando QR\".",
+          step3: "En el teléfono: WhatsApp → Menú (⋮) o Ajustes → Dispositivos vinculados → Vincular dispositivo.",
+          step4: "Apunte la cámara al código QR en pantalla. Al conectar, el estado mostrará \"Conectado\" en verde.",
+        },
+        statusLabel: {
+          CONNECTED: "Conectado",
+          qrcode: "Esperando QR",
+          OPENING: "Conectando...",
+          DISCONNECTED: "Desconectado",
+          TIMEOUT: "Sin conexión",
+          PAIRING: "Emparejando",
+        },
         toasts: {
           deleted: "¡Conexión con WhatsApp eliminada con éxito!",
+          connected: "¡WhatsApp conectado con éxito!",
         },
         confirmationModal: {
           deleteTitle: "Eliminar",
@@ -394,19 +416,20 @@ const messages = {
         success: "WhatsApp guardado con éxito.",
       },
       qrCodeModal: {
-        title: "Utilice su WhatsApp:",
+        title: "Conectar WhatsApp por código QR",
         steps: {
-          one: "1 - Abra WhatsApp en su teléfono",
+          one: "Abra WhatsApp en su teléfono",
           two: {
-            partOne: "2 - Toque en Más opciones en Android",
+            partOne: "Toque en Más opciones (⋮) en Android",
             partTwo: "o en Configuración",
             partThree: "en iPhone",
           },
-          three:
-              "3 - Toque en Dispositivos vinculados y luego en Vincular un dispositivo",
-          four: "4 - Apunte su teléfono a esta pantalla para capturar el código QR",
+          three: "Toque en \"Dispositivos vinculados\" y luego en \"Vincular un dispositivo\"",
+          four: "Apunte la cámara del teléfono al código QR de abajo",
         },
-        waiting: "Esperando lectura del código QR",
+        waiting: "Esperando lectura del código QR...",
+        newQr: "Generar nuevo código QR",
+        connected: "¡Conectado! Ya puede cerrar esta ventana.",
       },
       qrCode: {
         message: "Lea el código QR para iniciar la sesión",
@@ -1458,6 +1481,8 @@ const messages = {
         placeholderOpen: "Escribe un mensaje",
         placeholderClosed: "Reabre o acepta este ticket para enviar un mensaje.",
         signMessage: "Firmar",
+        sticker: "Enviar sticker (WebP)",
+        stickerOnlyWebp: "El sticker debe ser un archivo .webp",
       },
       contactDrawer: {
         header: "Datos del contacto",

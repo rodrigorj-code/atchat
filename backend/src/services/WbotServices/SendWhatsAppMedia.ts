@@ -1,4 +1,4 @@
-import { WAMessage, AnyMessageContent } from "baileys";
+import { WAMessage, AnyMessageContent } from "@whiskeysockets/baileys";
 import * as Sentry from "@sentry/node";
 import fs from "fs";
 import { exec } from "child_process";
@@ -14,6 +14,7 @@ interface Request {
   media: Express.Multer.File;
   ticket: Ticket;
   body?: string;
+  asSticker?: boolean;
 }
 
 const publicFolder = path.resolve(__dirname, "..", "..", "..", "public");
@@ -117,17 +118,23 @@ export const getMessageOptions = async (
 const SendWhatsAppMedia = async ({
   media,
   ticket,
-  body
+  body,
+  asSticker = false
 }: Request): Promise<WAMessage> => {
   try {
     const wbot = await GetTicketWbot(ticket);
 
     const pathMedia = media.path;
     const typeMessage = media.mimetype.split("/")[0];
+    const isWebp = media.mimetype === "image/webp";
     let options: AnyMessageContent;
     const bodyMessage = formatBody(body, ticket.contact);
 
-    if (typeMessage === "video") {
+    if (asSticker && (typeMessage === "image" || isWebp)) {
+      options = {
+        sticker: fs.readFileSync(pathMedia)
+      };
+    } else if (typeMessage === "video") {
       options = {
         video: fs.readFileSync(pathMedia),
         caption: bodyMessage,

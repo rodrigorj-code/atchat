@@ -5,16 +5,15 @@ import makeWASocket, {
   DisconnectReason,
   fetchLatestBaileysVersion,
   makeCacheableSignalKeyStore,
-  // makeInMemoryStore,
   isJidBroadcast,
-  CacheStore
-} from "baileys";
-import makeWALegacySocket from "baileys";
+  CacheStore,
+  proto
+} from "@whiskeysockets/baileys";
+import makeWALegacySocket from "@whiskeysockets/baileys";
 import P from "pino";
 
 import Whatsapp from "../models/Whatsapp";
 import { logger } from "../utils/logger";
-import MAIN_LOGGER from "baileys/lib/Utils/logger";
 import authState from "../helpers/authState";
 import { Boom } from "@hapi/boom";
 import AppError from "../errors/AppError";
@@ -24,8 +23,7 @@ import { StartWhatsAppSession } from "../services/WbotServices/StartWhatsAppSess
 import DeleteBaileysService from "../services/BaileysServices/DeleteBaileysService";
 import NodeCache from 'node-cache';
 
-const loggerBaileys = MAIN_LOGGER.child({});
-loggerBaileys.level = "error";
+const loggerBaileys = P({ level: "error" });
 
 type Session = WASocket & {
   id?: number;
@@ -105,44 +103,40 @@ export const initWASocket = async (whatsapp: Whatsapp): Promise<Session> => {
             keys: makeCacheableSignalKeyStore(state.keys, logger),
           },
           version,
-          // defaultQueryTimeoutMs: 60000,
-          // retryRequestDelayMs: 250,
-          // keepAliveIntervalMs: 1000 * 60 * 10 * 3,
+          markOnlineOnConnect: true,
+          syncFullHistory: true,
           msgRetryCounterCache,
           shouldIgnoreJid: jid => isJidBroadcast(jid),
+          patchMessageBeforeSending: (msg: any) => {
+            if (!msg) return msg;
+            const m = { ...msg };
+            if (m.deviceSentMessage?.message?.listMessage?.listType === proto?.Message?.ListMessage?.ListType?.PRODUCT_LIST) {
+              m.deviceSentMessage = m.deviceSentMessage || {};
+              m.deviceSentMessage.message = m.deviceSentMessage.message || {};
+              m.deviceSentMessage.message.listMessage = m.deviceSentMessage.message.listMessage || {};
+              m.deviceSentMessage.message.listMessage.listType = proto.Message.ListMessage.ListType.SINGLE_SELECT;
+            }
+            if (m.listMessage?.listType === proto?.Message?.ListMessage?.ListType?.PRODUCT_LIST) {
+              m.listMessage = m.listMessage || {};
+              m.listMessage.listType = proto.Message.ListMessage.ListType.SINGLE_SELECT;
+            }
+            const requiresPatch = !!(m.buttonsMessage || m.listMessage || m.templateMessage);
+            if (requiresPatch) {
+              return {
+                viewOnceMessage: {
+                  message: {
+                    messageContextInfo: {
+                      deviceListMetadataVersion: 2,
+                      deviceListMetadata: {},
+                    },
+                    ...m,
+                  },
+                },
+              };
+            }
+            return m;
+          },
         });
-
-        // wsocket = makeWASocket({
-        //   version,
-        //   logger: loggerBaileys,
-        //   printQRInTerminal: false,
-        //   auth: state as AuthenticationState,
-        //   generateHighQualityLinkPreview: false,
-        //   shouldIgnoreJid: jid => isJidBroadcast(jid),
-        //   browser: ["Chat", "Chrome", "10.15.7"],
-        //   patchMessageBeforeSending: (message) => {
-        //     const requiresPatch = !!(
-        //       message.buttonsMessage ||
-        //       // || message.templateMessage
-        //       message.listMessage
-        //     );
-        //     if (requiresPatch) {
-        //       message = {
-        //         viewOnceMessage: {
-        //           message: {
-        //             messageContextInfo: {
-        //               deviceListMetadataVersion: 2,
-        //               deviceListMetadata: {},
-        //             },
-        //             ...message,
-        //           },
-        //         },
-        //       };
-        //     }
-
-        //     return message;
-        //   },
-        // })
 
         wsocket.ev.on(
           "connection.update",
@@ -152,8 +146,19 @@ export const initWASocket = async (whatsapp: Whatsapp): Promise<Session> => {
               }`
             );
 
+            if (connection === "connecting") return;
+
             if (connection === "close") {
-              if ((lastDisconnect?.error as Boom)?.output?.statusCode === 403) {
+              const statusCode = (lastDisconnect?.error as Boom)?.output?.statusCode;
+              if (statusCode === 440) {
+                return;
+              }
+              const isLoggedOutOrInvalid = statusCode === DisconnectReason.loggedOut
+                || statusCode === 402
+                || statusCode === 403
+                || statusCode === 405;
+
+              if (isLoggedOutOrInvalid) {
                 await whatsapp.update({ status: "PENDING", session: "" });
                 await DeleteBaileysService(whatsapp.id);
                 io.to(`company-${whatsapp.companyId}-mainchannel`).emit(`company-${whatsapp.companyId}-whatsappSession`, {
@@ -161,29 +166,13 @@ export const initWASocket = async (whatsapp: Whatsapp): Promise<Session> => {
                   session: whatsapp
                 });
                 removeWbot(id, false);
-              }
-              if (
-                (lastDisconnect?.error as Boom)?.output?.statusCode !==
-                DisconnectReason.loggedOut
-              ) {
-                removeWbot(id, false);
-                setTimeout(
-                  () => StartWhatsAppSession(whatsapp, whatsapp.companyId),
-                  2000
-                );
               } else {
-                await whatsapp.update({ status: "PENDING", session: "" });
-                await DeleteBaileysService(whatsapp.id);
-                io.to(`company-${whatsapp.companyId}-mainchannel`).emit(`company-${whatsapp.companyId}-whatsappSession`, {
-                  action: "update",
-                  session: whatsapp
-                });
                 removeWbot(id, false);
-                setTimeout(
-                  () => StartWhatsAppSession(whatsapp, whatsapp.companyId),
-                  2000
-                );
               }
+              setTimeout(
+                () => StartWhatsAppSession(whatsapp, whatsapp.companyId),
+                2000
+              );
             }
 
             if (connection === "open") {

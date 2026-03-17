@@ -1,131 +1,125 @@
 import React, { useEffect, useState } from 'react';
 import {
-    Chart as ChartJS,
-    CategoryScale,
-    LinearScale,
-    BarElement,
-    Title,
-    Tooltip,
-    Legend,
-} from 'chart.js';
-import { Bar } from 'react-chartjs-2';
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Cell,
+} from 'recharts';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import brLocale from 'date-fns/locale/pt-BR';
 import { DatePicker, LocalizationProvider } from '@mui/x-date-pickers';
-import { Button, Stack, TextField } from '@mui/material';
-import Typography from "@material-ui/core/Typography";
+import { Button, Stack, TextField, Paper, Typography, Box } from '@mui/material';
 import api from '../../services/api';
 import { format } from 'date-fns';
 import { toast } from 'react-toastify';
-import './button.css';
 import { i18n } from '../../translate/i18n';
 
-ChartJS.register(
-    CategoryScale,
-    LinearScale,
-    BarElement,
-    Title,
-    Tooltip,
-    Legend
-);
-
-export const options = {
-    responsive: true,
-    plugins: {
-        legend: {
-            position: 'top',
-            display: false,
-        },
-        title: {
-            display: true,
-            text: i18n.t("dashboard.charts.date.label"),
-            position: 'left',
-        },
-        datalabels: {
-            display: true,
-            anchor: 'start',
-            offset: -30,
-            align: "start",
-            color: "#fff",
-            textStrokeColor: "#000",
-            textStrokeWidth: 2,
-            font: {
-                size: 20,
-                weight: "bold"
-
-            },
-        }
-    },
-};
+const CHART_COLORS = ['#6366f1', '#8b5cf6', '#a855f7', '#c084fc', '#d8b4fe', '#e9d5ff'];
 
 export const ChartsDate = () => {
+  const [initialDate, setInitialDate] = useState(new Date());
+  const [finalDate, setFinalDate] = useState(new Date());
+  const [ticketsData, setTicketsData] = useState({ data: [], count: 0 });
+  const [loading, setLoading] = useState(false);
 
-    const [initialDate, setInitialDate] = useState(new Date());
-    const [finalDate, setFinalDate] = useState(new Date());
-    const [ticketsData, setTicketsData] = useState({ data: [], count: 0 });
+  const companyId = localStorage.getItem('companyId');
 
-    const companyId = localStorage.getItem("companyId");
-
-    useEffect(() => {
-        handleGetTicketsInformation();
-    }, []);
-
-    const dataCharts = {
-
-        labels: ticketsData && ticketsData?.data.length > 0 && ticketsData?.data.map((item) => (item.hasOwnProperty('horario') ? `Das ${item.horario}:00 as ${item.horario}:59` : item.data)),
-        datasets: [
-            {
-                // label: 'Dataset 1',
-                data: ticketsData?.data.length > 0 && ticketsData?.data.map((item, index) => {
-                    return item.total
-                }),
-                backgroundColor: '#2DDD7F',
-            },
-        ],
-    };
-
-    const handleGetTicketsInformation = async () => {
-        try {
-            const { data } = await api.get(`/dashboard/ticketsDay?initialDate=${format(initialDate, 'yyyy-MM-dd')}&finalDate=${format(finalDate, 'yyyy-MM-dd')}&companyId=${companyId}`);
-            setTicketsData(data);
-        } catch (error) {
-            toast.error(i18n.t("dashboard.toasts.dateChartError"));
-        }
+  const handleGetTicketsInformation = async () => {
+    setLoading(true);
+    try {
+      const { data } = await api.get(
+        `/dashboard/ticketsDay?initialDate=${format(initialDate, 'yyyy-MM-dd')}&finalDate=${format(finalDate, 'yyyy-MM-dd')}&companyId=${companyId}`
+      );
+      setTicketsData(data);
+    } catch (error) {
+      toast.error(i18n.t('dashboard.toasts.dateChartError'));
+    } finally {
+      setLoading(false);
     }
+  };
 
+  useEffect(() => {
+    handleGetTicketsInformation();
+  }, []);
+
+  const chartData =
+    ticketsData?.data?.length > 0
+      ? ticketsData.data.map((item) => ({
+          name: item.hasOwnProperty('horario')
+            ? `${item.horario}h`
+            : item.data,
+          total: item.total,
+          fullLabel: item.hasOwnProperty('horario')
+            ? `Das ${item.horario}:00 às ${item.horario}:59`
+            : item.data,
+        }))
+      : [];
+
+  const CustomTooltip = ({ active, payload, label }) => {
+    if (!active || !payload?.length) return null;
+    const item = chartData.find((d) => d.name === label);
     return (
-        <>
-            <Typography component="h2" variant="h6" color="primary" gutterBottom>
-                {i18n.t("dashboard.charts.date.title")} ({ticketsData?.count})
-            </Typography>
-
-            <Stack direction={'row'} spacing={2} alignItems={'center'} sx={{ my: 2, }} >
-
-                <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={brLocale}>
-                    <DatePicker
-                        value={initialDate}
-                        onChange={(newValue) => { setInitialDate(newValue) }}
-                        label={i18n.t("dashboard.charts.date.start")}
-                        renderInput={(params) => <TextField fullWidth {...params} sx={{ width: '20ch' }} />}
-
-                    />
-                </LocalizationProvider>
-
-                <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={brLocale}>
-                    <DatePicker
-                        value={finalDate}
-                        onChange={(newValue) => { setFinalDate(newValue) }}
-                        label={i18n.t("dashboard.charts.date.end")}
-                        renderInput={(params) => <TextField fullWidth {...params} sx={{ width: '20ch' }} />}
-                    />
-                </LocalizationProvider>
-
-                <Button className="buttonHover" onClick={handleGetTicketsInformation} variant='contained' >
-                    {i18n.t("dashboard.charts.date.filter")}
-                </Button>
-
-            </Stack>
-            <Bar options={options} data={dataCharts} style={{ maxWidth: '100%', maxHeight: '280px', }} />
-        </>
+      <Paper elevation={2} sx={{ p: 1.5, minWidth: 140 }}>
+        <Typography variant="body2" color="textSecondary">
+          {item?.fullLabel || label}
+        </Typography>
+        <Typography variant="h6" color="primary">
+          {payload[0].value} {i18n.t('dashboard.charts.date.tickets')}
+        </Typography>
+      </Paper>
     );
-}
+  };
+
+  return (
+    <Paper elevation={0} sx={{ p: 3, borderRadius: 3, height: '100%' }}>
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 2, mb: 3 }}>
+        <Typography variant="h6" style={{ fontWeight: 600 }} color="text.primary">
+          {i18n.t('dashboard.charts.date.title')} ({ticketsData?.count ?? 0})
+        </Typography>
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="center">
+          <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={brLocale}>
+            <DatePicker
+              value={initialDate}
+              onChange={(newValue) => setInitialDate(newValue)}
+              label={i18n.t('dashboard.charts.date.start')}
+              renderInput={(params) => <TextField {...params} size="small" sx={{ width: '18ch' }} />}
+            />
+            <DatePicker
+              value={finalDate}
+              onChange={(newValue) => setFinalDate(newValue)}
+              label={i18n.t('dashboard.charts.date.end')}
+              renderInput={(params) => <TextField {...params} size="small" sx={{ width: '18ch' }} />}
+            />
+          </LocalizationProvider>
+          <Button
+            variant="contained"
+            onClick={handleGetTicketsInformation}
+            disabled={loading}
+            sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600 }}
+          >
+            {i18n.t('dashboard.charts.date.filter')}
+          </Button>
+        </Stack>
+      </Box>
+      <Box sx={{ width: '100%', height: 320 }}>
+        <ResponsiveContainer>
+          <BarChart data={chartData} margin={{ top: 12, right: 12, left: 0, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.06)" />
+            <XAxis dataKey="name" tick={{ fontSize: 12 }} stroke="rgba(0,0,0,0.4)" />
+            <YAxis tick={{ fontSize: 12 }} stroke="rgba(0,0,0,0.4)" allowDecimals={false} />
+            <Tooltip content={<CustomTooltip />} />
+            <Bar dataKey="total" radius={[6, 6, 0, 0]} maxBarSize={48}>
+              {chartData.map((_, index) => (
+                <Cell key={index} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </Box>
+    </Paper>
+  );
+};

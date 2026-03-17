@@ -1,4 +1,4 @@
-import React, { useContext, useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 
 import Paper from "@material-ui/core/Paper";
 import Container from "@material-ui/core/Container";
@@ -10,27 +10,25 @@ import Select from "@material-ui/core/Select";
 import TextField from "@material-ui/core/TextField";
 import FormHelperText from "@material-ui/core/FormHelperText";
 import Typography from "@material-ui/core/Typography";
+import Box from "@material-ui/core/Box";
 
 import CallIcon from "@material-ui/icons/Call";
 import GroupAddIcon from "@material-ui/icons/GroupAdd";
 import HourglassEmptyIcon from "@material-ui/icons/HourglassEmpty";
 import CheckCircleIcon from "@material-ui/icons/CheckCircle";
-import AccessAlarmIcon from '@material-ui/icons/AccessAlarm';
-import TimerIcon from '@material-ui/icons/Timer';
+import AccessAlarmIcon from "@material-ui/icons/AccessAlarm";
+import TimerIcon from "@material-ui/icons/Timer";
 
 import { makeStyles } from "@material-ui/core/styles";
-import { grey, blue } from "@material-ui/core/colors";
 import { toast } from "react-toastify";
 
 import ButtonWithSpinner from "../../components/ButtonWithSpinner";
-
 import TableAttendantsStatus from "../../components/Dashboard/TableAttendantsStatus";
 import { isArray } from "lodash";
 
 import useDashboard from "../../hooks/useDashboard";
 import useContacts from "../../hooks/useContacts";
-import { ChatsUser } from "./ChartsUser"
-
+import { ChatsUser } from "./ChartsUser";
 import { isEmpty } from "lodash";
 import moment from "moment";
 import { ChartsDate } from "./ChartsDate";
@@ -214,6 +212,17 @@ const useStyles = makeStyles((theme) => ({
     overflow: "auto",
     flexDirection: "column",
   },
+  sectionTitle: {
+    fontSize: "1.1rem",
+    fontWeight: 600,
+    marginBottom: theme.spacing(2),
+    color: theme.palette.text.primary,
+  },
+  filterBar: {
+    padding: theme.spacing(2),
+    borderRadius: 16,
+    marginBottom: theme.spacing(3),
+  },
 }));
 
 const Dashboard = () => {
@@ -371,9 +380,48 @@ const Dashboard = () => {
   return (
     <div>
       <Container maxWidth="lg" className={classes.container}>
-        <Grid container spacing={3} justifyContent="flex-end">
-		
+        <Box mb={3}>
+          <Typography variant="h5" style={{ fontWeight: 600 }} color="textPrimary" gutterBottom>
+            {i18n.t("dashboard.title", "Dashboard")}
+          </Typography>
+          <Typography variant="body2" color="textSecondary">
+            {i18n.t("dashboard.subtitle", "Visão geral dos atendimentos e indicadores")}
+          </Typography>
+        </Box>
 
+        {/* Barra de filtros */}
+        <Paper className={classes.filterBar} elevation={0} variant="outlined">
+          <Grid container spacing={2} alignItems="center">
+            <Grid item xs={12} sm={6} md={3}>
+              <FormControl className={classes.selectContainer} size="small" fullWidth>
+                <InputLabel id="filter-type-label">{i18n.t("dashboard.filters.filterType.title")}</InputLabel>
+                <Select
+                  labelId="filter-type-label"
+                  value={filterType}
+                  onChange={(e) => handleChangeFilterType(e.target.value)}
+                >
+                  <MenuItem value={1}>{i18n.t("dashboard.filters.filterType.options.perDate")}</MenuItem>
+                  <MenuItem value={2}>{i18n.t("dashboard.filters.filterType.options.perPeriod")}</MenuItem>
+                </Select>
+                <FormHelperText>{i18n.t("dashboard.filters.filterType.helper")}</FormHelperText>
+              </FormControl>
+            </Grid>
+            {renderFilters()}
+            <Grid item xs={12} sm={6} md={2}>
+              <ButtonWithSpinner
+                loading={loading}
+                onClick={() => fetchData()}
+                variant="contained"
+                color="primary"
+                fullWidth
+              >
+                {i18n.t("dashboard.buttons.filter")}
+              </ButtonWithSpinner>
+            </Grid>
+          </Grid>
+        </Paper>
+
+        <Grid container spacing={3}>
           {/* EM ATENDIMENTO */}
           <Grid item xs={12} sm={6} md={4}>
             <Paper
@@ -639,60 +687,26 @@ const Dashboard = () => {
             </Paper>
           </Grid>
 		  
-		  {/* FILTROS */}
-          <Grid item xs={12} sm={6} md={4}>
-            <FormControl className={classes.selectContainer}>
-              <InputLabel id="period-selector-label">{i18n.t("dashboard.filters.filterType.title")}</InputLabel>
-              <Select
-                labelId="period-selector-label"
-                value={filterType}
-                onChange={(e) => handleChangeFilterType(e.target.value)}
-              >
-                <MenuItem value={1}>{i18n.t("dashboard.filters.filterType.options.perDate")}</MenuItem>
-                <MenuItem value={2}>{i18n.t("dashboard.filters.filterType.options.perPeriod")}</MenuItem>
-              </Select>
-              <FormHelperText>
-                {i18n.t("dashboard.filters.filterType.helper")}
-              </FormHelperText>
-            </FormControl>
-          </Grid>
-
-          {renderFilters()}
-
-          {/* BOTAO FILTRAR */}
-          <Grid item xs={12} className={classes.alignRight}>
-            <ButtonWithSpinner
-              loading={loading}
-              onClick={() => fetchData()}
-              variant="contained"
-              color="primary"
-            >
-              {i18n.t("dashboard.buttons.filter")}
-            </ButtonWithSpinner>
-          </Grid>
-
           {/* USUARIOS ONLINE */}
           <Grid item xs={12}>
+            <Typography className={classes.sectionTitle}>
+              {i18n.t("dashboard.onlineTable.title", "Status dos atendentes")}
+            </Typography>
             {attendants.length ? (
-              <TableAttendantsStatus
-                attendants={attendants}
-                loading={loading}
-              />
+              <Paper elevation={0} variant="outlined" style={{ borderRadius: 16, overflow: "hidden" }}>
+                <TableAttendantsStatus attendants={attendants} loading={loading} />
+              </Paper>
             ) : null}
           </Grid>
 
           {/* TOTAL DE ATENDIMENTOS POR USUARIO */}
-          <Grid item xs={12}>
-            <Paper className={classes.fixedHeightPaper2}>
-              <ChatsUser />
-            </Paper>
+          <Grid item xs={12} md={6}>
+            <ChatsUser />
           </Grid>
 
           {/* TOTAL DE ATENDIMENTOS */}
-          <Grid item xs={12}>
-            <Paper className={classes.fixedHeightPaper2}>
-              <ChartsDate />
-            </Paper>
+          <Grid item xs={12} md={6}>
+            <ChartsDate />
           </Grid>
 
         </Grid>

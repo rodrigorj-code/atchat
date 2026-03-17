@@ -86,6 +86,8 @@ const messages = {
         },
       },
       dashboard: {
+        title: "Dashboard",
+        subtitle: "Visão geral dos atendimentos e indicadores",
         toasts: {
           selectFilterError: "Parametrize o filtro",
           userChartError: "Erro ao obter informações da conversa",
@@ -128,6 +130,7 @@ const messages = {
           filter: "Filtrar",
         },
         onlineTable: {
+          title: "Status dos atendentes",
           ratingLabel: "1 - Insatisfeito, 2 - Satisfeito, 3 - Muito Satisfeito",
           name: "Nome",
           ratings: "Avaliações",
@@ -141,6 +144,7 @@ const messages = {
             start: "Início",
             end: "Fim",
             filter: "Filtrar",
+            tickets: "atendimentos",
           },
           date: {
             label: "Gráfico de Conversas",
@@ -148,6 +152,7 @@ const messages = {
             start: "Início",
             end: "Fim",
             filter: "Filtrar",
+            tickets: "atendimentos",
           },
         },
       },
@@ -308,8 +313,25 @@ const messages = {
       },
       connections: {
         title: "Conexões",
+        guide: {
+          title: "Como conectar o WhatsApp",
+          intro: "Não é necessário API paga. A conexão é por QR Code (como WhatsApp Web).",
+          step1: "Clique em \"Adicionar WhatsApp\", dê um nome e salve.",
+          step2: "Na lista, clique no botão \"Ver QR Code\" quando o status estiver como \"Aguardando QR\".",
+          step3: "No celular: WhatsApp → Menu (⋮) ou Configurações → Dispositivos conectados → Conectar dispositivo.",
+          step4: "Aponte a câmera para o QR Code na tela. Quando conectar, o status ficará verde \"Conectado\".",
+        },
+        statusLabel: {
+          CONNECTED: "Conectado",
+          qrcode: "Aguardando QR",
+          OPENING: "Conectando...",
+          DISCONNECTED: "Desconectado",
+          TIMEOUT: "Sem conexão",
+          PAIRING: "Emparelhando",
+        },
         toasts: {
           deleted: "Conexão com o WhatsApp excluída com sucesso!",
+          connected: "WhatsApp conectado com sucesso!",
         },
         confirmationModal: {
           deleteTitle: "Deletar",
@@ -402,19 +424,20 @@ const messages = {
         success: "WhatsApp salvo com sucesso.",
       },
       qrCodeModal: {
-        title: "Utilize o seu WhatsApp:",
+        title: "Conectar WhatsApp por QR Code",
         steps: {
-          one: "1 - Abra o WhatsApp no seu celular",
+          one: "Abra o WhatsApp no seu celular",
           two: {
-            partOne: "2 - Toque em Mais opções no Android",
+            partOne: "Toque em Mais opções (⋮) no Android",
             partTwo: "ou em Configurações",
             partThree: "no iPhone",
           },
-          three:
-              "3 - Toque em Dispositivos conectados e, em seguida, em Conectar dispositivos",
-          four: "4 - Aponte seu celular para essa tela para capturar o QR Code",
+          three: "Toque em \"Dispositivos conectados\" e depois em \"Conectar dispositivo\"",
+          four: "Aponte a câmera do celular para o QR Code abaixo",
         },
-        waiting: "Aguardando leitura do QR Code",
+        waiting: "Aguardando leitura do QR Code...",
+        newQr: "Gerar novo QR Code",
+        connected: "Conectado! Você já pode fechar esta janela.",
       },
       qrCode: {
         message: "Leia o QrCode para iniciar a sessão",
@@ -1521,6 +1544,8 @@ const messages = {
         placeholderClosed:
             "Reabra ou aceite esse ticket para enviar uma mensagem.",
         signMessage: "Assinar",
+        sticker: "Enviar figurinha (WebP)",
+        stickerOnlyWebp: "Figurinha deve ser um arquivo .webp",
       },
       contactDrawer: {
         header: "Dados do contato",
