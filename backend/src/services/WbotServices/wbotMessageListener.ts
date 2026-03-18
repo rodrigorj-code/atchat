@@ -1000,13 +1000,11 @@ export const verifyMessage = async (
   const io = getIO();
   const quotedMsg = await verifyQuotedMessage(msg);
   const extractedBody = getBodyMessage(msg);
-  const body =
-    bodyOverride && msg.key.fromMe
-      ? bodyOverride
-      : extractedBody;
+  const fromMe = msg.key?.fromMe ?? Boolean(bodyOverride);
+  const body = bodyOverride ?? extractedBody;
   const isEdited = getTypeMessage(msg) == "editedMessage";
 
-  if (msg.key.fromMe && !bodyOverride && isWhatsAppPendingStub(extractedBody)) {
+  if (fromMe && !bodyOverride && isWhatsAppPendingStub(extractedBody)) {
     return;
   }
 
@@ -1017,9 +1015,9 @@ export const verifyMessage = async (
     ticketId: ticket.id,
     contactId: msg.key.fromMe ? undefined : contact.id,
     body,
-    fromMe: msg.key.fromMe,
+    fromMe,
     mediaType: getTypeMessage(msg),
-    read: msg.key.fromMe,
+    read: fromMe,
     quotedMsgId: quotedMsg?.id,
     ack: msg.status,
     remoteJid: msg.key.remoteJid,
