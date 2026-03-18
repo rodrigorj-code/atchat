@@ -88,7 +88,13 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     const bodyToSave = formatBody(body, ticket.contact);
     if (sentMessage && ticket.contact) {
       await verifyMessage(
-        sentMessage as any,
+        {
+          ...(sentMessage as any),
+          key: {
+            ...(sentMessage as any)?.key,
+            fromMe: true
+          }
+        } as any,
         ticket,
         ticket.contact,
         bodyToSave
@@ -175,11 +181,24 @@ export const send = async (req: Request, res: Response): Promise<Response> => {
         })
       );
     } else {
-      await SendWhatsAppMessage({ body: formatBody(body, contact), ticket });
+      const sentMessage = await SendWhatsAppMessage({ body: formatBody(body, contact), ticket });
 
       await ticket.update({
         lastMessage: body,
       });
+      // Salva imediatamente o texto real enviado (evita “Aguardando mensagem…” virar body)
+      await verifyMessage(
+        {
+          ...(sentMessage as any),
+          key: {
+            ...(sentMessage as any)?.key,
+            fromMe: true
+          }
+        } as any,
+        ticket,
+        contact,
+        formatBody(body, contact)
+      );
 
     }
 
