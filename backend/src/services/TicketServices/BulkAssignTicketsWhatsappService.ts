@@ -8,7 +8,7 @@ interface Request {
   companyId: number;
   ticketIds: number[];
   whatsappId: number;
-  actionUserId?: number | null;
+  actionUserId?: string | null;
 }
 
 interface Response {

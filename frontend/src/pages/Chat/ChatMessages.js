@@ -1,7 +1,6 @@
 import React, { useContext, useEffect, useRef, useState } from "react";
 import {
   Box,
-  FormControl,
   IconButton,
   Input,
   InputAdornment,
@@ -10,11 +9,12 @@ import {
   Typography,
 } from "@material-ui/core";
 import SendIcon from "@material-ui/icons/Send";
+import AttachFileIcon from "@material-ui/icons/AttachFile";
+import MicIcon from "@material-ui/icons/Mic";
 
 import { AuthContext } from "../../context/Auth/AuthContext";
 import { useDate } from "../../hooks/useDate";
 import api from "../../services/api";
-import { green } from "@material-ui/core/colors";
 
 const useStyles = makeStyles((theme) => ({
   mainContainer: {
@@ -25,45 +25,79 @@ const useStyles = makeStyles((theme) => ({
     overflow: "hidden",
     borderRadius: 0,
     height: "100%",
-    borderLeft: "1px solid rgba(0, 0, 0, 0.12)",
+    borderLeft: "1px solid rgba(0, 0, 0, 0.08)",
+    backgroundColor: "#fff",
+  },
+  chatHeader: {
+    display: "flex",
+    alignItems: "center",
+    padding: theme.spacing(1.5, 2),
+    borderBottom: "1px solid rgba(0, 0, 0, 0.08)",
+    backgroundColor: "#fff",
+  },
+  headerAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: "50%",
+    backgroundColor: "#2196f3",
+    color: "#fff",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontWeight: 600,
+    fontSize: "1rem",
+    marginRight: theme.spacing(1.5),
+  },
+  headerTitle: {
+    fontWeight: 600,
+    fontSize: "1rem",
+  },
+  headerSub: {
+    fontSize: "0.8125rem",
+    color: theme.palette.text.secondary,
+    display: "block",
   },
   messageList: {
     position: "relative",
     overflowY: "auto",
-    height: "100%",
+    flex: 1,
+    minHeight: 0,
     ...theme.scrollbarStyles,
-    backgroundColor: theme.palette.chatlist, //DARK MODE PLW DESIGN//
+    backgroundColor: "#fafafa",
   },
-  inputArea: {
-    position: "relative",
-    height: "auto",
+  inputBar: {
+    display: "flex",
+    alignItems: "center",
+    padding: theme.spacing(1, 2),
+    borderTop: "1px solid rgba(0, 0, 0, 0.08)",
+    backgroundColor: "#fff",
   },
   input: {
-    padding: "20px",
-  },
-  buttonSend: {
-    margin: theme.spacing(1),
+    flex: 1,
+    margin: "0 8px",
+    padding: "10px 14px",
+    fontSize: "0.9375rem",
+    backgroundColor: "#f0f0f0",
+    borderRadius: 20,
   },
   boxLeft: {
-    padding: "10px 10px 5px",
-    margin: "10px",
-    position: "relative",
-    backgroundColor: "blue",
-    maxWidth: 300,
-    borderRadius: 10,
-    borderBottomLeftRadius: 0,
-    border: "1px solid rgba(0, 0, 0, 0.12)",
+    padding: "10px 12px",
+    margin: "8px 12px",
+    maxWidth: 280,
+    borderRadius: 12,
+    borderBottomLeftRadius: 4,
+    backgroundColor: "#e8e8e8",
+    border: "1px solid rgba(0, 0, 0, 0.06)",
   },
   boxRight: {
-    padding: "10px 10px 5px",
-    margin: "10px 10px 10px auto",
-    position: "relative",
-    backgroundColor: "green", //DARK MODE PLW DESIGN//
+    padding: "10px 12px",
+    margin: "8px 12px 8px auto",
+    maxWidth: 280,
+    borderRadius: 12,
+    borderBottomRightRadius: 4,
+    backgroundColor: "#dcf8c6",
     textAlign: "right",
-    maxWidth: 300,
-    borderRadius: 10,
-    borderBottomRightRadius: 0,
-    border: "1px solid rgba(0, 0, 0, 0.12)",
+    border: "1px solid rgba(0, 0, 0, 0.06)",
   },
 }));
 
@@ -115,17 +149,27 @@ export default function ChatMessages({
     }
   };
 
+  const participantCount = chat && Array.isArray(chat.users) ? chat.users.length : 0;
+  const participantLabel =
+    participantCount === 1 ? "1 participante" : `${participantCount} participantes`;
+  const initial = (chat && chat.title ? chat.title.charAt(0).toUpperCase() : "C") || "C";
+
   return (
     <Paper className={classes.mainContainer}>
+      <div className={classes.chatHeader}>
+        <div className={classes.headerAvatar}>{initial}</div>
+        <div>
+          <Typography className={classes.headerTitle}>{chat?.title || "Chat"}</Typography>
+          <Typography className={classes.headerSub}>{participantLabel}</Typography>
+        </div>
+      </div>
       <div onScroll={handleScroll} className={classes.messageList}>
         {Array.isArray(messages) &&
           messages.map((item, key) => {
             if (item.senderId === user.id) {
               return (
                 <Box key={key} className={classes.boxRight}>
-                  <Typography variant="subtitle2">
-                    {item.sender.name}
-                  </Typography>
+                  <Typography variant="subtitle2">{item.sender.name}</Typography>
                   {item.message}
                   <Typography variant="caption" display="block">
                     {datetimeToClient(item.createdAt)}
@@ -135,9 +179,7 @@ export default function ChatMessages({
             } else {
               return (
                 <Box key={key} className={classes.boxLeft}>
-                  <Typography variant="subtitle2">
-                    {item.sender.name}
-                  </Typography>
+                  <Typography variant="subtitle2">{item.sender.name}</Typography>
                   {item.message}
                   <Typography variant="caption" display="block">
                     {datetimeToClient(item.createdAt)}
@@ -146,38 +188,42 @@ export default function ChatMessages({
               );
             }
           })}
-        <div ref={baseRef}></div>
+        <div ref={baseRef} />
       </div>
-      <div className={classes.inputArea}>
-        <FormControl variant="outlined" fullWidth>
-          <Input
-            multiline
-            value={contentMessage}
-            onKeyUp={(e) => {
-              if (e.key === "Enter" && contentMessage.trim() !== "") {
-                handleSendMessage(contentMessage);
-                setContentMessage("");
-              }
-            }}
-            onChange={(e) => setContentMessage(e.target.value)}
-            className={classes.input}
-            endAdornment={
-              <InputAdornment position="end">
-                <IconButton
-                  onClick={() => {
-                    if (contentMessage.trim() !== "") {
-                      handleSendMessage(contentMessage);
-                      setContentMessage("");
-                    }
-                  }}
-                  className={classes.buttonSend}
-                >
-                  <SendIcon />
-                </IconButton>
-              </InputAdornment>
+      <div className={classes.inputBar}>
+        <IconButton size="small" aria-label="anexar">
+          <AttachFileIcon />
+        </IconButton>
+        <Input
+          disableUnderline
+          fullWidth
+          placeholder="Digite sua mensagem..."
+          value={contentMessage}
+          onKeyUp={(e) => {
+            if (e.key === "Enter" && contentMessage.trim() !== "") {
+              handleSendMessage(contentMessage);
+              setContentMessage("");
             }
-          />
-        </FormControl>
+          }}
+          onChange={(e) => setContentMessage(e.target.value)}
+          className={classes.input}
+          inputProps={{ "aria-label": "mensagem" }}
+        />
+        <IconButton size="small" aria-label="microfone">
+          <MicIcon />
+        </IconButton>
+        <IconButton
+          size="small"
+          aria-label="enviar"
+          onClick={() => {
+            if (contentMessage.trim() !== "") {
+              handleSendMessage(contentMessage);
+              setContentMessage("");
+            }
+          }}
+        >
+          <SendIcon />
+        </IconButton>
       </div>
     </Paper>
   );

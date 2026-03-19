@@ -10,6 +10,7 @@ import {
   DialogTitle,
   Fab,
   Grid,
+  IconButton,
   InputBase,
   makeStyles,
   Paper,
@@ -21,6 +22,7 @@ import {
 import SearchIcon from "@material-ui/icons/Search";
 import AddIcon from "@material-ui/icons/Add";
 import PeopleIcon from "@material-ui/icons/People";
+import MenuIcon from "@material-ui/icons/Menu";
 import ChatList from "./ChatList";
 import ChatMessages from "./ChatMessages";
 import { UsersFilter } from "../../components/UsersFilter";
@@ -72,10 +74,15 @@ const useStyles = makeStyles((theme) => ({
     position: "relative",
   },
   chatHeader: {
-    padding: theme.spacing(2),
+    display: "flex",
+    alignItems: "center",
+    padding: theme.spacing(1.5, 2),
     borderBottom: "1px solid rgba(0,0,0,0.08)",
     fontWeight: 600,
     fontSize: "1.125rem",
+  },
+  chatHeaderIcon: {
+    marginRight: theme.spacing(1),
   },
   searchWrap: {
     display: "flex",
@@ -441,7 +448,14 @@ function Chat(props) {
       <Grid className={classes.gridContainer} container>
         <Grid className={classes.gridItem} md={4} item>
           <div className={classes.leftPane}>
-            <Typography className={classes.chatHeader}>Chat Interno</Typography>
+            <div className={classes.chatHeader}>
+              <IconButton size="small" className={classes.chatHeaderIcon} aria-label="menu">
+                <MenuIcon />
+              </IconButton>
+              <Typography component="span" style={{ fontWeight: 600, fontSize: "1.125rem" }}>
+                Chat Interno
+              </Typography>
+            </div>
             <div className={classes.searchWrap}>
               <SearchIcon style={{ color: "rgba(0,0,0,0.4)" }} />
               <InputBase

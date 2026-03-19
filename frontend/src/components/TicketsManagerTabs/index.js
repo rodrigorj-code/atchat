@@ -26,7 +26,7 @@ import MenuItem from "@material-ui/core/MenuItem";
 
 import FolderOpenIcon from "@material-ui/icons/FolderOpen";
 import PersonIcon from "@material-ui/icons/Person";
-import SmartToyIcon from "@material-ui/icons/SmartToy";
+import AndroidIcon from "@material-ui/icons/Android";
 
 import NewTicketModal from "../NewTicketModal";
 import TicketsList from "../TicketsListCustom";
@@ -58,7 +58,9 @@ const useStyles = makeStyles(theme => ({
 
 	tabsHeader: {
 		flex: "none",
-		backgroundColor: theme.palette.tabHeaderBackground,
+		backgroundColor: "#fff",
+		borderTopLeftRadius: 12,
+		borderTopRightRadius: 12,
 	},
 
 	tabsInternal: {
@@ -203,6 +205,10 @@ const useStyles = makeStyles(theme => ({
 		backgroundColor: "#1a1a1a",
 		color: "#fff",
 		marginLeft: theme.spacing(1),
+		borderRadius: 8,
+		width: 34,
+		height: 34,
+		padding: 0,
 		"&:hover": {
 			backgroundColor: "#333",
 		},
@@ -442,7 +448,7 @@ const TicketsManagerTabs = () => {
               <Button
                 variant="outlined"
                 className={classes.bulkButton}
-                startIcon={<SmartToyIcon />}
+                startIcon={<AndroidIcon />}
                 onClick={() => {}}
               >
                 CHATBOT
@@ -503,7 +509,7 @@ const TicketsManagerTabs = () => {
           </Button>
         </div>
       </Dialog>
-      <Paper elevation={0} square className={classes.tabsHeader}>
+      <Paper elevation={0} className={classes.tabsHeader}>
         <Tabs
           value={tab}
           onChange={handleChangeTab}
