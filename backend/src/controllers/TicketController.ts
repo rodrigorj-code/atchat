@@ -9,6 +9,8 @@ import ShowTicketUUIDService from "../services/TicketServices/ShowTicketFromUUID
 import ShowTicketService from "../services/TicketServices/ShowTicketService";
 import UpdateTicketService from "../services/TicketServices/UpdateTicketService";
 import ListTicketsServiceKanban from "../services/TicketServices/ListTicketsServiceKanban";
+import ListTicketsWithoutConnectionService from "../services/TicketServices/ListTicketsWithoutConnectionService";
+import BulkAssignTicketsWhatsappService from "../services/TicketServices/BulkAssignTicketsWhatsappService";
 
 type IndexQuery = {
   searchParam: string;
@@ -221,4 +223,25 @@ export const remove = async (
     });
 
   return res.status(200).json({ message: "ticket deleted" });
+};
+
+export const listWithoutConnection = async (req: Request, res: Response): Promise<Response> => {
+  const { companyId } = req.user;
+  const { ticketIds, count } = await ListTicketsWithoutConnectionService({ companyId });
+  return res.status(200).json({ ticketIds, count });
+};
+
+export const bulkAssignConnection = async (req: Request, res: Response): Promise<Response> => {
+  const { companyId, id } = req.user;
+  const { whatsappId, ticketIds } = req.body as { whatsappId: number; ticketIds: number[] };
+  if (!whatsappId || !Array.isArray(ticketIds) || ticketIds.length === 0) {
+    return res.status(400).json({ error: "whatsappId and ticketIds (non-empty) are required" });
+  }
+  const { updated } = await BulkAssignTicketsWhatsappService({
+    companyId,
+    ticketIds,
+    whatsappId: Number(whatsappId),
+    actionUserId: id
+  });
+  return res.status(200).json({ updated });
 };

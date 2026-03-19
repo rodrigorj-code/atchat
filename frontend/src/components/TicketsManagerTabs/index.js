@@ -8,11 +8,25 @@ import InputBase from "@material-ui/core/InputBase";
 import Tabs from "@material-ui/core/Tabs";
 import Tab from "@material-ui/core/Tab";
 import Badge from "@material-ui/core/Badge";
-import MoveToInboxIcon from "@material-ui/icons/MoveToInbox";
-import CheckBoxIcon from "@material-ui/icons/CheckBox";
+import Fab from "@material-ui/core/Fab";
+import Typography from "@material-ui/core/Typography";
+import AddIcon from "@material-ui/icons/Add";
+import FlashOnIcon from "@material-ui/icons/FlashOn";
 
 import FormControlLabel from "@material-ui/core/FormControlLabel";
 import Switch from "@material-ui/core/Switch";
+import IconButton from "@material-ui/core/IconButton";
+import Dialog from "@material-ui/core/Dialog";
+import DialogTitle from "@material-ui/core/DialogTitle";
+import DialogContent from "@material-ui/core/DialogContent";
+import FormControl from "@material-ui/core/FormControl";
+import InputLabel from "@material-ui/core/InputLabel";
+import Select from "@material-ui/core/Select";
+import MenuItem from "@material-ui/core/MenuItem";
+
+import FolderOpenIcon from "@material-ui/icons/FolderOpen";
+import PersonIcon from "@material-ui/icons/Person";
+import SmartToyIcon from "@material-ui/icons/SmartToy";
 
 import NewTicketModal from "../NewTicketModal";
 import TicketsList from "../TicketsListCustom";
@@ -20,7 +34,11 @@ import TabPanel from "../TabPanel";
 
 import { i18n } from "../../translate/i18n";
 import { AuthContext } from "../../context/Auth/AuthContext";
+import { WhatsAppsContext } from "../../context/WhatsApp/WhatsAppsContext";
 import { Can } from "../Can";
+import api from "../../services/api";
+import { toast } from "react-toastify";
+import toastError from "../../errors/toastError";
 import TicketsQueueSelect from "../TicketsQueueSelect";
 import { Button } from "@material-ui/core";
 import { TagsFilter } from "../TagsFilter";
@@ -136,7 +154,125 @@ const useStyles = makeStyles(theme => ({
 		'& .MuiInputLabel-outlined': {
 			marginTop: "-6px"
 		}
-	}
+	},
+	// Stream HUB: abas em maiúsculas, pills e busca
+	tabLabel: {
+		textTransform: "uppercase",
+		fontWeight: 600,
+		fontSize: "0.8125rem",
+	},
+	statusPillsRow: {
+		display: "flex",
+		flexWrap: "wrap",
+		gap: theme.spacing(1),
+		padding: theme.spacing(1, 2),
+		backgroundColor: theme.palette.background.paper,
+		borderBottom: "1px solid rgba(0,0,0,0.08)",
+	},
+	statusPill: {
+		fontSize: "0.75rem",
+		fontWeight: 600,
+		padding: "4px 10px",
+		borderRadius: 6,
+	},
+	statusPillGreen: {
+		backgroundColor: "rgba(36, 199, 118, 0.15)",
+		color: "#24c776",
+	},
+	statusPillPink: {
+		backgroundColor: "rgba(233, 30, 99, 0.12)",
+		color: "#e91e63",
+	},
+	searchRow: {
+		display: "flex",
+		alignItems: "center",
+		padding: theme.spacing(1, 1.5),
+		borderBottom: "1px solid rgba(0,0,0,0.08)",
+		backgroundColor: theme.palette.background.paper,
+	},
+	searchInputWrap: {
+		flex: 1,
+		display: "flex",
+		alignItems: "center",
+		border: "1px solid rgba(0,0,0,0.2)",
+		borderRadius: 6,
+		padding: "6px 10px",
+		backgroundColor: "#fff",
+	},
+	searchButton: {
+		backgroundColor: "#1a1a1a",
+		color: "#fff",
+		marginLeft: theme.spacing(1),
+		"&:hover": {
+			backgroundColor: "#333",
+		},
+	},
+	fabsWrap: {
+		position: "absolute",
+		bottom: 16,
+		left: 16,
+		display: "flex",
+		flexDirection: "column",
+		gap: 10,
+		zIndex: 10,
+	},
+	fabGreen: {
+		backgroundColor: "#24c776",
+		color: "#fff",
+		boxShadow: "0 4px 14px rgba(36, 199, 118, 0.45)",
+		animation: "$fabPulse 2s ease-in-out infinite",
+		"&:hover": {
+			backgroundColor: "#1fb865",
+		},
+	},
+	"@keyframes fabPulse": {
+		"0%, 100%": { boxShadow: "0 4px 14px rgba(36, 199, 118, 0.45)" },
+		"50%": { boxShadow: "0 4px 20px rgba(36, 199, 118, 0.7)" },
+	},
+	// Modal Ações em massa
+	bulkModalTitle: {
+		fontSize: "1.125rem",
+		fontWeight: 600,
+		padding: theme.spacing(2, 3),
+		borderBottom: "1px solid rgba(0,0,0,0.08)",
+	},
+	bulkSection: {
+		padding: theme.spacing(2, 3),
+	},
+	bulkSectionTitle: {
+		fontSize: "0.75rem",
+		fontWeight: 700,
+		letterSpacing: "0.05em",
+		color: theme.palette.text.secondary,
+		marginBottom: theme.spacing(1.5),
+	},
+	bulkButtonsRow: {
+		display: "flex",
+		flexWrap: "wrap",
+		gap: theme.spacing(1.5),
+	},
+	bulkButton: {
+		textTransform: "none",
+		fontWeight: 600,
+	},
+	bulkAssignRow: {
+		marginTop: theme.spacing(2),
+	},
+	bulkSelect: {
+		width: "100%",
+		marginBottom: theme.spacing(1.5),
+	},
+	bulkFooter: {
+		padding: theme.spacing(2, 3),
+		borderTop: "1px solid rgba(0,0,0,0.08)",
+		display: "flex",
+		justifyContent: "flex-end",
+	},
+	groupsPlaceholder: {
+		padding: theme.spacing(4, 2),
+		textAlign: "center",
+		color: theme.palette.text.secondary,
+	},
 }));
 
 const TicketsManagerTabs = () => {
@@ -147,9 +283,15 @@ const TicketsManagerTabs = () => {
   const [tab, setTab] = useState("open");
   const [tabOpen, setTabOpen] = useState("open");
   const [newTicketModalOpen, setNewTicketModalOpen] = useState(false);
+  const [bulkActionsModalOpen, setBulkActionsModalOpen] = useState(false);
+  const [bulkSelectedConnection, setBulkSelectedConnection] = useState("");
+  const [bulkTicketIds, setBulkTicketIds] = useState([]);
+  const [bulkLoading, setBulkLoading] = useState(false);
+  const [bulkAssigning, setBulkAssigning] = useState(false);
   const [showAllTickets, setShowAllTickets] = useState(false);
   const searchInputRef = useRef();
   const { user } = useContext(AuthContext);
+  const { whatsApps } = useContext(WhatsAppsContext);
   const { profile } = user;
 
   const [openCount, setOpenCount] = useState(0);
@@ -222,15 +364,145 @@ const TicketsManagerTabs = () => {
     setSelectedUsers(users);
   };
 
+  const fetchTicketsWithoutConnection = async () => {
+    setBulkLoading(true);
+    try {
+      const { data } = await api.get("/tickets/without-connection");
+      setBulkTicketIds(data.ticketIds || []);
+    } catch (err) {
+      toastError(err);
+      setBulkTicketIds([]);
+    }
+    setBulkLoading(false);
+  };
+
+  const handleOpenBulkModal = () => {
+    setBulkActionsModalOpen(true);
+    setBulkSelectedConnection("");
+    fetchTicketsWithoutConnection();
+  };
+
+  const handleBulkAssign = async () => {
+    if (!bulkSelectedConnection || bulkTicketIds.length === 0) return;
+    setBulkAssigning(true);
+    try {
+      const { data } = await api.post("/tickets/bulk-assign-connection", {
+        whatsappId: Number(bulkSelectedConnection),
+        ticketIds: bulkTicketIds
+      });
+      toast.success(`${data.updated || 0} ticket(s) atribuído(s) à conexão.`);
+      setBulkActionsModalOpen(false);
+      setBulkSelectedConnection("");
+      setBulkTicketIds([]);
+    } catch (err) {
+      toastError(err);
+    }
+    setBulkAssigning(false);
+  };
+
   return (
-    <Paper elevation={0} variant="outlined" className={classes.ticketsWrapper}>
+    <Paper elevation={0} variant="outlined" className={classes.ticketsWrapper} style={{ position: "relative" }}>
       <NewTicketModal
         modalOpen={newTicketModalOpen}
-        onClose={(ticket) => {
-          
-          handleCloseOrOpenTicket(ticket);
-        }}
+        onClose={(ticket) => handleCloseOrOpenTicket(ticket)}
       />
+
+      <Dialog
+        open={bulkActionsModalOpen}
+        onClose={() => setBulkActionsModalOpen(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{ style: { borderRadius: 12 } }}
+      >
+        <DialogTitle className={classes.bulkModalTitle}>
+          Ações em massa - Tickets
+        </DialogTitle>
+        <DialogContent style={{ padding: 0 }}>
+          <div className={classes.bulkSection}>
+            <Typography className={classes.bulkSectionTitle}>
+              FECHAR TODOS TICKETS:
+            </Typography>
+            <div className={classes.bulkButtonsRow}>
+              <Button
+                variant="outlined"
+                className={classes.bulkButton}
+                startIcon={<FolderOpenIcon />}
+                onClick={() => {}}
+              >
+                Abertos
+              </Button>
+              <Button
+                variant="outlined"
+                className={classes.bulkButton}
+                startIcon={<PersonIcon />}
+                onClick={() => {}}
+              >
+                Pendentes
+              </Button>
+              <Button
+                variant="outlined"
+                className={classes.bulkButton}
+                startIcon={<SmartToyIcon />}
+                onClick={() => {}}
+              >
+                CHATBOT
+              </Button>
+            </div>
+          </div>
+          <div className={`${classes.bulkSection} ${classes.bulkAssignRow}`}>
+            <Typography className={classes.bulkSectionTitle}>
+              ATRIBUIR TODOS TICKETS SEM CONEXÃO:
+            </Typography>
+            {bulkLoading ? (
+              <Typography variant="body2" color="textSecondary">
+                Carregando…
+              </Typography>
+            ) : (
+              <>
+                <Typography variant="body2" color="textSecondary" style={{ marginBottom: 8 }}>
+                  {bulkTicketIds.length} ticket(s) sem conexão
+                </Typography>
+                <FormControl variant="outlined" size="small" className={classes.bulkSelect}>
+                  <InputLabel id="bulk-connection-label">Conexão</InputLabel>
+                  <Select
+                    labelId="bulk-connection-label"
+                    value={bulkSelectedConnection}
+                    onChange={(e) => setBulkSelectedConnection(e.target.value)}
+                    label="Conexão"
+                  >
+                    <MenuItem value="">
+                      <em>Selecione</em>
+                    </MenuItem>
+                    {(whatsApps || []).map((w) => (
+                      <MenuItem key={w.id} value={String(w.id)}>
+                        {w.name || `Conexão ${w.id}`}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  fullWidth
+                  disabled={!bulkSelectedConnection || bulkTicketIds.length === 0 || bulkAssigning}
+                  onClick={handleBulkAssign}
+                >
+                  {bulkAssigning ? "Atribuindo…" : "Atribuir"}
+                </Button>
+              </>
+            )}
+          </div>
+        </DialogContent>
+        <div className={classes.bulkFooter}>
+          <Button
+            onClick={() => setBulkActionsModalOpen(false)}
+            color="default"
+            className={classes.bulkButton}
+          >
+            CANCELAR
+          </Button>
+        </div>
+      </Dialog>
       <Paper elevation={0} square className={classes.tabsHeader}>
         <Tabs
           value={tab}
@@ -238,53 +510,62 @@ const TicketsManagerTabs = () => {
           variant="fullWidth"
           indicatorColor="primary"
           textColor="primary"
-          aria-label="icon label tabs example"
         >
-          <Tab
-            value={"open"}
-            icon={<MoveToInboxIcon />}
-            label={i18n.t("tickets.tabs.open.title")}
-            classes={{ root: classes.tab }}
-          />
-          <Tab
-            value={"closed"}
-            icon={<CheckBoxIcon />}
-            label={i18n.t("tickets.tabs.closed.title")}
-            classes={{ root: classes.tab }}
-          />
-          <Tab
-            value={"search"}
-            icon={<SearchIcon />}
-            label={i18n.t("tickets.tabs.search.title")}
-            classes={{ root: classes.tab }}
-          />
+          <Tab value={"open"} label="ABERTAS" classes={{ root: classes.tab, label: classes.tabLabel }} />
+          <Tab value={"closed"} label="RESOLVIDOS" classes={{ root: classes.tab, label: classes.tabLabel }} />
+          <Tab value={"groups"} label="GRUPOS" classes={{ root: classes.tab, label: classes.tabLabel }} />
+          <Tab value={"search"} label="FILTROS" classes={{ root: classes.tab, label: classes.tabLabel }} />
         </Tabs>
       </Paper>
-      <Paper square elevation={0} className={classes.ticketOptionsBox}>
-        {tab === "search" ? (
-          <div className={classes.serachInputWrapper}>
-            <SearchIcon className={classes.searchIcon} />
-            <InputBase
-              className={classes.searchInput}
-              inputRef={searchInputRef}
-              placeholder={i18n.t("tickets.search.placeholder")}
-              type="search"
-              onChange={handleSearch}
-            />
-          </div>
-        ) : (
-          <>
-            <Button
-              variant="outlined"
-              color="primary"
-              onClick={() => setNewTicketModalOpen(true)}
-            >
-              {i18n.t("ticketsManager.buttons.newTicket")}
-            </Button>
-            <Can
-              role={user.profile}
-              perform="tickets-manager:showall"
-              yes={() => (
+
+      {tab === "open" && (
+        <div className={classes.statusPillsRow}>
+          <span className={`${classes.statusPill} ${classes.statusPillGreen}`}>
+            {openCount} ATENDENDO
+          </span>
+          <span className={`${classes.statusPill} ${classes.statusPillPink}`}>
+            {pendingCount} AGUARDANDO
+          </span>
+          <span className={`${classes.statusPill} ${classes.statusPillGreen}`}>
+            0 CHATBOT
+          </span>
+        </div>
+      )}
+
+      <div className={classes.searchRow}>
+        <div className={classes.searchInputWrap}>
+          <InputBase
+            className={classes.searchInput}
+            inputRef={searchInputRef}
+            placeholder="Buscar atendimento e mensagens"
+            type="search"
+            value={searchParam}
+            onChange={(e) => {
+              if (e.target.value.trim()) setTab("search");
+              handleSearch(e);
+            }}
+            onFocus={() => tab !== "search" && setTab("search")}
+            fullWidth
+            style={{ marginLeft: 4 }}
+          />
+        </div>
+        <IconButton
+          className={classes.searchButton}
+          size="small"
+          onClick={() => searchInputRef.current?.focus()}
+          aria-label="Buscar"
+        >
+          <SearchIcon fontSize="small" />
+        </IconButton>
+      </div>
+
+      {(tab === "open" || tab === "closed" || tab === "search") && (
+        <Paper square elevation={0} className={classes.ticketOptionsBox}>
+          <Can
+            role={user.profile}
+            perform="tickets-manager:showall"
+            yes={() =>
+              tab === "open" ? (
                 <FormControlLabel
                   label={i18n.t("tickets.buttons.showAll")}
                   labelPlacement="start"
@@ -292,25 +573,24 @@ const TicketsManagerTabs = () => {
                     <Switch
                       size="small"
                       checked={showAllTickets}
-                      onChange={() =>
-                        setShowAllTickets((prevState) => !prevState)
-                      }
+                      onChange={() => setShowAllTickets((prev) => !prev)}
                       name="showAllTickets"
                       color="primary"
                     />
                   }
                 />
-              )}
-            />
-          </>
-        )}
-        <TicketsQueueSelect
-          style={{ marginLeft: 6 }}
-          selectedQueueIds={selectedQueueIds}
-          userQueues={user?.queues}
-          onChange={(values) => setSelectedQueueIds(values)}
-        />
-      </Paper>
+              ) : null
+            }
+          />
+          <TicketsQueueSelect
+            style={{ marginLeft: 6 }}
+            selectedQueueIds={selectedQueueIds}
+            userQueues={user?.queues}
+            onChange={(values) => setSelectedQueueIds(values)}
+          />
+        </Paper>
+      )}
+
       <TabPanel value={tab} name="open" className={classes.ticketsWrapper}>
         <Tabs
           value={tabOpen}
@@ -380,6 +660,31 @@ const TicketsManagerTabs = () => {
           selectedQueueIds={selectedQueueIds}
         />
       </TabPanel>
+
+      <TabPanel value={tab} name="groups" className={classes.ticketsWrapper}>
+        <div className={classes.groupsPlaceholder}>
+          <Typography variant="body2">Em breve.</Typography>
+        </div>
+      </TabPanel>
+
+      <div className={classes.fabsWrap}>
+        <Fab
+          size="small"
+          className={classes.fabGreen}
+          onClick={() => setNewTicketModalOpen(true)}
+          aria-label="Novo atendimento"
+        >
+          <AddIcon />
+        </Fab>
+        <Fab
+          size="small"
+          className={classes.fabGreen}
+          onClick={handleOpenBulkModal}
+          aria-label="Ações em massa"
+        >
+          <FlashOnIcon />
+        </Fab>
+      </div>
     </Paper>
   );
 };

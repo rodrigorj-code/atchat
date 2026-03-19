@@ -8,13 +8,19 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  Fab,
   Grid,
+  InputBase,
   makeStyles,
   Paper,
   Tab,
   Tabs,
   TextField,
+  Typography,
 } from "@material-ui/core";
+import SearchIcon from "@material-ui/icons/Search";
+import AddIcon from "@material-ui/icons/Add";
+import PeopleIcon from "@material-ui/icons/People";
 import ChatList from "./ChatList";
 import ChatMessages from "./ChatMessages";
 import { UsersFilter } from "../../components/UsersFilter";
@@ -35,17 +41,103 @@ const useStyles = makeStyles((theme) => ({
     flex: 1,
     padding: theme.spacing(2),
     height: `calc(100% - 48px)`,
-    overflowY: "hidden",
-    border: "1px solid rgba(0, 0, 0, 0.12)",
+    overflow: "hidden",
+    backgroundColor: "#f4f4f4",
   },
   gridContainer: {
     flex: 1,
-    height: "100%",
-    border: "1px solid rgba(0, 0, 0, 0.12)",
-    backgroundColor: theme.palette.dark,
+    minHeight: 0,
+    overflow: "hidden",
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
   },
   gridItem: {
     height: "100%",
+    display: "flex",
+    flexDirection: "column",
+    overflow: "hidden",
+    borderRight: "1px solid rgba(0,0,0,0.08)",
+  },
+  gridItemRight: {
+    height: "100%",
+    display: "flex",
+    flexDirection: "column",
+    overflow: "hidden",
+  },
+  leftPane: {
+    display: "flex",
+    flexDirection: "column",
+    height: "100%",
+    position: "relative",
+  },
+  chatHeader: {
+    padding: theme.spacing(2),
+    borderBottom: "1px solid rgba(0,0,0,0.08)",
+    fontWeight: 600,
+    fontSize: "1.125rem",
+  },
+  searchWrap: {
+    display: "flex",
+    alignItems: "center",
+    padding: theme.spacing(1, 2),
+    borderBottom: "1px solid rgba(0,0,0,0.08)",
+    backgroundColor: "#fff",
+  },
+  searchInput: {
+    flex: 1,
+    marginLeft: 8,
+    fontSize: "0.9375rem",
+  },
+  listWrap: {
+    flex: 1,
+    overflow: "auto",
+    minHeight: 0,
+  },
+  emptyState: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: theme.spacing(4),
+    textAlign: "center",
+    color: theme.palette.text.secondary,
+  },
+  emptyIcon: {
+    fontSize: 64,
+    color: "rgba(0,0,0,0.2)",
+    marginBottom: theme.spacing(2),
+  },
+  emptyTitle: {
+    fontWeight: 600,
+    fontSize: "1rem",
+    marginBottom: theme.spacing(0.5),
+    color: theme.palette.text.primary,
+  },
+  emptySub: {
+    fontSize: "0.875rem",
+    marginBottom: theme.spacing(2),
+  },
+  btnNewChat: {
+    backgroundColor: "#1a1a1a",
+    color: "#fff",
+    fontWeight: 600,
+    textTransform: "uppercase",
+    padding: "10px 20px",
+    "&:hover": {
+      backgroundColor: "#333",
+    },
+  },
+  fabNew: {
+    position: "absolute",
+    bottom: 16,
+    right: 16,
+    backgroundColor: "#1a1a1a",
+    color: "#fff",
+    zIndex: 10,
+    "&:hover": {
+      backgroundColor: "#333",
+    },
   },
   gridItemTab: {
     height: "92%",
@@ -164,9 +256,21 @@ function Chat(props) {
   const [messagesPage, setMessagesPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [tab, setTab] = useState(0);
+  const [searchChat, setSearchChat] = useState("");
   const isMounted = useRef(true);
   const scrollToBottomRef = useRef();
   const { id } = useParams();
+
+  const filteredChats = React.useMemo(() => {
+    if (!Array.isArray(chats)) return [];
+    const q = (searchChat || "").trim().toLowerCase();
+    if (!q) return chats;
+    return chats.filter(
+      (c) =>
+        (c.title || "").toLowerCase().includes(q) ||
+        (c.lastMessage || "").toLowerCase().includes(q)
+    );
+  }, [chats, searchChat]);
 
   const socketManager = useContext(SocketContext);
 
@@ -332,37 +436,73 @@ function Chat(props) {
   };
 
   const renderGrid = () => {
+    const hasChatSelected = isObject(currentChat) && has(currentChat, "id");
     return (
       <Grid className={classes.gridContainer} container>
-        <Grid className={classes.gridItem} md={3} item>
-          
-            <div className={classes.btnContainer}>
-              <Button
-                onClick={() => {
-                  setDialogType("new");
-                  setShowDialog(true);
-                }}
-                color="primary"
-                variant="contained"
-              >
-                {i18n.t("chat.buttons.new")}
-              </Button>
+        <Grid className={classes.gridItem} md={4} item>
+          <div className={classes.leftPane}>
+            <Typography className={classes.chatHeader}>Chat Interno</Typography>
+            <div className={classes.searchWrap}>
+              <SearchIcon style={{ color: "rgba(0,0,0,0.4)" }} />
+              <InputBase
+                className={classes.searchInput}
+                placeholder="Buscar conversas..."
+                value={searchChat}
+                onChange={(e) => setSearchChat(e.target.value)}
+                inputProps={{ "aria-label": "buscar conversas" }}
+              />
             </div>
-          
-          <ChatList
-            chats={chats}
-            pageInfo={chatsPageInfo}
-            loading={loading}
-            handleSelectChat={(chat) => selectChat(chat)}
-            handleDeleteChat={(chat) => deleteChat(chat)}
-            handleEditChat={() => {
-              setDialogType("edit");
-              setShowDialog(true);
-            }}
-          />
+            <div className={classes.listWrap}>
+              {filteredChats.length === 0 ? (
+                <div className={classes.emptyState}>
+                  <PeopleIcon className={classes.emptyIcon} />
+                  <Typography className={classes.emptyTitle}>
+                    Nenhuma conversa encontrada
+                  </Typography>
+                  <Typography className={classes.emptySub}>
+                    Comece uma nova conversa para começar a mensagear
+                  </Typography>
+                  <Button
+                    className={classes.btnNewChat}
+                    variant="contained"
+                    startIcon={<AddIcon />}
+                    onClick={() => {
+                      setDialogType("new");
+                      setShowDialog(true);
+                    }}
+                  >
+                    + CRIAR NOVA CONVERSA
+                  </Button>
+                </div>
+              ) : (
+                <ChatList
+                  chats={filteredChats}
+                  pageInfo={chatsPageInfo}
+                  loading={loading}
+                  handleSelectChat={(chat) => selectChat(chat)}
+                  handleDeleteChat={(chat) => deleteChat(chat)}
+                  handleEditChat={() => {
+                    setDialogType("edit");
+                    setShowDialog(true);
+                  }}
+                />
+              )}
+            </div>
+            <Fab
+              className={classes.fabNew}
+              size="medium"
+              aria-label="nova conversa"
+              onClick={() => {
+                setDialogType("new");
+                setShowDialog(true);
+              }}
+            >
+              <AddIcon />
+            </Fab>
+          </div>
         </Grid>
-        <Grid className={classes.gridItem} md={9} item>
-          {isObject(currentChat) && has(currentChat, "id") && (
+        <Grid className={classes.gridItemRight} md={8} item>
+          {hasChatSelected ? (
             <ChatMessages
               chat={currentChat}
               scrollToBottomRef={scrollToBottomRef}
@@ -372,6 +512,26 @@ function Chat(props) {
               handleSendMessage={sendMessage}
               handleLoadMore={loadMoreMessages}
             />
+          ) : (
+            <div
+              className={classes.emptyState}
+              style={{
+                flex: 1,
+                justifyContent: "center",
+                minHeight: 0,
+                display: "flex",
+              }}
+            >
+              <div>
+                <PeopleIcon className={classes.emptyIcon} />
+                <Typography className={classes.emptyTitle}>
+                  Selecione uma conversa
+                </Typography>
+                <Typography className={classes.emptySub}>
+                  Escolha uma conversa da lista para começar a mensagear
+                </Typography>
+              </div>
+            </div>
           )}
         </Grid>
       </Grid>

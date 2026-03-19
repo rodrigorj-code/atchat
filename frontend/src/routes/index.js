@@ -63,6 +63,7 @@ const Routes = () => {
             <WhatsAppsProvider>
               <LoggedInLayout>
                 <Route exact path="/" component={Dashboard} isPrivate />
+                <Route exact path="/relatorios" component={Dashboard} isPrivate />
                 <Route
                   exact
                   path="/tickets/:ticketId?"

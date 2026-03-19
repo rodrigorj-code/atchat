@@ -6,6 +6,8 @@ import * as TicketController from "../controllers/TicketController";
 const ticketRoutes = express.Router();
 
 ticketRoutes.get("/tickets", isAuth, TicketController.index);
+ticketRoutes.get("/tickets/without-connection", isAuth, TicketController.listWithoutConnection);
+ticketRoutes.post("/tickets/bulk-assign-connection", isAuth, TicketController.bulkAssignConnection);
 
 ticketRoutes.get("/tickets/:ticketId", isAuth, TicketController.show);
 

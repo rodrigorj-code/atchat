@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useReducer, useState } from "react";
-import { Link as RouterLink, useHistory } from "react-router-dom";
+import { Link as RouterLink, useHistory, useLocation } from "react-router-dom";
 
 import ListItem from "@material-ui/core/ListItem";
 import ListItemIcon from "@material-ui/core/ListItemIcon";
@@ -22,6 +22,7 @@ import LocalOfferIcon from "@material-ui/icons/LocalOffer";
 import EventAvailableIcon from "@material-ui/icons/EventAvailable";
 import ExpandLessIcon from "@material-ui/icons/ExpandLess";
 import ExpandMoreIcon from "@material-ui/icons/ExpandMore";
+import DescriptionOutlinedIcon from "@material-ui/icons/DescriptionOutlined";
 import PeopleIcon from "@material-ui/icons/People";
 import ListIcon from "@material-ui/icons/ListAlt";
 import AnnouncementIcon from "@material-ui/icons/Announcement";
@@ -46,7 +47,7 @@ import usePlans from "../hooks/usePlans";
 import Typography from "@material-ui/core/Typography";
 import { ShapeLine } from "@mui/icons-material";
 
-const SIDEBAR_GREEN = "#2e7d32";
+const SIDEBAR_GREEN = "#24c776";
 
 const useStyles = makeStyles((theme) => ({
   ListSubheader: {
@@ -67,10 +68,11 @@ const useStyles = makeStyles((theme) => ({
   },
   listItem: {
     "&:hover": {
-      backgroundColor: "rgba(46, 125, 50, 0.06)",
+      backgroundColor: "rgba(36, 199, 118, 0.08)",
     },
     "&.Mui-selected": {
-      backgroundColor: "rgba(46, 125, 50, 0.12)",
+      backgroundColor: "rgba(36, 199, 118, 0.12)",
+      borderLeft: `3px solid ${SIDEBAR_GREEN}`,
       "& .MuiListItemIcon-root": {
         color: SIDEBAR_GREEN,
       },
@@ -179,8 +181,16 @@ const MainListItems = (props) => {
   const { getPlanCompany } = usePlans();
   
   const [openFlowsSubmenu, setOpenFlowsSubmenu] = useState(false);
+  const [openDashboardSubmenu, setOpenDashboardSubmenu] = useState(true);
+  const location = useLocation();
 
   const socketManager = useContext(SocketContext);
+
+  useEffect(() => {
+    if (location.pathname === "/" || location.pathname === "/relatorios") {
+      setOpenDashboardSubmenu(true);
+    }
+  }, [location.pathname]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -304,14 +314,53 @@ const MainListItems = (props) => {
         role={user.profile}
         perform="dashboard:view"
         yes={() => (
-          <ListItemLink
-            to="/"
-            primary="Dashboard"
-            icon={<DashboardOutlinedIcon />}
-            listItemClassName={classes.listItem}
-            listItemIconClassName={classes.listItemIcon}
-            listItemTextClassName={classes.listItemText}
-          />
+          <>
+            <ListItem
+              button
+              onClick={() => setOpenDashboardSubmenu((prev) => !prev)}
+              className={classes.listItem}
+            >
+              <ListItemIcon className={classes.listItemIcon}>
+                <DashboardOutlinedIcon />
+              </ListItemIcon>
+              <ListItemText primary="Dashboard" className={classes.listItemText} />
+              {openDashboardSubmenu ? (
+                <ExpandLessIcon style={{ color: SIDEBAR_GREEN }} />
+              ) : (
+                <ExpandMoreIcon style={{ color: SIDEBAR_GREEN }} />
+              )}
+            </ListItem>
+            <Collapse in={openDashboardSubmenu} timeout="auto" unmountOnExit>
+              <List component="div" disablePadding style={{ paddingLeft: 15 }}>
+                <ListItem
+                  button
+                  dense
+                  component={RouterLink}
+                  to="/"
+                  className={classes.listItem}
+                  selected={location.pathname === "/"}
+                >
+                  <ListItemIcon className={classes.listItemIcon}>
+                    <DashboardOutlinedIcon />
+                  </ListItemIcon>
+                  <ListItemText primary="Dashboard" className={classes.listItemText} />
+                </ListItem>
+                <ListItem
+                  button
+                  dense
+                  component={RouterLink}
+                  to="/relatorios"
+                  className={classes.listItem}
+                  selected={location.pathname === "/relatorios"}
+                >
+                  <ListItemIcon className={classes.listItemIcon}>
+                    <DescriptionOutlinedIcon />
+                  </ListItemIcon>
+                  <ListItemText primary="Relatórios Gerados" className={classes.listItemText} />
+                </ListItem>
+              </List>
+            </Collapse>
+          </>
         )}
       />
 

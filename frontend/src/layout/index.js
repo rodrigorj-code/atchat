@@ -3,6 +3,7 @@ import clsx from "clsx";
 import moment from "moment";
 import {
   makeStyles,
+  Avatar,
   Drawer,
   AppBar,
   Toolbar,
@@ -43,6 +44,7 @@ import Brightness4Icon from '@material-ui/icons/Brightness4';
 import Brightness7Icon from '@material-ui/icons/Brightness7';
 import LanguageControl from "../components/LanguageControl";
 import { LanguageOutlined } from "@material-ui/icons";
+import { versionSystem } from "../../package.json";
 
 const drawerWidth = 240;
 
@@ -115,6 +117,7 @@ const useStyles = makeStyles((theme) => ({
     position: "relative",
     whiteSpace: "nowrap",
     width: drawerWidth,
+    height: "100%",
     backgroundColor: "#ffffff",
     borderRight: "1px solid rgba(0, 0, 0, 0.08)",
     transition: theme.transitions.create("width", {
@@ -170,6 +173,32 @@ const useStyles = makeStyles((theme) => ({
     padding: theme.spacing(1),
     overflowY: "scroll",
     ...theme.scrollbarStyles,
+  },
+  drawerFooter: {
+    padding: theme.spacing(2),
+    borderTop: "1px solid rgba(0, 0, 0, 0.08)",
+    backgroundColor: "rgba(0, 0, 0, 0.02)",
+  },
+  drawerFooterUser: {
+    display: "flex",
+    alignItems: "center",
+    gap: theme.spacing(1.5),
+    marginBottom: theme.spacing(1),
+  },
+  drawerFooterRole: {
+    fontSize: "0.75rem",
+    color: theme.palette.text.secondary,
+    marginBottom: theme.spacing(1),
+  },
+  versionBadge: {
+    display: "inline-block",
+    backgroundColor: "#24c776",
+    color: "#fff",
+    fontSize: "0.7rem",
+    fontWeight: 600,
+    padding: "2px 8px",
+    borderRadius: 6,
+    marginRight: theme.spacing(0.75),
   },
   NotificationsPopOver: {
     // color: theme.barraSuperior.secondary.main,
@@ -369,17 +398,38 @@ const LoggedInLayout = ({ children, themeToggle }) => {
         }}
         open={drawerOpen}
       >
-        <div className={clsx(classes.toolbarIcon, classes.drawerToolbar)}>
-          <img src={logo} className={classes.logo} alt="logo" />
-          <IconButton onClick={() => setDrawerOpen(!drawerOpen)}>
-            <ChevronLeftIcon />
-          </IconButton>
+        <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0 }}>
+          <div className={clsx(classes.toolbarIcon, classes.drawerToolbar)}>
+            <img src={logo} className={classes.logo} alt="logo" />
+            <IconButton onClick={() => setDrawerOpen(!drawerOpen)}>
+              <ChevronLeftIcon />
+            </IconButton>
+          </div>
+          <Divider />
+          <List className={classes.containerWithScroll}>
+            <MainListItems drawerClose={drawerClose} collapsed={!drawerOpen} />
+          </List>
+          <Divider />
+          {drawerOpen && (
+            <div className={classes.drawerFooter}>
+              <div className={classes.drawerFooterUser}>
+                <Avatar style={{ width: 36, height: 36, backgroundColor: "#24c776" }}>
+                  {user?.name ? user.name.charAt(0).toUpperCase() : "?"}
+                </Avatar>
+                <Typography variant="body2" style={{ fontWeight: 600 }} noWrap>
+                  {user?.name || "-"}
+                </Typography>
+              </div>
+              <Typography className={classes.drawerFooterRole}>
+                {user?.profile === "admin" ? "Administrador" : user?.profile === "user" ? "Usuário" : user?.profile || "-"}
+              </Typography>
+              <div>
+                <span className={classes.versionBadge}>Sistema {versionSystem}</span>
+                <span className={classes.versionBadge}>API 2.2.6</span>
+              </div>
+            </div>
+          )}
         </div>
-        <Divider />
-        <List className={classes.containerWithScroll}>
-          <MainListItems drawerClose={drawerClose} collapsed={!drawerOpen} />
-        </List>
-        <Divider />
       </Drawer>
       <UserModal
         open={userModalOpen}

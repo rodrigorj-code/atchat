@@ -11,6 +11,12 @@ import FormHelperText from "@material-ui/core/FormHelperText";
 import Typography from "@material-ui/core/Typography";
 import Box from "@material-ui/core/Box";
 import Button from "@material-ui/core/Button";
+import Table from "@material-ui/core/Table";
+import TableBody from "@material-ui/core/TableBody";
+import TableCell from "@material-ui/core/TableCell";
+import TableContainer from "@material-ui/core/TableContainer";
+import TableHead from "@material-ui/core/TableHead";
+import TableRow from "@material-ui/core/TableRow";
 
 import AssignmentOutlinedIcon from "@material-ui/icons/AssignmentOutlined";
 import ScheduleOutlinedIcon from "@material-ui/icons/ScheduleOutlined";
@@ -20,6 +26,8 @@ import ChatBubbleOutlinedIcon from "@material-ui/icons/ChatBubbleOutlined";
 import FilterListIcon from "@material-ui/icons/FilterList";
 import DescriptionOutlinedIcon from "@material-ui/icons/DescriptionOutlined";
 import ArrowDropDownIcon from "@material-ui/icons/ArrowDropDown";
+import PeopleOutlinedIcon from "@material-ui/icons/PeopleOutlined";
+import AssessmentOutlinedIcon from "@material-ui/icons/AssessmentOutlined";
 
 import { makeStyles } from "@material-ui/core/styles";
 import { toast } from "react-toastify";
@@ -34,7 +42,7 @@ import ButtonWithSpinner from "../../components/ButtonWithSpinner";
 import TableAttendantsStatus from "../../components/Dashboard/TableAttendantsStatus";
 import { isArray } from "lodash";
 import useDashboard from "../../hooks/useDashboard";
-import useContacts from "../../hooks/useContacts";
+import api from "../../services/api";
 import { ChatsUser } from "./ChartsUser";
 import { isEmpty } from "lodash";
 import moment from "moment";
@@ -119,6 +127,14 @@ const useStyles = makeStyles((theme) => ({
     backgroundColor: "rgba(76, 175, 80, 0.12)",
     color: "#4caf50",
   },
+  iconPurple: {
+    backgroundColor: "rgba(156, 39, 176, 0.12)",
+    color: "#9c27b0",
+  },
+  iconRed: {
+    backgroundColor: "rgba(244, 67, 54, 0.12)",
+    color: "#f44336",
+  },
   cardValue: {
     fontSize: "1.75rem",
     fontWeight: 700,
@@ -169,6 +185,27 @@ const useStyles = makeStyles((theme) => ({
     borderRadius: 6,
     marginRight: theme.spacing(1),
   },
+  performanceTable: {
+    "& .MuiTableHead-root .MuiTableRow-root th": {
+      backgroundColor: "#1a1a1a",
+      color: "#fff",
+      fontWeight: 600,
+      fontSize: "0.8125rem",
+    },
+    "& .MuiTableCell-root": {
+      fontSize: "0.8125rem",
+    },
+  },
+  emptyRow: {
+    textAlign: "center",
+    color: theme.palette.text.secondary,
+    fontStyle: "italic",
+    padding: theme.spacing(4, 2),
+  },
+  dashboardBg: {
+    backgroundColor: "#f4f4f4",
+    minHeight: "100%",
+  },
 }));
 
 // Converte série real (por dia) em dados para o mini gráfico. Se não houver série, usa valor único (linha estável).
@@ -194,13 +231,8 @@ const Dashboard = () => {
   const [dateTo, setDateTo] = useState(moment().format("YYYY-MM-DD"));
   const [loading, setLoading] = useState(false);
   const [messageStats, setMessageStats] = useState({ sent: 0, received: 0 });
+  const [contactsCount, setContactsCount] = useState(0);
   const { find } = useDashboard();
-
-  const GetContacts = (all) => {
-    const props = all ? {} : {};
-    const { count } = useContacts(props);
-    return count;
-  };
 
   useEffect(() => {
     let mounted = true;
@@ -214,6 +246,12 @@ const Dashboard = () => {
       mounted = false;
       clearTimeout(t);
     };
+  }, []);
+
+  useEffect(() => {
+    api.get("/contacts", { params: { pageNumber: 1 } }).then((r) => {
+      setContactsCount(r.data?.count ?? 0);
+    }).catch(() => {});
   }, []);
 
   const handleChangePeriod = (value) => setPeriod(value);
@@ -285,6 +323,16 @@ const Dashboard = () => {
   const avgWaitMin = counters.avgWaitTime != null ? Math.round(Number(counters.avgWaitTime)) : 0;
   const avgSupportMin = counters.avgSupportTime != null ? Math.round(Number(counters.avgSupportTime)) : 0;
 
+  const onlineCount = attendants.filter((a) => a.online).length;
+  const totalUsers = attendants.length || 1;
+  const taxaOnline = totalUsers > 0 ? ((onlineCount / totalUsers) * 100).toFixed(0) : 0;
+  const avgRating = attendants.length > 0
+    ? (attendants.reduce((s, a) => s + (Number(a.rating) || 0), 0) / attendants.length).toFixed(1)
+    : "0.0";
+  const sparkContacts = seriesToSparkData(series, "total", contactsCount);
+  const sparkOnline = seriesToSparkData(series, "total", onlineCount);
+  const sparkRating = [{ name: "1", value: Number(avgRating) || 0 }, { name: "2", value: Number(avgRating) || 0 }];
+
   function renderFilters() {
     if (filterType === 1) {
       return (
@@ -352,7 +400,7 @@ const Dashboard = () => {
       : [{ name: "1", value: totalMensagens }, { name: "2", value: totalMensagens }];
 
   return (
-    <div>
+    <div className={classes.dashboardBg}>
       <Container maxWidth="lg" className={classes.container}>
         {/* Cabeçalho: Filtros + Criar Relatório (BETA) */}
         <div className={classes.headerRow}>
@@ -627,27 +675,229 @@ const Dashboard = () => {
               </div>
             </Paper>
           </Grid>
+
+          {/* 7. Total de Contatos */}
+          <Grid item xs={12} sm={6} md={4}>
+            <Paper className={classes.card} elevation={0}>
+              <div className={classes.cardHeader}>
+                <Typography className={classes.cardTitle}>Total de Contatos</Typography>
+                <div className={`${classes.iconCircle} ${classes.iconPurple}`}>
+                  <PeopleOutlinedIcon />
+                </div>
+              </div>
+              <Typography className={classes.cardValue}>{contactsCount}</Typography>
+              <Typography className={classes.cardSub}>Contatos Ativos: {contactsCount}</Typography>
+              <Typography className={classes.cardSub}>Inativos: 0</Typography>
+              <div className={classes.chartWrap}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={sparkContacts} margin={{ top: 4, right: 0, left: 0, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="areaPurple" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#9c27b0" stopOpacity={0.4} />
+                        <stop offset="100%" stopColor="#9c27b0" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <Area type="monotone" dataKey="value" stroke="#9c27b0" fill="url(#areaPurple)" strokeWidth={1.5} />
+                    <XAxis dataKey="name" hide />
+                    <YAxis hide domain={["auto", "auto"]} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </Paper>
+          </Grid>
+
+          {/* 8. Usuários Online */}
+          <Grid item xs={12} sm={6} md={4}>
+            <Paper className={classes.card} elevation={0}>
+              <div className={classes.cardHeader}>
+                <Typography className={classes.cardTitle}>Usuários Online</Typography>
+                <div className={`${classes.iconCircle} ${classes.iconPurple}`}>
+                  <PeopleOutlinedIcon />
+                </div>
+              </div>
+              <Typography className={classes.cardValue}>{onlineCount}</Typography>
+              <Typography className={classes.cardSub}>Taxa Online: {taxaOnline}%</Typography>
+              <Typography className={classes.cardSub}>Offline: {totalUsers - onlineCount}</Typography>
+              <div className={classes.chartWrap}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={sparkOnline} margin={{ top: 4, right: 0, left: 0, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="areaPurple2" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#9c27b0" stopOpacity={0.4} />
+                        <stop offset="100%" stopColor="#9c27b0" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <Area type="monotone" dataKey="value" stroke="#9c27b0" fill="url(#areaPurple2)" strokeWidth={1.5} />
+                    <XAxis dataKey="name" hide />
+                    <YAxis hide domain={["auto", "auto"]} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </Paper>
+          </Grid>
+
+          {/* 9. Avaliação Média */}
+          <Grid item xs={12} sm={6} md={4}>
+            <Paper className={classes.card} elevation={0}>
+              <div className={classes.cardHeader}>
+                <Typography className={classes.cardTitle}>Avaliação Média</Typography>
+                <div className={`${classes.iconCircle} ${classes.iconRed}`}>
+                  <AssessmentOutlinedIcon />
+                </div>
+              </div>
+              <Typography className={classes.cardValue}>{avgRating}</Typography>
+              <Typography className={classes.cardSub}>Escala: 1 a 5</Typography>
+              <Typography className={classes.cardSub}>Status: {Number(avgRating) >= 4 ? "Ótimo" : Number(avgRating) >= 3 ? "Bom" : "Melhorar"}</Typography>
+              <div className={classes.chartWrap}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={sparkRating} margin={{ top: 4, right: 0, left: 0, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="areaRed" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#f44336" stopOpacity={0.4} />
+                        <stop offset="100%" stopColor="#f44336" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <Area type="monotone" dataKey="value" stroke="#f44336" fill="url(#areaRed)" strokeWidth={1.5} />
+                    <XAxis dataKey="name" hide />
+                    <YAxis hide domain={[0, 5]} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </Paper>
+          </Grid>
         </Grid>
 
-        {/* Status dos atendentes */}
+        {/* Performance de Usuários / Filas / Conexões */}
         <Typography className={classes.sectionTitle}>
-          {i18n.t("dashboard.onlineTable.title", "Status dos atendentes")}
+          Performance de Usuários
         </Typography>
         {attendants.length > 0 ? (
-          <Paper elevation={0} variant="outlined" style={{ borderRadius: 12, overflow: "hidden" }}>
-            <TableAttendantsStatus attendants={attendants} loading={loading} />
+          <Paper elevation={0} style={{ borderRadius: 12, overflow: "hidden", marginBottom: 24 }}>
+            <TableContainer>
+              <Table size="small" className={classes.performanceTable}>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Usuário</TableCell>
+                    <TableCell align="center">Status</TableCell>
+                    <TableCell align="center">Total</TableCell>
+                    <TableCell align="center">Tempo Médio</TableCell>
+                    <TableCell align="center">Avaliação</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {attendants.map((a, k) => (
+                    <TableRow key={k}>
+                      <TableCell>{a.name}</TableCell>
+                      <TableCell align="center">
+                        <span style={{
+                          backgroundColor: a.online ? "rgba(76, 175, 80, 0.15)" : "rgba(244, 67, 54, 0.15)",
+                          color: a.online ? "#4caf50" : "#f44336",
+                          padding: "2px 8px",
+                          borderRadius: 6,
+                          fontSize: "0.75rem",
+                          fontWeight: 600,
+                        }}>
+                          {a.online ? "Online" : "Offline"}
+                        </span>
+                      </TableCell>
+                      <TableCell align="center">{a.total != null ? a.total : "-"}</TableCell>
+                      <TableCell align="center">{a.avgSupportTime != null ? formatTime(a.avgSupportTime) : "-"}</TableCell>
+                      <TableCell align="center">{a.rating != null ? Number(a.rating).toFixed(1) : "-"}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
           </Paper>
-        ) : null}
+        ) : (
+          <Paper elevation={0} style={{ borderRadius: 12, overflow: "hidden", marginBottom: 24 }}>
+            <TableContainer>
+              <Table size="small" className={classes.performanceTable}>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Usuário</TableCell>
+                    <TableCell align="center">Status</TableCell>
+                    <TableCell align="center">Total</TableCell>
+                    <TableCell align="center">Tempo Médio</TableCell>
+                    <TableCell align="center">Avaliação</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  <TableRow><TableCell colSpan={5} className={classes.emptyRow}>Nenhum dado disponível</TableCell></TableRow>
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Paper>
+        )}
+
+        <Typography className={classes.sectionTitle}>
+          Performance de Filas
+        </Typography>
+        <Paper elevation={0} style={{ borderRadius: 12, overflow: "hidden", marginBottom: 24 }}>
+          <TableContainer>
+            <Table size="small" className={classes.performanceTable}>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Fila</TableCell>
+                  <TableCell align="center">Total</TableCell>
+                  <TableCell align="center">Tempo Médio</TableCell>
+                  <TableCell align="center">Taxa Resolução</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                <TableRow><TableCell colSpan={4} className={classes.emptyRow}>Nenhum dado disponível</TableCell></TableRow>
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Paper>
+
+        <Typography className={classes.sectionTitle}>
+          Performance de Conexões
+        </Typography>
+        <Paper elevation={0} style={{ borderRadius: 12, overflow: "hidden", marginBottom: 24 }}>
+          <TableContainer>
+            <Table size="small" className={classes.performanceTable}>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Conexão</TableCell>
+                  <TableCell align="center">Status</TableCell>
+                  <TableCell align="center">Atendimentos</TableCell>
+                  <TableCell align="center">Mensagens</TableCell>
+                  <TableCell align="center">Tempo Médio</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                <TableRow><TableCell colSpan={5} className={classes.emptyRow}>Nenhum dado disponível</TableCell></TableRow>
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Paper>
 
         {/* Gráficos */}
+        <Typography className={classes.sectionTitle}>
+          Atendimentos ao Longo do Tempo
+        </Typography>
+        <Grid container spacing={3} style={{ marginTop: 8, marginBottom: 24 }}>
+          <Grid item xs={12}>
+            <ChartsDate />
+          </Grid>
+        </Grid>
+        <Typography className={classes.sectionTitle}>
+          Mensagens ao Longo do Tempo / Performance por Usuário
+        </Typography>
         <Grid container spacing={3} style={{ marginTop: 8 }}>
           <Grid item xs={12} md={6}>
             <ChatsUser />
           </Grid>
           <Grid item xs={12} md={6}>
-            <ChartsDate />
+            {attendants.length > 0 ? (
+              <Paper elevation={0} variant="outlined" style={{ borderRadius: 12, overflow: "hidden", height: "100%" }}>
+                <TableAttendantsStatus attendants={attendants} loading={loading} />
+              </Paper>
+            ) : null}
           </Grid>
         </Grid>
+
       </Container>
     </div>
   );
