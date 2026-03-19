@@ -65,6 +65,9 @@ const useStyles = makeStyles(theme => ({
 		backgroundColor: "#fff",
 		borderTopLeftRadius: 12,
 		borderTopRightRadius: 12,
+		"& .MuiTabs-indicator": {
+			backgroundColor: "#000",
+		},
 	},
 
 	tabsInternal: {
@@ -183,7 +186,7 @@ const useStyles = makeStyles(theme => ({
 		fontSize: "0.75rem",
 		fontWeight: 600,
 		padding: "6px 12px",
-		borderRadius: 8,
+		borderRadius: 6,
 	},
 	statusPillBtn: {
 		cursor: "pointer",
@@ -202,9 +205,9 @@ const useStyles = makeStyles(theme => ({
 		display: "flex",
 		alignItems: "center",
 		justifyContent: "center",
-		backgroundColor: "#24c776",
-		border: "none",
-		color: "#fff",
+		backgroundColor: "#fff",
+		border: "2px solid rgba(36, 199, 118, 0.55)",
+		color: "#24c776",
 		fontWeight: 700,
 		fontSize: "0.72rem",
 	},
@@ -215,27 +218,33 @@ const useStyles = makeStyles(theme => ({
 		display: "flex",
 		alignItems: "center",
 		justifyContent: "center",
-		backgroundColor: "#e91e63",
-		border: "none",
-		color: "#fff",
+		backgroundColor: "#fff",
+		border: "2px solid rgba(233, 30, 99, 0.55)",
+		color: "#e91e63",
 		fontWeight: 700,
 		fontSize: "0.72rem",
 	},
 	statusPillGreen: {
-		backgroundColor: "rgba(36, 199, 118, 0.10)",
+		backgroundColor: "#fff",
 		border: "1px solid rgba(36, 199, 118, 0.35)",
-		color: "#24c776",
+		color: "rgba(0,0,0,0.45)",
 	},
 	statusPillGreenActive: {
-		boxShadow: "inset 0 0 0 2px rgba(36, 199, 118, 0.18)",
+		boxShadow: "inset 0 -2px 0 #000",
 	},
 	statusPillPink: {
-		backgroundColor: "rgba(233, 30, 99, 0.10)",
+		backgroundColor: "#fff",
 		border: "1px solid rgba(233, 30, 99, 0.30)",
-		color: "#e91e63",
+		color: "rgba(0,0,0,0.45)",
 	},
 	statusPillPinkActive: {
-		boxShadow: "inset 0 0 0 2px rgba(233, 30, 99, 0.18)",
+		boxShadow: "inset 0 -2px 0 #000",
+	},
+	statusPillText: {
+		color: "rgba(0,0,0,0.45)",
+	},
+	statusPillTextActive: {
+		color: "rgba(0,0,0,0.87)",
 	},
 	searchRow: {
 		display: "flex",
@@ -615,8 +624,17 @@ const TicketsManagerTabs = () => {
             onClick={() => setTabOpen("open")}
           >
             <span className={classes.statusCountGreen}>{openCount}</span>
-            <FolderOpenIcon className={classes.statusPillIcon} />
-            ATENDENDO
+            <FolderOpenIcon
+              className={classes.statusPillIcon}
+              style={{ color: "#24c776" }}
+            />
+            <span
+              className={
+                tabOpen === "open" ? classes.statusPillTextActive : classes.statusPillText
+              }
+            >
+              ATENDENDO
+            </span>
           </ButtonBase>
 
           <ButtonBase
@@ -626,8 +644,17 @@ const TicketsManagerTabs = () => {
             onClick={() => setTabOpen("pending")}
           >
             <span className={classes.statusCountPink}>{pendingCount}</span>
-            <PersonIcon className={classes.statusPillIcon} />
-            AGUARDANDO
+            <PersonIcon
+              className={classes.statusPillIcon}
+              style={{ color: "#e91e63" }}
+            />
+            <span
+              className={
+                tabOpen === "pending" ? classes.statusPillTextActive : classes.statusPillText
+              }
+            >
+              AGUARDANDO
+            </span>
           </ButtonBase>
 
           <ButtonBase
@@ -637,8 +664,17 @@ const TicketsManagerTabs = () => {
             onClick={() => setTabOpen("chatbot")}
           >
             <span className={classes.statusCountGreen}>{chatbotCount}</span>
-            <AndroidIcon className={classes.statusPillIcon} />
-            CHATBOT
+            <AndroidIcon
+              className={classes.statusPillIcon}
+              style={{ color: "#24c776" }}
+            />
+            <span
+              className={
+                tabOpen === "chatbot" ? classes.statusPillTextActive : classes.statusPillText
+              }
+            >
+              CHATBOT
+            </span>
           </ButtonBase>
         </div>
       )}
