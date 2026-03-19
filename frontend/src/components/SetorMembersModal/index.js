@@ -14,7 +14,7 @@ import {
   Typography,
 } from "@material-ui/core";
 import PersonAddIcon from "@material-ui/icons/PersonAdd";
-import PersonRemoveIcon from "@material-ui/icons/PersonRemove";
+import RemoveCircleIcon from "@material-ui/icons/RemoveCircle";
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
 import { toast } from "react-toastify";
@@ -152,7 +152,7 @@ const SetorMembersModal = ({ open, onClose, queue, onMembersChange }) => {
                           onClick={() => setRemoveConfirm({ open: true, user })}
                           aria-label="Remover"
                         >
-                          <PersonRemoveIcon />
+                          <RemoveCircleIcon />
                         </IconButton>
                       </ListItemSecondaryAction>
                     </ListItem>
