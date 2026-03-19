@@ -80,7 +80,7 @@ const SetorMembersModal = ({ open, onClose, queue, onMembersChange }) => {
       toast.success(i18n.t("userModal.success"));
       setAddModalOpen(false);
       fetchMembers();
-      onMembersChange?.();
+      if (typeof onMembersChange === "function") onMembersChange();
     } catch (err) {
       toastError(err);
     }
@@ -101,7 +101,7 @@ const SetorMembersModal = ({ open, onClose, queue, onMembersChange }) => {
       toast.success(i18n.t("userModal.success"));
       setRemoveConfirm({ open: false, user: null });
       fetchMembers();
-      onMembersChange?.();
+      if (typeof onMembersChange === "function") onMembersChange();
     } catch (err) {
       toastError(err);
     }
