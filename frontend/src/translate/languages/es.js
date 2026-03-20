@@ -1299,6 +1299,24 @@ const messages = {
       helps: {
         title: "Centro de Ayuda",
       },
+      evaluation: {
+        title: "Evaluación",
+        avgRating: "Evaluación Promedia",
+        totalRatings: "Total de Evaluaciones",
+        byAttendant: "Por Atendente",
+        searchPlaceholder: "Buscar por contacto o atendente...",
+        noRatings: "Ninguna evaluación encontrada en el período.",
+        loadMore: "Cargar más",
+        dateFrom: "De",
+        dateTo: "Hasta",
+        table: {
+          date: "Fecha",
+          contact: "Contacto",
+          attendant: "Atendente",
+          setor: "Sector",
+          rating: "Evaluación",
+        },
+      },
       schedules: {
         title: "Programaciones",
         confirmationModal: {

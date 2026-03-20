@@ -118,7 +118,7 @@ const CampaignsPhrase = () => {
     await api
       .get("/flowcampaign")
       .then((res) => {
-        setCampaignFlows(res.data.flow);
+        setCampaignFlows(Array.isArray(res.data?.flow) ? res.data.flow : []);
       })
       .finally(() => {
         setLoading(false);
@@ -226,7 +226,7 @@ const CampaignsPhrase = () => {
           </Grid>
           <>
             {!loading &&
-              campaignflows.map((flow) => (
+              (Array.isArray(campaignflows) ? campaignflows : []).map((flow) => (
                 <Grid
                   container
                   key={flow.id}

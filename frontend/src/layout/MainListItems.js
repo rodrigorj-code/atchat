@@ -82,7 +82,7 @@ const useStyles = makeStyles((theme) => ({
 
 
 function ListItemLink(props) {
-  const { icon, primary, to, className, listItemClassName, listItemIconClassName, listItemTextClassName } = props;
+  const { icon, primary, to, className, listItemClassName, listItemIconClassName, listItemTextClassName, selected } = props;
 
   const renderLink = React.useMemo(
     () =>
@@ -94,7 +94,13 @@ function ListItemLink(props) {
 
   return (
     <li>
-      <ListItem button dense component={renderLink} className={listItemClassName || className}>
+      <ListItem
+        button
+        dense
+        component={renderLink}
+        className={listItemClassName || className}
+        selected={selected}
+      >
         {icon ? <ListItemIcon className={listItemIconClassName}>{icon}</ListItemIcon> : null}
         <ListItemText primary={primary} className={listItemTextClassName} />
       </ListItem>
@@ -181,27 +187,22 @@ const MainListItems = (props) => {
   const { getPlanCompany } = usePlans();
   
   const [openFlowsSubmenu, setOpenFlowsSubmenu] = useState(false);
-  const [openDashboardSubmenu, setOpenDashboardSubmenu] = useState(true);
-  const [openGestaoSubmenu, setOpenGestaoSubmenu] = useState(true);
-  const [openAdministracaoSubmenu, setOpenAdministracaoSubmenu] = useState(true);
-  const [openAjustesSubmenu, setOpenAjustesSubmenu] = useState(true);
+  const [openDashboardSubmenu, setOpenDashboardSubmenu] = useState(false);
+  const [openGestaoSubmenu, setOpenGestaoSubmenu] = useState(false);
+  const [openAdministracaoSubmenu, setOpenAdministracaoSubmenu] = useState(false);
+  const [openAjustesSubmenu, setOpenAjustesSubmenu] = useState(false);
   const location = useLocation();
 
   const socketManager = useContext(SocketContext);
 
   useEffect(() => {
-    if (location.pathname === "/" || location.pathname === "/relatorios") {
-      setOpenDashboardSubmenu(true);
-    }
+    const path = location.pathname;
+    setOpenDashboardSubmenu(path === "/" || path === "/relatorios");
   }, [location.pathname]);
 
   useEffect(() => {
     const path = location.pathname;
-    if (path.startsWith("/chats")) {
-      setOpenGestaoSubmenu(true);
-      return;
-    }
-    const shouldOpen = [
+    const shouldOpen = path.startsWith("/chats") || [
       "/",
       "/contacts",
       "/tags",
@@ -209,7 +210,8 @@ const MainListItems = (props) => {
       "/quick-messages",
       "/todolist",
       "/schedules",
-    ].includes(path);
+      "/avaliacao",
+    ].some((p) => path === p || (p !== "/" && path.startsWith(p + "/")));
     setOpenGestaoSubmenu(shouldOpen);
   }, [location.pathname]);
 
@@ -232,13 +234,28 @@ const MainListItems = (props) => {
       "/queue-integration",
       "/settings",
       "/connections",
-    ].includes(path);
+    ].some((p) => path === p || path.startsWith(p + "/"));
     setOpenAjustesSubmenu(shouldOpen);
   }, [location.pathname]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    const path = location.pathname;
+    const shouldOpen = [
+      "/campaigns",
+      "/contact-lists",
+      "/campaigns-config",
+      "/campaign",
+    ].some((p) => path === p || path.startsWith(p + "/"));
+    setOpenCampaignSubmenu(shouldOpen);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    const path = location.pathname;
+    const shouldOpen = path.startsWith("/phrase-lists") ||
+      path.startsWith("/flowbuilders") ||
+      path.startsWith("/flowbuilder/");
+    setOpenFlowsSubmenu(shouldOpen);
+  }, [location.pathname]);
  
 
   useEffect(() => {
@@ -415,6 +432,7 @@ const MainListItems = (props) => {
         listItemClassName={classes.listItem}
         listItemIconClassName={classes.listItemIcon}
         listItemTextClassName={classes.listItemText}
+        selected={location.pathname === "/tickets" || location.pathname.startsWith("/tickets/")}
       />
 	{showKanban && (
 	  <ListItemLink
@@ -424,6 +442,7 @@ const MainListItems = (props) => {
         listItemClassName={classes.listItem}
         listItemIconClassName={classes.listItemIcon}
         listItemTextClassName={classes.listItemText}
+        selected={location.pathname === "/kanban"}
       />
 	)}
 
@@ -439,6 +458,7 @@ const MainListItems = (props) => {
         listItemClassName={classes.listItem}
         listItemIconClassName={classes.listItemIcon}
         listItemTextClassName={classes.listItemText}
+        selected={location.pathname === "/chats" || location.pathname.startsWith("/chats/")}
       />
 
       <ListItem
@@ -555,9 +575,9 @@ const MainListItems = (props) => {
             button
             dense
             component={RouterLink}
-            to="/"
+            to="/avaliacao"
             className={classes.listItem}
-            selected={location.pathname === "/"}
+            selected={location.pathname === "/avaliacao"}
           >
             <ListItemIcon className={classes.listItemIcon}>
               <DashboardOutlinedIcon />
@@ -774,15 +794,36 @@ const MainListItems = (props) => {
                   unmountOnExit
                 >
                   <List component="div" disablePadding>
-                    <ListItem onClick={() => history.push("/campaigns")} button className={classes.listItem}>
+                    <ListItem
+                      button
+                      dense
+                      component={RouterLink}
+                      to="/campaigns"
+                      className={classes.listItem}
+                      selected={location.pathname === "/campaigns"}
+                    >
                       <ListItemIcon className={classes.listItemIcon}><ListIcon /></ListItemIcon>
                       <ListItemText primary="Listagem" className={classes.listItemText} />
                     </ListItem>
-                    <ListItem onClick={() => history.push("/contact-lists")} button className={classes.listItem}>
+                    <ListItem
+                      button
+                      dense
+                      component={RouterLink}
+                      to="/contact-lists"
+                      className={classes.listItem}
+                      selected={location.pathname === "/contact-lists" || location.pathname.startsWith("/contact-lists/")}
+                    >
                       <ListItemIcon className={classes.listItemIcon}><PeopleIcon /></ListItemIcon>
                       <ListItemText primary="Listas de Contatos" className={classes.listItemText} />
                     </ListItem>
-                    <ListItem onClick={() => history.push("/campaigns-config")} button className={classes.listItem}>
+                    <ListItem
+                      button
+                      dense
+                      component={RouterLink}
+                      to="/campaigns-config"
+                      className={classes.listItem}
+                      selected={location.pathname === "/campaigns-config"}
+                    >
                       <ListItemIcon className={classes.listItemIcon}><SettingsOutlinedIcon /></ListItemIcon>
                       <ListItemText primary="Configurações" className={classes.listItemText} />
                     </ListItem>
@@ -795,11 +836,25 @@ const MainListItems = (props) => {
                 </ListItem>
                 <Collapse style={{ paddingLeft: 15 }} in={openFlowsSubmenu} timeout="auto" unmountOnExit>
                   <List component="div" disablePadding>
-                    <ListItem onClick={() => history.push("/phrase-lists")} button className={classes.listItem}>
+                    <ListItem
+                      button
+                      dense
+                      component={RouterLink}
+                      to="/phrase-lists"
+                      className={classes.listItem}
+                      selected={location.pathname === "/phrase-lists"}
+                    >
                       <ListItemIcon className={classes.listItemIcon}><EventAvailableIcon /></ListItemIcon>
                       <ListItemText primary="Campanha" className={classes.listItemText} />
                     </ListItem>
-                    <ListItem onClick={() => history.push("/flowbuilders")} button className={classes.listItem}>
+                    <ListItem
+                      button
+                      dense
+                      component={RouterLink}
+                      to="/flowbuilders"
+                      className={classes.listItem}
+                      selected={location.pathname === "/flowbuilders" || location.pathname.startsWith("/flowbuilder/")}
+                    >
                       <ListItemIcon className={classes.listItemIcon}><ShapeLine /></ListItemIcon>
                       <ListItemText primary="Conversa" className={classes.listItemText} />
                     </ListItem>
@@ -816,6 +871,7 @@ const MainListItems = (props) => {
                 listItemClassName={classes.listItem}
                 listItemIconClassName={classes.listItemIcon}
                 listItemTextClassName={classes.listItemText}
+                selected={location.pathname === "/announcements"}
               />
             )}
             <ListItemLink
@@ -825,6 +881,7 @@ const MainListItems = (props) => {
               listItemClassName={classes.listItem}
               listItemIconClassName={classes.listItemIcon}
               listItemTextClassName={classes.listItemText}
+              selected={location.pathname === "/files"}
             />
 
             {!collapsed && <React.Fragment>
@@ -845,6 +902,7 @@ const MainListItems = (props) => {
         listItemClassName={classes.listItem}
         listItemIconClassName={classes.listItemIcon}
         listItemTextClassName={classes.listItemText}
+        selected={location.pathname === "/helps"}
       />
     </div>
   );

@@ -36,7 +36,7 @@ import FlowBuilderModal from "../../components/FlowBuilderModal";
 
 const reducer = (state, action) => {
   if (action.type === "LOAD_CONTACTS") {
-    const contacts = action.payload;
+    const contacts = Array.isArray(action.payload) ? action.payload : [];
     const newContacts = [];
 
     contacts.forEach((contact) => {
@@ -121,8 +121,9 @@ const FlowBuilder = () => {
       const fetchContacts = async () => {
         try {
           const { data } = await api.get("/flowbuilder");
-          setWebhooks(data.flows);
-          dispatch({ type: "LOAD_CONTACTS", payload: data.flows });
+          const flows = Array.isArray(data?.flows) ? data.flows : [];
+          setWebhooks(flows);
+          dispatch({ type: "LOAD_CONTACTS", payload: flows });
           setHasMore(data.hasMore);
         } catch (err) {
           toastError(err);
@@ -335,7 +336,7 @@ const FlowBuilder = () => {
             </Grid>
           </Grid>
           <>
-            {webhooks.map((contact) => (
+            {(Array.isArray(webhooks) ? webhooks : []).map((contact) => (
               <Grid
                 container
                 key={contact.id}

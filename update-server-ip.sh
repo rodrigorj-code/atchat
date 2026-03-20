@@ -64,7 +64,7 @@ server {
     root ${PROJETO_DIR}/frontend/build;
     index index.html;
 
-    location ~ ^/(auth|users|settings|contacts|tickets|whatsapp|messages|whatsappSession|queues|companies|plans|ticketNotes|quickMessages|helps|dashboard|queueOptions|schedules|tags|contactLists|contactListItems|campaigns|campaignSettings|announcements|chats|subscription|invoices|ticketTags|files|prompts|queueIntegrations|forgetpassword|flowDefault|flowBuilder|flowCampaign|public|socket\.io) {
+    location ~ ^/(auth|users|settings|contacts|tickets|whatsapp|messages|whatsappSession|queues|companies|plans|ticketNotes|quickMessages|helps|dashboard|queueOptions|schedules|tags|contactLists|contactListItems|campaigns|campaignSettings|announcements|chats|subscription|invoices|ticketTags|files|prompts|queueIntegrations|forgetpassword|flowDefault|flowBuilder|flowCampaign|user-ratings|rating-templates|public|socket\.io) {
         proxy_pass http://127.0.0.1:8080;
         proxy_http_version 1.1;
         proxy_set_header Upgrade \$http_upgrade;

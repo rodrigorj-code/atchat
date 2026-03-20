@@ -41,6 +41,7 @@ import ForgetPassword from "../pages/ForgetPassWord/"; // Reset PassWd
 import CampaignsPhrase from "../pages/CampaignsPhrase";
 import FlowBuilder from "../pages/FlowBuilder";
 import FlowBuilderConfig from "../pages/FlowBuilderConfig";
+import Evaluation from "../pages/Evaluation";
 
 const Routes = () => {
   const [showCampaigns, setShowCampaigns] = useState(false);
@@ -65,6 +66,7 @@ const Routes = () => {
               <LoggedInLayout>
                 <Route exact path="/" component={Dashboard} isPrivate />
                 <Route exact path="/relatorios" component={Dashboard} isPrivate />
+                <Route exact path="/avaliacao" component={Evaluation} isPrivate />
                 <Route
                   exact
                   path="/tickets/:ticketId?"

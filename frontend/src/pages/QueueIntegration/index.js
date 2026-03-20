@@ -47,7 +47,7 @@ import { useHistory } from "react-router-dom/cjs/react-router-dom.min";
 
 const reducer = (state, action) => {
   if (action.type === "LOAD_INTEGRATIONS") {
-    const queueIntegration = action.payload;
+    const queueIntegration = Array.isArray(action.payload) ? action.payload : [];
     const newIntegrations = [];
 
     queueIntegration.forEach((integration) => {
@@ -150,7 +150,7 @@ const QueueIntegration = () => {
           const { data } = await api.get("/queueIntegration/", {
             params: { searchParam, pageNumber },
           });
-          dispatch({ type: "LOAD_INTEGRATIONS", payload: data.queueIntegrations });
+          dispatch({ type: "LOAD_INTEGRATIONS", payload: Array.isArray(data?.queueIntegrations) ? data.queueIntegrations : [] });
           setHasMore(data.hasMore);
           setLoading(false);
         } catch (err) {

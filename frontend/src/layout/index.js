@@ -237,8 +237,7 @@ const LoggedInLayout = ({ children, themeToggle }) => {
   const [drawerOpen, setDrawerOpen] = useState(() => {
     const saved = localStorage.getItem("drawerOpen");
     if (saved !== null) return saved === "true";
-    if (typeof window !== "undefined" && window.innerWidth > 1200) return true;
-    return false;
+    return true; // sempre expandido por padrão, independente da resolução
   });
   const [drawerVariant, setDrawerVariant] = useState("permanent");
   // const [dueDate, setDueDate] = useState("");
@@ -304,13 +303,6 @@ const LoggedInLayout = ({ children, themeToggle }) => {
   //##############################################################################
 
   const socketManager = useContext(SocketContext);
-
-  // Valor padrão em telas grandes, apenas quando não houver preferência salva
-  useEffect(() => {
-    if (localStorage.getItem("drawerOpen") === null && document.body.offsetWidth > 1200) {
-      setDrawerOpen(true);
-    }
-  }, []);
 
   useEffect(() => {
     if (document.body.offsetWidth < 600) {
@@ -472,7 +464,11 @@ const LoggedInLayout = ({ children, themeToggle }) => {
           <IconButton
             edge="start"
             aria-label="menu"
-            onClick={() => setDrawerOpen(!drawerOpen)}
+            onClick={() => {
+              const next = !drawerOpen;
+              setDrawerOpen(next);
+              localStorage.setItem("drawerOpen", String(next));
+            }}
             className={classes.menuButton}
             style={{ color: "rgba(0, 0, 0, 0.54)" }}
           >

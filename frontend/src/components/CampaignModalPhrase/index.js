@@ -77,9 +77,10 @@ const CampaignModalPhrase = ({ open, onClose, FlowCampaignId, onSave }) => {
 
   const getFlows = async () => {
     const flows = await api.get("/flowbuilder");
-    setFlowsDataComplete(flows.data.flows);
-    setFlowsData(flows.data.flows.map((flow) => flow.name));
-    return flows.data.flows;
+    const flowsArray = Array.isArray(flows.data?.flows) ? flows.data.flows : [];
+    setFlowsDataComplete(flowsArray);
+    setFlowsData(flowsArray.map((flow) => flow.name));
+    return flowsArray;
   };
 
   const detailsPhrase = async (flows) => {

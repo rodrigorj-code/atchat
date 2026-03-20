@@ -43,7 +43,7 @@ const useStyles = makeStyles((theme) => ({
 
 const reducer = (state, action) => {
   if (action.type === "LOAD_QUEUES") {
-    const queues = action.payload;
+    const queues = Array.isArray(action.payload) ? action.payload : [];
     const newQueues = [];
 
     queues.forEach((queue) => {
@@ -102,7 +102,7 @@ const Setores = () => {
       setLoading(true);
       try {
         const { data } = await api.get("/queue");
-        dispatch({ type: "LOAD_QUEUES", payload: data });
+        dispatch({ type: "LOAD_QUEUES", payload: Array.isArray(data) ? data : [] });
       } catch (err) {
         toastError(err);
       } finally {

@@ -1335,6 +1335,24 @@ const messages = {
 			helps: {
 				title: "Help Center",
 			},
+			evaluation: {
+				title: "Evaluation",
+				avgRating: "Average Rating",
+				totalRatings: "Total Ratings",
+				byAttendant: "By Attendant",
+				searchPlaceholder: "Search by contact or attendant...",
+				noRatings: "No ratings found in this period.",
+				loadMore: "Load more",
+				dateFrom: "From",
+				dateTo: "To",
+				table: {
+					date: "Date",
+					contact: "Contact",
+					attendant: "Attendant",
+					setor: "Sector",
+					rating: "Rating",
+				},
+			},
 			schedules: {
 				title: "Schedules",
 				confirmationModal: {

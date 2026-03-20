@@ -38,7 +38,7 @@ import { SocketContext } from "../../context/Socket/SocketContext";
 
 const reducer = (state, action) => {
   if (action.type === "LOAD_CONTACTLISTS") {
-    const contactLists = action.payload;
+    const contactLists = Array.isArray(action.payload) ? action.payload : [];
     const newContactLists = [];
 
     contactLists.forEach((contactList) => {
@@ -118,7 +118,7 @@ const ContactLists = () => {
           const { data } = await api.get("/contact-lists/", {
             params: { searchParam, pageNumber },
           });
-          dispatch({ type: "LOAD_CONTACTLISTS", payload: data.records });
+          dispatch({ type: "LOAD_CONTACTLISTS", payload: Array.isArray(data?.records) ? data.records : [] });
           setHasMore(data.hasMore);
           setLoading(false);
         } catch (err) {

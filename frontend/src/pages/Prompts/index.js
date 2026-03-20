@@ -53,10 +53,10 @@ const useStyles = makeStyles((theme) => ({
 
 const reducer = (state, action) => {
   if (action.type === "LOAD_PROMPTS") {
-    const prompts = action.payload;
+    const prompts = Array.isArray(action.payload) ? action.payload : [];
     const newPrompts = [];
 
-    if( prompts.length === 0 )
+    if (prompts.length === 0)
       return [];
 
     prompts.forEach((prompt) => {
@@ -162,7 +162,7 @@ const Prompts = () => {
   const getPrompts = async (  ) => {
 
     const { data } = await api.get("/prompt");
-    dispatch({ type: "LOAD_PROMPTS", payload: data.prompts });
+    dispatch({ type: "LOAD_PROMPTS", payload: Array.isArray(data?.prompts) ? data.prompts : [] });
   }
 
   const handleOpenPromptModal = () => {
