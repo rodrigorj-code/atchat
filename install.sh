@@ -3,12 +3,29 @@ set -e
 
 ###############################################################################
 # CONFIGURAÇÕES – Ubuntu 20.04, Postgres + Redis local
-# Usuário: root | IP: 217.216.64.80
+# O IP do servidor é detectado automaticamente na instalação.
 ###############################################################################
 
 PROJETO_DIR="/var/www/atendechat"
 LINUX_USER="root"
-SERVER_IP="217.216.64.80"
+
+# IP detectado automaticamente (use SERVER_IP=1.2.3.4 ./install.sh para forçar um IP específico)
+if [ -z "$SERVER_IP" ]; then
+  echo "==> Detectando IP do servidor..."
+  # Tenta IP público primeiro (ideal para acesso remoto)
+  SERVER_IP=$(curl -s --max-time 3 ifconfig.me 2>/dev/null || curl -s --max-time 3 icanhazip.com 2>/dev/null)
+  if [ -z "$SERVER_IP" ]; then
+    SERVER_IP=$(hostname -I 2>/dev/null | awk '{print $1}')
+  fi
+  if [ -z "$SERVER_IP" ]; then
+    SERVER_IP=$(ip route get 1.1.1.1 2>/dev/null | awk '{print $7; exit}')
+  fi
+  if [ -z "$SERVER_IP" ]; then
+    echo ">> ERRO: Não foi possível detectar o IP. Defina manualmente: SERVER_IP=SEU_IP ./install.sh"
+    exit 1
+  fi
+  echo "    IP detectado: ${SERVER_IP}"
+fi
 
 DB_NAME="atendechat"
 DB_USER="atendechat"
@@ -248,6 +265,9 @@ echo "  Backend:   http://${SERVER_IP}:8080"
 echo ""
 echo "  Backend (serviço): systemctl status atendechat-backend"
 echo "  Logs:              journalctl -u atendechat-backend -f"
+echo ""
+echo "  Usuário: admin@admin.com"
+echo "  Senha: 123456"
 echo ""
 echo "  Abra o firewall se necessário:"
 echo "    ufw allow 22 && ufw allow 80 && ufw allow 8080 && ufw enable"
