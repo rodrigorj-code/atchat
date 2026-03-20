@@ -243,7 +243,7 @@ const EvaluationModal = ({ open, onClose, onSave }) => {
       });
       toast.success(i18n.t("evaluationModal.created", "Avaliação criada com sucesso"));
       handleClose();
-      onSave?.();
+      if (onSave) onSave();
     } catch (err) {
       toastError(err);
     } finally {

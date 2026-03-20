@@ -85,10 +85,13 @@ const useStyles = makeStyles((theme) => ({
 
 export function PulsingNotificationBadge({ hasNotification, children }) {
   const classes = useStyles();
+  const showBadge = Boolean(hasNotification);
+  if (!showBadge) {
+    return <>{children}</>;
+  }
   return (
     <Badge
       variant="dot"
-      invisible={!hasNotification}
       overlap="circular"
       classes={{
         badge: classes.pulsingDot,
