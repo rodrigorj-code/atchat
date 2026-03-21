@@ -131,7 +131,7 @@ const CampaignModal = ({
           params: { companyId }
         });
 
-        setFile(data.files);
+        setFile(Array.isArray(data?.files) ? data.files : []);
       } catch (err) {
         toastError(err);
       }
@@ -148,16 +148,15 @@ const CampaignModal = ({
 
       api
         .get(`/contact-lists/list`, { params: { companyId } })
-        .then(({ data }) => setContactLists(data));
+        .then(({ data }) => setContactLists(Array.isArray(data) ? data : []));
 
       api
         .get(`/whatsapp`, { params: { companyId, session: 0 } })
-        .then(({ data }) => setWhatsapps(data));
+        .then(({ data }) => setWhatsapps(Array.isArray(data) ? data : []));
 
       api.get(`/tags`, { params: { companyId } })
         .then(({ data }) => {
-          const fetchedTags = data.tags;
-          // Perform any necessary data transformation here
+          const fetchedTags = Array.isArray(data?.tags) ? data.tags : [];
           const formattedTagLists = fetchedTags.map((tag) => ({
             id: tag.id,
             name: tag.name,
@@ -394,8 +393,7 @@ const CampaignModal = ({
                         disabled={!campaignEditable}
                       >
                         <MenuItem value="">Nenhuma</MenuItem>
-                        {contactLists &&
-                          contactLists.map((contactList) => (
+                        {(Array.isArray(contactLists) ? contactLists : []).map((contactList) => (
                             <MenuItem
                               key={contactList.id}
                               value={contactList.id}
@@ -427,8 +425,7 @@ const CampaignModal = ({
                         disabled={!campaignEditable}
                       >
                         <MenuItem value="">Nenhuma</MenuItem>
-                        {Array.isArray(tagLists) &&
-                          tagLists.map((tagList) => (
+                        {(Array.isArray(tagLists) ? tagLists : []).map((tagList) => (
                             <MenuItem key={tagList.id} value={tagList.id}>
                               {tagList.name}
                             </MenuItem>
@@ -457,8 +454,7 @@ const CampaignModal = ({
                         disabled={!campaignEditable}
                       >
                         <MenuItem value="">Nenhuma</MenuItem>
-                        {whatsapps &&
-                          whatsapps.map((whatsapp) => (
+                        {(Array.isArray(whatsapps) ? whatsapps : []).map((whatsapp) => (
                             <MenuItem key={whatsapp.id} value={whatsapp.id}>
                               {whatsapp.name}
                             </MenuItem>
@@ -502,7 +498,7 @@ const CampaignModal = ({
                         value={values.fileListId || ""}
                       >
                         <MenuItem value={""} >{"Nenhum"}</MenuItem>
-                        {file.map(f => (
+                        {(Array.isArray(file) ? file : []).map(f => (
                           <MenuItem key={f.id} value={f.id}>
                             {f.name}
                           </MenuItem>

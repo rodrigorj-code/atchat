@@ -48,13 +48,11 @@ export function QueueOptionStepper({ queueId, options, updateOptions }) {
           method: "GET",
           params: { queueId, parentId: option.id },
         });
-        const optionList = data.map((option) => {
-          return {
-            ...option,
-            children: [],
-            edition: false,
-          };
-        });
+        const optionList = Array.isArray(data) ? data.map((option) => ({
+          ...option,
+          children: [],
+          edition: false,
+        })) : [];
         option.children = optionList;
         updateOptions();
       } catch (e) {
@@ -256,7 +254,7 @@ export function QueueOptionStepper({ queueId, options, updateOptions }) {
         activeStep={activeOption}
         orientation="vertical"
       >
-        {options.map((option, index) => renderStep(option, index))}
+        {(Array.isArray(options) ? options : []).map((option, index) => renderStep(option, index))}
       </Stepper>
     );
   };
@@ -277,13 +275,11 @@ export function QueueOptions({ queueId }) {
             method: "GET",
             params: { queueId, parentId: -1 },
           });
-          const optionList = data.map((option) => {
-            return {
-              ...option,
-              children: [],
-              edition: false,
-            };
-          });
+          const optionList = Array.isArray(data) ? data.map((option) => ({
+            ...option,
+            children: [],
+            edition: false,
+          })) : [];
           setOptions(optionList);
         } catch (e) {
           toastError(e);

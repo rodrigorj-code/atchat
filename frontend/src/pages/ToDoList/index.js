@@ -9,7 +9,9 @@ import ListItemSecondaryAction from '@material-ui/core/ListItemSecondaryAction';
 import IconButton from '@material-ui/core/IconButton';
 import DeleteIcon from '@material-ui/icons/Delete';
 import EditIcon from '@material-ui/icons/Edit';
+import { toast } from 'react-toastify';
 import { i18n } from '../../translate/i18n';
+import MainContainer from '../../components/MainContainer';
 
 const useStyles = makeStyles({
   root: {
@@ -47,9 +49,16 @@ const ToDoList = () => {
   const [editIndex, setEditIndex] = useState(-1);
 
   useEffect(() => {
-    const savedTasks = localStorage.getItem('tasks');
-    if (savedTasks) {
-      setTasks(JSON.parse(savedTasks));
+    try {
+      const savedTasks = localStorage.getItem('tasks');
+      if (savedTasks) {
+        const parsed = JSON.parse(savedTasks);
+        if (Array.isArray(parsed)) {
+          setTasks(parsed);
+        }
+      }
+    } catch (e) {
+      // Ignora dados corrompidos do localStorage
     }
   }, []);
 
@@ -62,38 +71,49 @@ const ToDoList = () => {
   };
 
   const handleAddTask = () => {
-    if (!task.trim()) {
-      // Impede que o usuário crie uma tarefa sem texto
+    const taskText = (task || '').toString().trim();
+    if (!taskText) {
+      toast.info(i18n.t('todolist.buttons.typeTask', 'Digite uma tarefa para adicionar'));
       return;
     }
 
     const now = new Date();
+    const tasksArray = Array.isArray(tasks) ? tasks : [];
     if (editIndex >= 0) {
       // Editar tarefa existente
-      const newTasks = [...tasks];
-      newTasks[editIndex] = {text: task, updatedAt: now, createdAt: newTasks[editIndex].createdAt};
+      const newTasks = [...tasksArray];
+      const existing = newTasks[editIndex];
+      newTasks[editIndex] = {
+        text: taskText,
+        updatedAt: now,
+        createdAt: existing?.createdAt ? new Date(existing.createdAt) : now,
+      };
       setTasks(newTasks);
       setTask('');
       setEditIndex(-1);
     } else {
       // Adicionar nova tarefa
-      setTasks([...tasks, {text: task, createdAt: now, updatedAt: now}]);
+      setTasks([...tasksArray, { text: taskText, createdAt: now, updatedAt: now }]);
       setTask('');
     }
   };
 
   const handleEditTask = (index) => {
-    setTask(tasks[index].text);
+    const tasksArray = Array.isArray(tasks) ? tasks : [];
+    const taskItem = tasksArray[index];
+    setTask((taskItem?.text || '').toString());
     setEditIndex(index);
   };
 
   const handleDeleteTask = (index) => {
-    const newTasks = [...tasks];
+    const tasksArray = Array.isArray(tasks) ? tasks : [];
+    const newTasks = [...tasksArray];
     newTasks.splice(index, 1);
     setTasks(newTasks);
   };
 
   return (
+    <MainContainer>
     <div className={classes.root}>
       <div className={classes.inputContainer}>
         <TextField
@@ -101,17 +121,32 @@ const ToDoList = () => {
           label={i18n.t('todolist.input')}
           value={task}
           onChange={handleTaskChange}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              handleAddTask();
+            }
+          }}
           variant="outlined"
         />
-        <Button variant="contained" color="primary" onClick={handleAddTask}>
+        <Button type="button" variant="contained" color="primary" onClick={handleAddTask}>
           {editIndex >= 0 ? i18n.t('todolist.buttons.save') : i18n.t('todolist.buttons.add')}
         </Button>
       </div>
       <div className={classes.listContainer}>
         <List>
-          {tasks.map((task, index) => (
+          {(Array.isArray(tasks) ? tasks : []).map((taskItem, index) => (
             <ListItem key={index} className={classes.list}>
-              <ListItemText primary={task.text} secondary={task.updatedAt.toLocaleString()} />
+              <ListItemText
+                primary={taskItem?.text || ''}
+                secondary={
+                  taskItem?.updatedAt
+                    ? new Date(taskItem.updatedAt).toLocaleString()
+                    : taskItem?.createdAt
+                    ? new Date(taskItem.createdAt).toLocaleString()
+                    : ''
+                }
+              />
               <ListItemSecondaryAction>
                 <IconButton onClick={() => handleEditTask(index)}>
                   <EditIcon />
@@ -125,6 +160,7 @@ const ToDoList = () => {
         </List>
       </div>
     </div>
+    </MainContainer>
   );
 };
 

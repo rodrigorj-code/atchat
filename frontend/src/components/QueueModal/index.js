@@ -150,7 +150,7 @@ const QueueModal = ({ open, onClose, queueId }) => {
     (async () => {
       try {
         const { data } = await api.get("/prompt");
-        setPrompts(data.prompts);
+        setPrompts(Array.isArray(data?.prompts) ? data.prompts : []);
       } catch (err) {
         toastError(err);
       }
@@ -172,8 +172,7 @@ const QueueModal = ({ open, onClose, queueId }) => {
     (async () => {
       try {
         const { data } = await api.get("/queueIntegration");
-
-        setIntegrations(data.queueIntegrations);
+        setIntegrations(Array.isArray(data?.queueIntegrations) ? data.queueIntegrations : []);
       } catch (err) {
         toastError(err);
       }
@@ -192,7 +191,7 @@ const QueueModal = ({ open, onClose, queueId }) => {
           ? setSelectedPrompt(data.promptId)
           : setSelectedPrompt(null);
 
-        setSchedules(data.schedules);
+                        if (Array.isArray(data.schedules)) setSchedules(data.schedules);
       } catch (err) {
         toastError(err);
       }
@@ -373,7 +372,7 @@ const QueueModal = ({ open, onClose, queueId }) => {
                           value={values.integrationId || ""}
                         >
                           <MenuItem value={""}>{"Nenhum"}</MenuItem>
-                          {integrations.map((integration) => (
+                          {(Array.isArray(integrations) ? integrations : []).map((integration) => (
                             <MenuItem
                               key={integration.id}
                               value={integration.id}
@@ -407,7 +406,7 @@ const QueueModal = ({ open, onClose, queueId }) => {
                             getContentAnchorEl: null,
                           }}
                         >
-                          {prompts.map((prompt) => (
+                          {(Array.isArray(prompts) ? prompts : []).map((prompt) => (
                             <MenuItem key={prompt.id} value={prompt.id}>
                               {prompt.name}
                             </MenuItem>

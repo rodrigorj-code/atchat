@@ -7,10 +7,7 @@ import FormControl from "@material-ui/core/FormControl";
 import InputLabel from "@material-ui/core/InputLabel";
 import Select from "@material-ui/core/Select";
 import TextField from "@material-ui/core/TextField";
-import FormHelperText from "@material-ui/core/FormHelperText";
 import Typography from "@material-ui/core/Typography";
-import Box from "@material-ui/core/Box";
-import Button from "@material-ui/core/Button";
 import Table from "@material-ui/core/Table";
 import TableBody from "@material-ui/core/TableBody";
 import TableCell from "@material-ui/core/TableCell";
@@ -23,14 +20,10 @@ import ScheduleOutlinedIcon from "@material-ui/icons/ScheduleOutlined";
 import CheckCircleOutlinedIcon from "@material-ui/icons/CheckCircleOutlined";
 import AccessTimeIcon from "@material-ui/icons/AccessTime";
 import ChatBubbleOutlinedIcon from "@material-ui/icons/ChatBubbleOutlined";
-import FilterListIcon from "@material-ui/icons/FilterList";
-import DescriptionOutlinedIcon from "@material-ui/icons/DescriptionOutlined";
-import ArrowDropDownIcon from "@material-ui/icons/ArrowDropDown";
 import PeopleOutlinedIcon from "@material-ui/icons/PeopleOutlined";
 import AssessmentOutlinedIcon from "@material-ui/icons/AssessmentOutlined";
 
 import { makeStyles } from "@material-ui/core/styles";
-import { toast } from "react-toastify";
 import {
   AreaChart,
   Area,
@@ -56,32 +49,21 @@ const useStyles = makeStyles((theme) => ({
     paddingLeft: theme.spacing(2),
     paddingRight: theme.spacing(2),
   },
-  headerRow: {
+  periodSelectorRow: {
     display: "flex",
+    justifyContent: "flex-end",
     alignItems: "center",
-    justifyContent: "space-between",
-    flexWrap: "wrap",
-    gap: theme.spacing(2),
-    marginBottom: theme.spacing(3),
-  },
-  filterLabel: {
-    display: "flex",
-    alignItems: "center",
+    marginBottom: theme.spacing(2),
     gap: theme.spacing(1),
-    color: theme.palette.text.secondary,
-    fontSize: "0.875rem",
+    flexWrap: "wrap",
   },
-  reportButton: {
-    backgroundColor: "#1a1a1a",
-    color: "#fff",
-    borderRadius: 8,
-    textTransform: "none",
-    fontWeight: 600,
-    paddingLeft: theme.spacing(2),
-    paddingRight: theme.spacing(2),
-    "&:hover": {
-      backgroundColor: "#333",
-    },
+  periodSelect: {
+    minWidth: 140,
+    "& .MuiSelect-root": { paddingTop: 8, paddingBottom: 8 },
+  },
+  periodDateField: {
+    "& .MuiInputBase-root": { fontSize: "0.875rem" },
+    "& input": { padding: "8px 12px" },
   },
   card: {
     padding: theme.spacing(2.5),
@@ -154,13 +136,6 @@ const useStyles = makeStyles((theme) => ({
     marginRight: -theme.spacing(1),
     marginBottom: -theme.spacing(0.5),
   },
-  filterBar: {
-    padding: theme.spacing(2),
-    borderRadius: 12,
-    marginBottom: theme.spacing(3),
-    backgroundColor: theme.palette.background.paper,
-    border: `1px solid ${theme.palette.divider}`,
-  },
   selectContainer: {
     width: "100%",
     textAlign: "left",
@@ -225,9 +200,8 @@ const Dashboard = () => {
   const [counters, setCounters] = useState({});
   const [attendants, setAttendants] = useState([]);
   const [series, setSeries] = useState([]);
-  const [period, setPeriod] = useState(0);
-  const [filterType, setFilterType] = useState(1);
-  const [dateFrom, setDateFrom] = useState(moment().startOf("month").format("YYYY-MM-DD"));
+  const [period, setPeriod] = useState(7);
+  const [dateFrom, setDateFrom] = useState(moment().subtract(7, "days").format("YYYY-MM-DD"));
   const [dateTo, setDateTo] = useState(moment().format("YYYY-MM-DD"));
   const [loading, setLoading] = useState(false);
   const [messageStats, setMessageStats] = useState({ sent: 0, received: 0 });
@@ -235,18 +209,20 @@ const Dashboard = () => {
   const { find } = useDashboard();
 
   useEffect(() => {
-    let mounted = true;
-    async function firstLoad() {
-      await fetchData();
+    if (period > 0) {
+      const days = period === 1 ? 1 : period;
+      setDateFrom(moment().subtract(days, "days").format("YYYY-MM-DD"));
+      setDateTo(moment().format("YYYY-MM-DD"));
     }
-    const t = setTimeout(() => {
-      firstLoad();
-    }, 800);
-    return () => {
-      mounted = false;
-      clearTimeout(t);
-    };
-  }, []);
+  }, [period]);
+
+  useEffect(() => {
+    if (period > 0) {
+      const t = setTimeout(() => fetchData(), 150);
+      return () => clearTimeout(t);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [period]);
 
   useEffect(() => {
     api.get("/contacts", { params: { pageNumber: 1 } }).then((r) => {
@@ -254,28 +230,21 @@ const Dashboard = () => {
     }).catch(() => {});
   }, []);
 
-  const handleChangePeriod = (value) => setPeriod(value);
-  const handleChangeFilterType = (value) => {
-    setFilterType(value);
-    if (value === 1) setPeriod(0);
-    else {
-      setDateFrom("");
-      setDateTo("");
-    }
+  const handlePeriodChange = (value) => {
+    setPeriod(Number(value));
   };
 
   async function fetchData() {
     setLoading(true);
     let params = {};
-    if (period > 0) params = { days: period };
-    if (!isEmpty(dateFrom) && moment(dateFrom).isValid()) {
-      params = { ...params, date_from: moment(dateFrom).format("YYYY-MM-DD") };
-    }
-    if (!isEmpty(dateTo) && moment(dateTo).isValid()) {
-      params = { ...params, date_to: moment(dateTo).format("YYYY-MM-DD") };
-    }
-    if (Object.keys(params).length === 0) {
-      toast.error(i18n.t("dashboard.toasts.selectFilterError"));
+    if (period > 0) {
+      params = { days: period };
+    } else if (!isEmpty(dateFrom) && !isEmpty(dateTo) && moment(dateFrom).isValid() && moment(dateTo).isValid()) {
+      params = {
+        date_from: moment(dateFrom).format("YYYY-MM-DD"),
+        date_to: moment(dateTo).format("YYYY-MM-DD"),
+      };
+    } else {
       setLoading(false);
       return;
     }
@@ -333,59 +302,6 @@ const Dashboard = () => {
   const sparkOnline = seriesToSparkData(series, "total", onlineCount);
   const sparkRating = [{ name: "1", value: Number(avgRating) || 0 }, { name: "2", value: Number(avgRating) || 0 }];
 
-  function renderFilters() {
-    if (filterType === 1) {
-      return (
-        <>
-          <Grid item xs={12} sm={6} md={4}>
-            <TextField
-              label={i18n.t("dashboard.filters.initialDate")}
-              type="date"
-              value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
-              className={classes.fullWidth}
-              InputLabelProps={{ shrink: true }}
-            />
-          </Grid>
-          <Grid item xs={12} sm={6} md={4}>
-            <TextField
-              label={i18n.t("dashboard.filters.finalDate")}
-              type="date"
-              value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
-              className={classes.fullWidth}
-              InputLabelProps={{ shrink: true }}
-            />
-          </Grid>
-        </>
-      );
-    }
-    return (
-      <Grid item xs={12} sm={6} md={4}>
-        <FormControl className={classes.selectContainer}>
-          <InputLabel id="period-selector-label">
-            {i18n.t("dashboard.periodSelect.title")}
-          </InputLabel>
-          <Select
-            labelId="period-selector-label"
-            id="period-selector"
-            value={period}
-            onChange={(e) => handleChangePeriod(e.target.value)}
-          >
-            <MenuItem value={0}>{i18n.t("dashboard.periodSelect.options.none")}</MenuItem>
-            <MenuItem value={3}>{i18n.t("dashboard.periodSelect.options.last3")}</MenuItem>
-            <MenuItem value={7}>{i18n.t("dashboard.periodSelect.options.last7")}</MenuItem>
-            <MenuItem value={15}>{i18n.t("dashboard.periodSelect.options.last15")}</MenuItem>
-            <MenuItem value={30}>{i18n.t("dashboard.periodSelect.options.last30")}</MenuItem>
-            <MenuItem value={60}>{i18n.t("dashboard.periodSelect.options.last60")}</MenuItem>
-            <MenuItem value={90}>{i18n.t("dashboard.periodSelect.options.last90")}</MenuItem>
-          </Select>
-          <FormHelperText>{i18n.t("dashboard.periodSelect.helper")}</FormHelperText>
-        </FormControl>
-      </Grid>
-    );
-  }
-
   const sparkTotal = seriesToSparkData(series, "total", totalAtendimentos);
   const sparkPendentes = seriesToSparkData(series, "pending", pendentes);
   const sparkFechados = seriesToSparkData(series, "closed", fechados);
@@ -402,60 +318,58 @@ const Dashboard = () => {
   return (
     <div className={classes.dashboardBg}>
       <Container maxWidth="lg" className={classes.container}>
-        {/* Cabeçalho: Filtros + Criar Relatório (BETA) */}
-        <div className={classes.headerRow}>
-          <div className={classes.filterLabel}>
-            <FilterListIcon fontSize="small" />
-            <span>{i18n.t("dashboard.header.filters", "Filtros")}</span>
-          </div>
-          <Button
-            className={classes.reportButton}
-            startIcon={<DescriptionOutlinedIcon />}
-            endIcon={<ArrowDropDownIcon />}
-          >
-            {i18n.t("dashboard.header.createReport", "Criar Relatório (BETA)")}
-          </Button>
-        </div>
-
-        {/* Barra de filtros */}
-        <Paper className={classes.filterBar} elevation={0} variant="outlined">
-          <Grid container spacing={2} alignItems="center">
-            <Grid item xs={12} sm={6} md={3}>
-              <FormControl className={classes.selectContainer} size="small" fullWidth>
-                <InputLabel id="filter-type-label">
-                  {i18n.t("dashboard.filters.filterType.title")}
-                </InputLabel>
-                <Select
-                  labelId="filter-type-label"
-                  value={filterType}
-                  onChange={(e) => handleChangeFilterType(e.target.value)}
-                >
-                  <MenuItem value={1}>
-                    {i18n.t("dashboard.filters.filterType.options.perDate")}
-                  </MenuItem>
-                  <MenuItem value={2}>
-                    {i18n.t("dashboard.filters.filterType.options.perPeriod")}
-                  </MenuItem>
-                </Select>
-                <FormHelperText>{i18n.t("dashboard.filters.filterType.helper")}</FormHelperText>
-              </FormControl>
-            </Grid>
-            {renderFilters()}
-            <Grid item xs={12} sm={6} md={2}>
+        {/* Seletor de período - compacto, canto superior direito */}
+        <div className={classes.periodSelectorRow}>
+          <FormControl size="small" variant="outlined" className={classes.periodSelect}>
+            <InputLabel>{i18n.t("dashboard.periodSelect.title", "Período")}</InputLabel>
+            <Select
+              value={period}
+              onChange={(e) => handlePeriodChange(e.target.value)}
+              label={i18n.t("dashboard.periodSelect.title", "Período")}
+            >
+              <MenuItem value={1}>{i18n.t("dashboard.periodSelect.options.today", "Hoje")}</MenuItem>
+              <MenuItem value={7}>{i18n.t("dashboard.periodSelect.options.last7", "7 dias")}</MenuItem>
+              <MenuItem value={15}>{i18n.t("dashboard.periodSelect.options.last15", "15 dias")}</MenuItem>
+              <MenuItem value={30}>{i18n.t("dashboard.periodSelect.options.last30", "30 dias")}</MenuItem>
+              <MenuItem value={0}>{i18n.t("dashboard.periodSelect.options.custom", "Personalizado")}</MenuItem>
+            </Select>
+          </FormControl>
+          {period === 0 && (
+            <>
+              <TextField
+                type="date"
+                size="small"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                InputLabelProps={{ shrink: true }}
+                className={classes.periodDateField}
+                style={{ width: 140 }}
+                inputProps={{ "aria-label": "Data inicial" }}
+              />
+              <TextField
+                type="date"
+                size="small"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                InputLabelProps={{ shrink: true }}
+                className={classes.periodDateField}
+                style={{ width: 140 }}
+                inputProps={{ "aria-label": "Data final" }}
+              />
               <ButtonWithSpinner
                 loading={loading}
                 onClick={() => fetchData()}
                 variant="contained"
                 color="primary"
-                fullWidth
+                size="small"
               >
-                {i18n.t("dashboard.buttons.filter")}
+                {i18n.t("dashboard.buttons.filter", "Filtrar")}
               </ButtonWithSpinner>
-            </Grid>
-          </Grid>
-        </Paper>
+            </>
+          )}
+        </div>
 
-        {/* 6 cards no estilo da imagem */}
+        {/* Cards */}
         <Grid container spacing={3}>
           {/* 1. Total de Atendimentos */}
           <Grid item xs={12} sm={6} md={4}>
