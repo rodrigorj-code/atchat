@@ -856,7 +856,7 @@ const MainListItems = (props) => {
                       selected={location.pathname === "/flowbuilders" || location.pathname.startsWith("/flowbuilder/")}
                     >
                       <ListItemIcon className={classes.listItemIcon}><ShapeLine /></ListItemIcon>
-                      <ListItemText primary="Conversa" className={classes.listItemText} />
+                      <ListItemText primary="Chatbot" className={classes.listItemText} />
                     </ListItem>
                   </List>
                 </Collapse>

@@ -97,23 +97,23 @@ const SocketManager = {
         this.currentSocket = null;
       }
 
-      let token = JSON.parse(localStorage.getItem("token"));
-      const { exp } = jwt.decode(token) ?? {};
+      let token = null;
+      try {
+        token = JSON.parse(localStorage.getItem("token"));
+      } catch (_) {}
 
-      if ( Date.now() >= exp*1000) {
-        console.warn("Expired token, reload after refresh");
-        setTimeout(() => {
-          window.location.reload();
-        },1000);
+      if (!token) {
+        return new DummySocket();
+      }
+
+      const decoded = jwt.decode(token);
+      const exp = decoded?.exp;
+      if (exp && Date.now() >= exp * 1000) {
         return new DummySocket();
       }
 
       this.currentCompanyId = companyId;
       this.currentUserId = userId;
-      
-      if (!token) {
-        return new DummySocket();
-      }
       
       this.currentSocket = openSocket(process.env.REACT_APP_BACKEND_URL, {
         transports: ["polling"],
@@ -125,17 +125,13 @@ const SocketManager = {
       this.currentSocket.on("disconnect", (reason) => {
         console.warn(`socket disconnected because: ${reason}`);
         if (reason.startsWith("io ")) {
-          console.warn("tryng to reconnect", this.currentSocket);
-          
-          const { exp } = jwt.decode(token);
-          if ( Date.now()-180 >= exp*1000) {
-            console.warn("Expired token, reloading app");
-            window.location.reload();
+          const decoded = jwt.decode(token);
+          const exp = decoded?.exp;
+          if (exp && Date.now() - 180 >= exp * 1000) {
             return;
           }
-
           this.currentSocket.connect();
-        }        
+        }
       });
       
       this.currentSocket.on("connect", (...params) => {

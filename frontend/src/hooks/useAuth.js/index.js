@@ -109,11 +109,22 @@ const useAuth = () => {
       if (token) {
         try {
           const { data } = await api.post("/auth/refresh_token");
-          api.defaults.headers.Authorization = `Bearer ${data.token}`;
+          if (data?.token) {
+            localStorage.setItem("token", JSON.stringify(data.token));
+          }
+          api.defaults.headers.Authorization = `Bearer ${data?.token || JSON.parse(token)}`;
           setIsAuth(true);
-          setUser(data.user);
+          setUser(data?.user || {});
         } catch (err) {
-          toastError(err);
+          if (err?.response?.status === 401 || err?.response?.status === 403) {
+            localStorage.removeItem("token");
+            localStorage.removeItem("companyId");
+            api.defaults.headers.Authorization = undefined;
+            setIsAuth(false);
+            toastError(err);
+          } else {
+            toastError(err);
+          }
         }
       }
       setLoading(false);

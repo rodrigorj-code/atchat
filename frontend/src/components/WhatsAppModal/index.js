@@ -147,10 +147,10 @@ const WhatsAppModal = ({ open, onClose, whatsAppId }) => {
     (async () => {
       try {
         const { data } = await api.get("/prompt");
-        setPrompts(data.prompts);
+        setPrompts(data?.prompts ?? []);
 
-        const {data: dataIntegration} = await api.get("/queueIntegration");
-        setIntegrations(dataIntegration.queueIntegrations);
+        const { data: dataIntegration } = await api.get("/queueIntegration");
+        setIntegrations(dataIntegration?.queueIntegrations ?? []);
 
       } catch (err) {
         toastError(err);
@@ -477,7 +477,7 @@ const WhatsAppModal = ({ open, onClose, whatsAppId }) => {
                       getContentAnchorEl: null,
                     }}
                   >
-                    {integrations.map((prompt) => (
+                    {(integrations || []).map((prompt) => (
                       <MenuItem
                         key={prompt.id}
                         value={prompt.id}
