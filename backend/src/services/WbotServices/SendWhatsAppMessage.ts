@@ -11,12 +11,15 @@ interface Request {
   body: string;
   ticket: Ticket;
   quotedMsg?: Message;
+  /** JID da conversa original (ex: @lid). Use quando disponível para garantir que a resposta chegue no mesmo chat do cliente. */
+  remoteJid?: string;
 }
 
 const SendWhatsAppMessage = async ({
   body,
   ticket,
-  quotedMsg
+  quotedMsg,
+  remoteJid: remoteJidOverride
 }: Request): Promise<WAMessage> => {
   let options = {};
   const wbot = await GetTicketWbot(ticket);
@@ -28,11 +31,13 @@ const SendWhatsAppMessage = async ({
       throw new AppError("Não é possível enviar mensagem para o próprio número da conexão. Verifique o contato do ticket.");
     }
   }
-  // Sempre usar apenas dígitos para montar o JID (evita LID ou formatação errada)
-  const destNumber = String(ticket.contact.number || "").replace(/\D/g, "");
-  const number = ticket.isGroup
-    ? `${destNumber}@g.us`
-    : `${destNumber}@s.whatsapp.net`;
+  // Usar o JID da conversa original quando disponível (resolve LID: resposta no mesmo chat do cliente)
+  const number = remoteJidOverride || (() => {
+    const destNumber = String(ticket.contact.number || "").replace(/\D/g, "");
+    return ticket.isGroup
+      ? `${destNumber}@g.us`
+      : `${destNumber}@s.whatsapp.net`;
+  })();
 
   if (quotedMsg) {
       const chatMessages = await Message.findOne({

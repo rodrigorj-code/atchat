@@ -11,6 +11,7 @@ import Contact from "../../models/Contact";
 //import CreateTicketServiceWebhook from "../TicketServices/CreateTicketServiceWebhook";
 import { SendMessage } from "../../helpers/SendMessage";
 import GetDefaultWhatsApp from "../../helpers/GetDefaultWhatsApp";
+import ShowWhatsAppService from "../WhatsappService/ShowWhatsAppService";
 import Ticket from "../../models/Ticket";
 import fs from "fs";
 import GetWhatsappWbot from "../../helpers/GetWhatsappWbot";
@@ -45,6 +46,7 @@ import { getWbot } from "../../libs/wbot";
 import { proto } from "@whiskeysockets/baileys";
 import { handleOpenAi } from "../IntegrationsServices/OpenAiService";
 import { IOpenAi } from "../../@types/openai";
+import { verifyMessage } from "../WbotServices/wbotMessageListener";
 
 interface IAddContact {
   companyId: number;
@@ -71,6 +73,7 @@ export const ActionsWebhookService = async (
 ): Promise<string> => {
   try {
     const io = getIO();
+    const originalWhatsAppMsg = msg;
     let next = nextStage;
     console.log(
       "ActionWebhookService | 53",
@@ -164,7 +167,9 @@ export const ActionsWebhookService = async (
     }
 
     const lengthLoop = nodes.length;
-    const whatsapp = await GetDefaultWhatsApp(companyId);
+    const whatsapp = whatsappId
+      ? await ShowWhatsAppService(whatsappId, companyId)
+      : await GetDefaultWhatsApp(companyId);
 
     if (whatsapp.status !== "CONNECTED") {
       return;
@@ -174,7 +179,13 @@ export const ActionsWebhookService = async (
 
     let execFn = "";
 
-    let ticket = null;
+    let ticket: Ticket | null = null;
+    if (idTicket && whatsappId) {
+      ticket = await Ticket.findOne({
+        where: { id: idTicket, whatsappId, companyId },
+        include: [{ model: Contact, as: "contact" }]
+      });
+    }
 
     let noAlterNext = false;
 
@@ -219,7 +230,7 @@ export const ActionsWebhookService = async (
 
         let msg;
 
-        const webhook = ticket.dataWebhook
+        const webhook = ticket?.dataWebhook;
 
         if (webhook && webhook.hasOwnProperty("variables")) {
           msg = {
@@ -231,17 +242,28 @@ export const ActionsWebhookService = async (
           };
         }
 
-        await SendMessage(whatsapp, {
-          number: numberClient,
-          body: msg.body
-        });
+        if (ticket && ticket.contact) {
+          const ticketDetails = await ShowTicketService(ticket.id, companyId);
+          await delay(500);
+          await typeSimulation(ticket, "composing");
+          // Usar remoteJid da mensagem original para conversas LID (garante que a resposta chegue ao cliente)
+          const sentMessage = await SendWhatsAppMessage({
+            body: msg.body,
+            ticket: ticketDetails,
+            quotedMsg: null,
+            ...(originalWhatsAppMsg?.key?.remoteJid && { remoteJid: originalWhatsAppMsg.key.remoteJid })
+          });
+          if (sentMessage) {
+            await verifyMessage(sentMessage as any, ticketDetails, ticketDetails.contact, msg.body);
+          }
+          SetTicketMessagesAsRead(ticketDetails);
+        } else {
+          await SendMessage(whatsapp, {
+            number: numberClient,
+            body: msg.body
+          });
+        }
 
-
-        //TESTE BOTÃO
-        //await SendMessageFlow(whatsapp, {
-        //  number: numberClient,
-        //  body: msg.body
-        //} )
         await intervalWhats("1");
       }
       console.log("273");
