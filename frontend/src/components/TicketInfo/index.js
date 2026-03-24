@@ -11,9 +11,9 @@ const TicketInfo = ({ contact, ticket, onClick }) => {
 
 	useEffect(() => {
 		if (contact) {
-			setContactName(contact.name);
+			setContactName(contact.name || '');
 			if(document.body.offsetWidth < 600) {
-				if (contact.name.length > 10) {
+				if (contact.name && contact.name.length > 10) {
 					const truncadName = contact.name.substring(0, 10) + '...';
 					setContactName(truncadName);
 				}

@@ -385,8 +385,8 @@ const CustomInput = (props) => {
       const firstWord = inputMessage.charAt(0);
       setPopupOpen(firstWord.indexOf("/") > -1);
 
-      const filteredOptions = quickMessages.filter(
-        (m) => m.label.indexOf(inputMessage) > -1
+      const filteredOptions = (quickMessages || []).filter(
+        (m) => m.label && m.label.indexOf(inputMessage) > -1
       );
       setOptions(filteredOptions);
     } else {

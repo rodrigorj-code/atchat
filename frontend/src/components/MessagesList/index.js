@@ -270,7 +270,7 @@ const useStyles = makeStyles((theme) => ({
 
 const reducer = (state, action) => {
   if (action.type === "LOAD_MESSAGES") {
-    const messages = action.payload;
+    const messages = Array.isArray(action.payload) ? action.payload : [];
     const newMessages = [];
 
     messages.forEach((message) => {
@@ -348,12 +348,12 @@ const MessagesList = ({ ticket, ticketId, isGroup }) => {
           });
 
           if (currentTicketId.current === ticketId) {
-            dispatch({ type: "LOAD_MESSAGES", payload: data.messages });
+            dispatch({ type: "LOAD_MESSAGES", payload: Array.isArray(data?.messages) ? data.messages : [] });
             setHasMore(data.hasMore);
             setLoading(false);
           }
 
-          if (pageNumber === 1 && data.messages.length > 1) {
+          if (pageNumber === 1 && Array.isArray(data?.messages) && data.messages.length > 1) {
             scrollToBottom();
           }
         } catch (err) {
@@ -672,8 +672,9 @@ const MessagesList = ({ ticket, ticketId, isGroup }) => {
   };
 
   const renderMessages = () => {
-    if (messagesList.length > 0) {
-      const viewMessagesList = messagesList.map((message, index) => {
+    const list = Array.isArray(messagesList) ? messagesList : [];
+    if (list.length > 0) {
+      const viewMessagesList = list.map((message, index) => {
 
         if (message.mediaType === "call_log") {
           return (

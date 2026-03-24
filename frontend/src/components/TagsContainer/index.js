@@ -20,7 +20,7 @@ export function TagsContainer({ ticket }) {
     useEffect(() => {
         if (isMounted.current) {
             loadTags().then(() => {
-                if (Array.isArray(ticket.tags)) {
+                if (Array.isArray(ticket?.tags)) {
                     setSelecteds(ticket.tags);
                 } else {
                     setSelecteds([]);
