@@ -70,13 +70,12 @@ const SendWhatsAppMessage = async ({
   }
 
   try {
-    const sentMessage = await wbot.sendMessage(number,{
-        text: formatBody(body, ticket.contact)
-      },
-      {
-        ...options
-      }
-    );
+    const chatJid = number.includes("@") ? jidNormalizedUser(number) : number;
+    const textPayload = { text: formatBody(body, ticket.contact) };
+    const sentMessage =
+      Object.keys(options).length > 0
+        ? await wbot.sendMessage(chatJid, textPayload, options)
+        : await wbot.sendMessage(chatJid, textPayload);
 
     await ticket.update({ lastMessage: formatBody(body, ticket.contact) });
     return sentMessage;

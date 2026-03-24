@@ -125,7 +125,7 @@ const SendWhatsAppMedia = async ({
   try {
     const wbot = await GetTicketWbot(ticket);
     // Evitar enviar para o próprio número da conexão
-    if (!ticket.isGroup && ticket.contact?.number && wbot.user?.id) {
+    if (!ticket.isGroup && ticket.contact?.number && ticket.contact.number !== "LID" && wbot.user?.id) {
       const destNumber = String(ticket.contact.number).replace(/\D/g, "");
       const myNumber = jidNormalizedUser(wbot.user.id).replace(/\D/g, "");
       if (destNumber && myNumber && destNumber === myNumber) {
@@ -197,7 +197,8 @@ const SendWhatsAppMedia = async ({
         ? `${destNumber}@g.us`
         : `${destNumber}@s.whatsapp.net`;
     }
-    const sentMessage = await wbot.sendMessage(number, {
+    const chatJid = number.includes("@") ? jidNormalizedUser(number) : number;
+    const sentMessage = await wbot.sendMessage(chatJid, {
       ...options
     });
 

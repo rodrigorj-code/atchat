@@ -33,6 +33,7 @@ import { Store } from "../../libs/store";
 import TicketTraking from "../../models/TicketTraking";
 import UserRating from "../../models/UserRating";
 import SendWhatsAppMessage from "./SendWhatsAppMessage";
+import { parseTicketDataWebhook } from "../../helpers/GetTicketRemoteJid";
 import moment from "moment";
 import Queue from "../../models/Queue";
 import QueueOption from "../../models/QueueOption";
@@ -2392,7 +2393,7 @@ const handleMessage = async (
     );
 
     // Persistir remoteJid para envio correto (essencial em conversas LID)
-    const existingData = (ticket.dataWebhook as Record<string, unknown>) || {};
+    const existingData = parseTicketDataWebhook(ticket.dataWebhook);
     if (msg.key.remoteJid) {
       await ticket.update({
         dataWebhook: { ...existingData, remoteJid: msg.key.remoteJid }
@@ -2620,18 +2621,23 @@ const handleMessage = async (
         const connections: IConnections[] = flow.flow["connections"];
 
         const { message, answerKey } = nodeSelected.data.typebotIntegration;
-        const oldDataWebhook = ticket.dataWebhook;
-
         const nodeIndex = nodes.findIndex(node => node.id === nodeSelected.id);
 
         const lastFlowId = nodes[nodeIndex + 1].id;
+        const prevDw = parseTicketDataWebhook(ticket.dataWebhook);
+        const prevVars =
+          prevDw.variables && typeof prevDw.variables === "object" && !Array.isArray(prevDw.variables)
+            ? (prevDw.variables as Record<string, unknown>)
+            : {};
         await ticket.update({
           lastFlowId: lastFlowId,
           dataWebhook: {
+            ...prevDw,
             variables: {
+              ...prevVars,
               [answerKey]: body
             }
-          }
+          } as any
         });
 
         await ticket.save();

@@ -47,6 +47,7 @@ import { proto } from "@whiskeysockets/baileys";
 import { handleOpenAi } from "../IntegrationsServices/OpenAiService";
 import { IOpenAi } from "../../@types/openai";
 import { v4 as uuidv4 } from "uuid";
+import { parseTicketDataWebhook } from "../../helpers/GetTicketRemoteJid";
 
 interface IAddContact {
   companyId: number;
@@ -791,13 +792,22 @@ export const ActionsWebhookService = async (
           }
 
           if (ticket) {
+            const prevDw = parseTicketDataWebhook(ticket.dataWebhook);
+            const incoming =
+              dataWebhook && typeof dataWebhook === "object" && !Array.isArray(dataWebhook)
+                ? (dataWebhook as Record<string, unknown>)
+                : {};
+            const mergedDw = { ...prevDw, ...incoming };
+            if (prevDw.remoteJid) {
+              mergedDw.remoteJid = prevDw.remoteJid;
+            }
             await ticket.update({
               queueId: ticket.queueId ? ticket.queueId : null,
               userId: null,
               companyId: companyId,
               flowWebhook: true,
               lastFlowId: nodeSelected.id,
-              dataWebhook: dataWebhook,
+              dataWebhook: mergedDw as any,
               hashFlowId: hashWebhookId,
               flowStopped: idFlowDb.toString()
             });
