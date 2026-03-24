@@ -24,7 +24,9 @@ export default function RemoveEdge({
   const onRemove = useCallback(
     (evt) => {
       evt.stopPropagation();
-      data?.onRemove?.(id);
+      if (data?.onRemove) {
+        data.onRemove(id);
+      }
     },
     [id, data]
   );
