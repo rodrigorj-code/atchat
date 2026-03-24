@@ -11,9 +11,11 @@ type Session = WASocket & {
 
 const GetTicketWbot = async (ticket: Ticket): Promise<Session> => {
   if (!ticket.whatsappId) {
-    const defaultWhatsapp = await GetDefaultWhatsApp(ticket.user.id);
-
-    await ticket.$set("whatsapp", defaultWhatsapp);
+    const defaultWhatsapp = await GetDefaultWhatsApp(
+      ticket.companyId,
+      ticket.user?.id
+    );
+    await ticket.update({ whatsappId: defaultWhatsapp.id });
   }
 
   const wbot = getWbot(ticket.whatsappId);

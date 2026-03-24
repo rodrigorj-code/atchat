@@ -46,7 +46,7 @@ import { getWbot } from "../../libs/wbot";
 import { proto } from "@whiskeysockets/baileys";
 import { handleOpenAi } from "../IntegrationsServices/OpenAiService";
 import { IOpenAi } from "../../@types/openai";
-import { verifyMessage } from "../WbotServices/wbotMessageListener";
+import { v4 as uuidv4 } from "uuid";
 
 interface IAddContact {
   companyId: number;
@@ -254,7 +254,21 @@ export const ActionsWebhookService = async (
             ...(originalWhatsAppMsg?.key?.remoteJid && { remoteJid: originalWhatsAppMsg.key.remoteJid })
           });
           if (sentMessage) {
-            await verifyMessage(sentMessage as any, ticketDetails, ticketDetails.contact, msg.body);
+            const bodyToSave = formatBody(msg.body, ticketDetails.contact);
+            await CreateMessageService({
+              messageData: {
+                id: (sentMessage as any)?.key?.id || uuidv4(),
+                ticketId: ticketDetails.id,
+                body: bodyToSave,
+                fromMe: true,
+                read: true,
+                ack: (sentMessage as any)?.status,
+                mediaType: "conversation",
+                remoteJid: (sentMessage as any)?.key?.remoteJid,
+                ...((sentMessage as any) ? { dataJson: JSON.stringify(sentMessage as any) } : {})
+              } as MessageData,
+              companyId: ticketDetails.companyId
+            });
           }
           SetTicketMessagesAsRead(ticketDetails);
         } else {
