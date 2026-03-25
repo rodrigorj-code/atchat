@@ -2,8 +2,11 @@
 set -e
 
 ###############################################################################
-# INSTALAÇÃO ATENDECHAT – Ubuntu 20.04, Postgres + Redis local
-# Um único script para instalar tudo. Ao finalizar, basta acessar o sistema.
+# INSTALAÇÃO ATENDECHAT – Ubuntu Server 20.04 (e derivados)
+# - Node 20, PostgreSQL, Redis, Nginx
+# - Backend via systemd (atendechat-backend) — reinício automático no boot
+# - PM2 instalado globalmente só como ferramenta extra (testes); produção = systemd
+# - Timezone America/Sao_Paulo, limite de upload Nginx 100M, libs Puppeteer
 ###############################################################################
 
 PROJETO_DIR="/var/www/atendechat"
@@ -73,9 +76,22 @@ API_DOMAIN=""
 echo "==> Atualizando sistema"
 apt update && apt upgrade -y
 
+echo "==> Pacotes base (git, curl, timezone, libs para Puppeteer/Chromium)"
+apt install -y git curl ca-certificates gnupg tzdata \
+  libxshmfence-dev libgbm-dev libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 \
+  libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 \
+  libgbm1 libasound2 libpango-1.0-0 libcairo2 fonts-liberation || true
+
+if timedatectl list-timezones 2>/dev/null | grep -q "America/Sao_Paulo"; then
+  timedatectl set-timezone America/Sao_Paulo 2>/dev/null || true
+fi
+
 echo "==> Instalando Node.js 20"
 curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
 apt install -y nodejs build-essential
+
+echo "==> PM2 (opcional: testes manuais; produção usa systemd — ver mensagem final)"
+npm install -g pm2@latest
 
 echo "==> Instalando PostgreSQL"
 apt install -y postgresql postgresql-contrib
@@ -97,6 +113,9 @@ sudo -u postgres psql -d "${DB_NAME}" -c 'CREATE EXTENSION IF NOT EXISTS "pgcryp
 
 echo "==> Instalando Redis"
 apt install -y redis-server
+if [ -f /etc/redis/redis.conf ] && grep -q '^supervised no' /etc/redis/redis.conf; then
+  sed -i 's/^supervised no/supervised systemd/' /etc/redis/redis.conf
+fi
 systemctl enable redis-server
 systemctl start redis-server
 
@@ -111,6 +130,10 @@ fi
 
 echo "==> Instalando Nginx"
 apt install -y nginx
+# Upload de mídia (anexos) — padrão do Nginx é 1M
+cat > /etc/nginx/conf.d/atendechat-limits.conf << 'LIMITS_EOF'
+client_max_body_size 100M;
+LIMITS_EOF
 systemctl enable nginx
 systemctl start nginx
 
@@ -220,6 +243,7 @@ ExecStart=/usr/bin/node dist/server.js
 Restart=always
 RestartSec=10
 Environment=NODE_ENV=production
+LimitNOFILE=65535
 
 [Install]
 WantedBy=multi-user.target
@@ -319,6 +343,19 @@ echo "    Senha:   123456"
 echo ""
 echo "  Abra o firewall se necessário:"
 echo "    ufw allow 22 && ufw allow 80 && ufw enable"
+echo ""
+echo "  Backend em produção usa systemd (não PM2):"
+echo "    Ver logs em tempo real:"
+echo "      journalctl -u atendechat-backend -f --no-pager"
+echo "    Últimas 200 linhas:"
+echo "      journalctl -u atendechat-backend -n 200 --no-pager"
+echo "    Reiniciar:"
+echo "      systemctl restart atendechat-backend"
+echo "    Status:"
+echo "      systemctl status atendechat-backend"
+echo ""
+echo "  PM2 foi instalado globalmente (npm install -g pm2) para testes manuais;"
+echo "  o serviço oficial continua sendo o systemd acima."
 echo ""
 echo "  Tudo pronto! Basta acessar o link acima."
 echo "=============================================="
