@@ -2077,6 +2077,17 @@ const flowbuilderIntegration = async (
       //   console.log(`Mensagem do worker: ${message}`);
       // });
 
+      logger.info(
+        {
+          flowBuilderInbound: true,
+          body,
+          lastFlowId: ticket.lastFlowId,
+          flowStopped: ticket.flowStopped,
+          hashFlowId: ticket.hashFlowId
+        },
+        "[FlowBuilder] fluxo ativo (webhook config): chamando ActionsWebhookService"
+      );
+
       await ActionsWebhookService(
         whatsapp.id,
         webhook.config["details"].idFlow,
@@ -2131,6 +2142,16 @@ const flowbuilderIntegration = async (
       // worker.on("message", message => {
       //   console.log(`Mensagem do worker: ${message}`);
       // });
+
+      logger.info(
+        {
+          flowBuilderInbound: true,
+          body,
+          lastFlowId: ticket.lastFlowId,
+          flowStopped: ticket.flowStopped
+        },
+        "[FlowBuilder] fluxo ativo (flowStopped): chamando ActionsWebhookService"
+      );
 
       await ActionsWebhookService(
         whatsapp.id,

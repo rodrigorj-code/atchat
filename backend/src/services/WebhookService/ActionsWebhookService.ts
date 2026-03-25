@@ -90,21 +90,41 @@ export const ActionsWebhookService = async (
       idTicket,
       numberPhrase
     );
+    if (
+      pressKey != null &&
+      pressKey !== "999" &&
+      pressKey !== "parar"
+    ) {
+      pressKey = String(pressKey).trim().replace(/\u200e/g, "");
+    }
     let createFieldJsonName = "";
 
     const connectStatic = connects;
+    const hasWebhookFormInputs =
+      details &&
+      typeof details === "object" &&
+      Array.isArray((details as { inputs?: unknown }).inputs);
+
     if (numberPhrase === "") {
-      const nameInput = details.inputs.find(item => item.keyValue === "nome");
-      nameInput.data.split(",").map(dataN => {
-        const lineToData = details.keysFull.find(item => item === dataN);
-        let sumRes = "";
-        if (!lineToData) {
-          sumRes = dataN;
-        } else {
-          sumRes = constructJsonLine(lineToData, dataWebhook);
+      if (hasWebhookFormInputs) {
+        const d = details as {
+          inputs: { keyValue: string; data: string }[];
+          keysFull: string[];
+        };
+        const nameInput = d.inputs.find(item => item.keyValue === "nome");
+        if (nameInput) {
+          nameInput.data.split(",").map(dataN => {
+            const lineToData = d.keysFull.find(item => item === dataN);
+            let sumRes = "";
+            if (!lineToData) {
+              sumRes = dataN;
+            } else {
+              sumRes = constructJsonLine(lineToData, dataWebhook);
+            }
+            createFieldJsonName = createFieldJsonName + sumRes;
+          });
         }
-        createFieldJsonName = createFieldJsonName + sumRes;
-      });
+      }
     } else {
       createFieldJsonName = numberPhrase.name;
     }
@@ -112,24 +132,31 @@ export const ActionsWebhookService = async (
     let numberClient = "";
 
     if (numberPhrase === "") {
-      const numberInput = details.inputs.find(
-        item => item.keyValue === "celular"
-      );
+      if (hasWebhookFormInputs) {
+        const d = details as {
+          inputs: { keyValue: string; data: string }[];
+          keysFull: string[];
+        };
+        const numberInput = d.inputs.find(
+          item => item.keyValue === "celular"
+        );
+        if (numberInput) {
+          numberInput.data.split(",").map(dataN => {
+            const lineToDataNumber = d.keysFull.find(item => item === dataN);
+            let createFieldJsonNumber = "";
+            if (!lineToDataNumber) {
+              createFieldJsonNumber = dataN;
+            } else {
+              createFieldJsonNumber = constructJsonLine(
+                lineToDataNumber,
+                dataWebhook
+              );
+            }
 
-      numberInput.data.split(",").map(dataN => {
-        const lineToDataNumber = details.keysFull.find(item => item === dataN);
-        let createFieldJsonNumber = "";
-        if (!lineToDataNumber) {
-          createFieldJsonNumber = dataN;
-        } else {
-          createFieldJsonNumber = constructJsonLine(
-            lineToDataNumber,
-            dataWebhook
-          );
+            numberClient = numberClient + createFieldJsonNumber;
+          });
         }
-
-        numberClient = numberClient + createFieldJsonNumber;
-      });
+      }
     } else {
       numberClient = numberPhrase.number;
     }
@@ -148,21 +175,29 @@ export const ActionsWebhookService = async (
     let createFieldJsonEmail = "";
 
     if (numberPhrase === "") {
-      const emailInput = details.inputs.find(item => item.keyValue === "email");
-      emailInput.data.split(",").map(dataN => {
-        const lineToDataEmail = details.keysFull.find(item =>
-          item.endsWith("email")
-        );
+      if (hasWebhookFormInputs) {
+        const d = details as {
+          inputs: { keyValue: string; data: string }[];
+          keysFull: string[];
+        };
+        const emailInput = d.inputs.find(item => item.keyValue === "email");
+        if (emailInput) {
+          emailInput.data.split(",").map(dataN => {
+            const lineToDataEmail = d.keysFull.find(item =>
+              item.endsWith("email")
+            );
 
-        let sumRes = "";
-        if (!lineToDataEmail) {
-          sumRes = dataN;
-        } else {
-          sumRes = constructJsonLine(lineToDataEmail, dataWebhook);
+            let sumRes = "";
+            if (!lineToDataEmail) {
+              sumRes = dataN;
+            } else {
+              sumRes = constructJsonLine(lineToDataEmail, dataWebhook);
+            }
+
+            createFieldJsonEmail = createFieldJsonEmail + sumRes;
+          });
         }
-
-        createFieldJsonEmail = createFieldJsonEmail + sumRes;
-      });
+      }
     } else {
       createFieldJsonEmail = numberPhrase.email;
     }
@@ -683,38 +718,64 @@ export const ActionsWebhookService = async (
       let isMenu: boolean;
 
       if (nodeSelected.type === "menu") {
-        console.log(650, "menu");
         if (pressKey) {
           const filterOne = connectStatic.filter(
             confil => confil.source === next
           );
-          const filterTwo = filterOne.filter(
+          let filterTwo = filterOne.filter(
             filt2 => filt2.sourceHandle === "a" + pressKey
           );
+          if (filterTwo.length === 0 && pressKey !== "") {
+            const n = Number(pressKey);
+            if (!Number.isNaN(n)) {
+              filterTwo = filterOne.filter(
+                filt2 => filt2.sourceHandle === "a" + String(n)
+              );
+            }
+          }
           if (filterTwo.length > 0) {
             execFn = filterTwo[0].target;
           } else {
             execFn = undefined;
           }
-          // execFn =
-          //   connectStatic
-          //     .filter(confil => confil.source === next)
-          //     .filter(filt2 => filt2.sourceHandle === "a" + pressKey)[0]?.target ??
-          //   undefined;
+          logger.info(
+            {
+              flowBuilderMenu: true,
+              clientReply: pressKey,
+              menuNodeId: next,
+              edgesFromMenu: filterOne.map(e => ({
+                sourceHandle: e.sourceHandle,
+                target: e.target
+              })),
+              matchedHandle: filterTwo[0]?.sourceHandle,
+              nextNodeId: execFn
+            },
+            "[FlowBuilder] menu: resposta do cliente e edge escolhida"
+          );
           if (execFn === undefined) {
+            logger.warn(
+              { flowBuilderMenu: true, menuNodeId: next, clientReply: pressKey },
+              "[FlowBuilder] menu: nenhuma edge com sourceHandle a{opção}"
+            );
             break;
           }
           pressKey = "999";
 
           const isNodeExist = nodes.filter(item => item.id === execFn);
-          console.log(674, "menu");
           if (isNodeExist.length > 0) {
             isMenu = isNodeExist[0].type === "menu" ? true : false;
           } else {
             isMenu = false;
           }
+          logger.info(
+            {
+              flowBuilderMenu: true,
+              nextNodeType: isNodeExist[0]?.type,
+              isNextNodeAlsoMenu: isMenu
+            },
+            "[FlowBuilder] menu: próximo nó após opção"
+          );
         } else {
-          console.log(681, "menu");
           let optionsMenu = "";
           nodeSelected.data.arrayOption.map(item => {
             optionsMenu += `[${item.number}] ${item.value}\n`;
@@ -820,8 +881,6 @@ export const ActionsWebhookService = async (
       let isContinue = false;
 
       if (pressKey === "999" && execCount > 0) {
-        console.log(587, "ActionsWebhookService | 587");
-
         pressKey = undefined;
         let result = connects.filter(connect => connect.source === execFn)[0];
         if (typeof result === "undefined") {
@@ -838,6 +897,16 @@ export const ActionsWebhookService = async (
           result = { target: execFn };
           isContinue = true;
           pressKey = undefined;
+        } else if (pressKey === "999" && execFn) {
+          // Próximo nó é sector, tag, closeTicket, etc. — não outro menu.
+          // Antes caía no primeiro connect(source===next) e ignorava a opção escolhida.
+          result = { target: execFn };
+          isContinue = true;
+          pressKey = undefined;
+          logger.info(
+            { flowBuilderMenu: true, nextTarget: execFn },
+            "[FlowBuilder] menu: avançando para nó após opção (não-menu)"
+          );
         } else if (isRandomizer) {
           isRandomizer = false;
           result = next;
@@ -852,7 +921,6 @@ export const ActionsWebhookService = async (
             next = result.target;
           }
         }
-        console.log(619, "ActionsWebhookService");
       }
 
       if (!pressKey && !isContinue) {
@@ -863,8 +931,6 @@ export const ActionsWebhookService = async (
         console.log(626, "ActionsWebhookService");
 
         if (nextNode === 0) {
-          console.log(654, "ActionsWebhookService");
-
           await Ticket.findOne({
             where: { id: idTicket, whatsappId, companyId: companyId }
           });
@@ -884,8 +950,6 @@ export const ActionsWebhookService = async (
         break;
       }
 
-      console.log(678, "ActionsWebhookService");
-
       console.log("UPDATE10...");
       ticket = await Ticket.findOne({
         where: { id: idTicket, whatsappId, companyId: companyId }
@@ -901,14 +965,23 @@ export const ActionsWebhookService = async (
           });
       }
 
-      console.log("UPDATE12...");
+      const lastFlowIdToSave = nodeSelected?.id ?? next;
+      logger.info(
+        {
+          flowBuilder: true,
+          lastFlowIdToSave,
+          nextAfterStep: next,
+          nodeType: nodeSelected?.type
+        },
+        "[FlowBuilder] persistindo lastFlowId no ticket"
+      );
       await ticket.update({
         whatsappId: whatsappId,
         queueId: ticket?.queueId,
         userId: null,
         companyId: companyId,
         flowWebhook: true,
-        lastFlowId: nodeSelected.id,
+        lastFlowId: lastFlowIdToSave,
         hashFlowId: hashWebhookId,
         flowStopped: idFlowDb.toString()
       });
