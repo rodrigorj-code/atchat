@@ -2792,14 +2792,51 @@ const handleMessage = async (
     }
 
     //integraçao na conexao
+    const wbotSessionId = Number(wbot.id);
+    const whatsappDbRow = await Whatsapp.findByPk(ticket.whatsappId, {
+      attributes: ["id", "name", "integrationId", "flowIdWelcome", "flowIdNotPhrase"]
+    });
+    const queuesLinked = (whatsapp.queues || []).map((q: Queue) => ({
+      id: q.id,
+      name: q.name,
+      integrationId: q.integrationId ?? null
+    }));
+    const singleQueueIntegrationId =
+      whatsapp.queues?.length === 1
+        ? whatsapp.queues[0]?.integrationId ?? null
+        : null;
+    const sessionVsTicketMatch = ticket.whatsappId === wbotSessionId;
     logger.info(
       {
         flowBuilderGate: "connection_pre",
+        ticketId: ticket.id,
+        ticketWhatsappId: ticket.whatsappId,
+        wbotSessionId,
+        sessionVsTicketMatch,
+        whatsappFromShowId: whatsapp.id,
+        whatsappFromShowName: whatsapp.name,
+        whatsappIntegrationId: whatsapp.integrationId,
+        whatsappFlowIdWelcome: whatsapp.flowIdWelcome,
+        whatsappDbId: whatsappDbRow?.id ?? null,
+        whatsappDbName: whatsappDbRow?.name ?? null,
+        whatsappDbIntegrationId: whatsappDbRow?.integrationId ?? null,
+        whatsappDbFlowIdWelcome: whatsappDbRow?.flowIdWelcome ?? null,
+        showVsDbIntegrationMatch:
+          whatsapp.integrationId === (whatsappDbRow?.integrationId ?? null),
+        queueId: ticket.queueId,
+        queueIntegrationIdFromTicket: ticket.queue?.integrationId ?? null,
+        queuesLinkedCount: whatsapp.queues?.length ?? 0,
+        queuesLinked,
+        singleQueueIntegrationId,
+        hint:
+          !whatsapp.integrationId && !whatsappDbRow?.integrationId && singleQueueIntegrationId
+            ? "Integração só na FILA (Queues.integrationId); Whatsapps.integrationId está null — o gate da conexão usa só a coluna da tabela Whatsapps"
+            : !whatsapp.queues?.length
+              ? "Nenhuma fila vinculada à conexão — verifyQueue não roda e fila/integração por fila não aplicam"
+              : null,
         chatbot: ticket.chatbot,
         hasQueue: !!ticket.queue,
-        queueId: ticket.queueId,
         hasUser: !!ticket.user,
-        integrationId: whatsapp.integrationId,
         useIntegration: ticket.useIntegration
       },
       "[FlowBuilder][DEBUG] checagem integração na conexão (antes do if)"
@@ -2904,14 +2941,33 @@ const handleMessage = async (
       order: [["id", "DESC"]]
     });
 
+    await ticket.reload({
+      include: [{ model: Queue, as: "queue" }]
+    });
+
     // integração flowbuilder (fallback: ex.: ticket sem queue em memória após verifyQueue ou fluxo sem retorno antecipado)
+    const whatsappDbPost = await Whatsapp.findByPk(ticket.whatsappId, {
+      attributes: ["id", "name", "integrationId", "flowIdWelcome", "flowIdNotPhrase"]
+    });
     logger.info(
       {
         flowBuilderGate: "connection_post_verifyQueue",
+        ticketId: ticket.id,
+        ticketWhatsappId: ticket.whatsappId,
+        wbotSessionId,
+        whatsappFromShowId: whatsapp.id,
+        whatsappFromShowName: whatsapp.name,
+        whatsappIntegrationId: whatsapp.integrationId,
+        whatsappFlowIdWelcome: whatsapp.flowIdWelcome,
+        whatsappDbIntegrationId: whatsappDbPost?.integrationId ?? null,
+        whatsappDbFlowIdWelcome: whatsappDbPost?.flowIdWelcome ?? null,
         hasQueue: !!ticket.queue,
         queueId: ticket.queueId,
+        queueIntegrationIdFromTicket: ticket.queue?.integrationId ?? null,
+        queuesLinkedCount: whatsapp.queues?.length ?? 0,
+        queuesLinked,
+        singleQueueIntegrationId,
         hasUser: !!ticket.user,
-        integrationId: whatsapp.integrationId,
         useIntegration: ticket.useIntegration,
         isFirstMsgTicketId: isFirstMsg?.id ?? null
       },

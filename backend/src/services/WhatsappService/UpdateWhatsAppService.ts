@@ -119,13 +119,17 @@ const UpdateWhatsAppService = async ({
     //sendIdQueue,
     transferQueueId,
     timeToTransfer,
-    promptId,
     maxUseBotQueues,
     timeUseBotQueues,
     expiresTicket,
-    expiresInactiveMessage,
-    integrationId
+    expiresInactiveMessage
   };
+  if (promptId !== undefined) {
+    updateData.promptId = promptId;
+  }
+  if (integrationId !== undefined) {
+    updateData.integrationId = integrationId;
+  }
   if (token !== undefined) {
     updateData.token = token;
   }
