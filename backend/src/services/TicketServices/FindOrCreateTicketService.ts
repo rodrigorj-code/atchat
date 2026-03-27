@@ -6,6 +6,7 @@ import ShowTicketService from "./ShowTicketService";
 import FindOrCreateATicketTrakingService from "./FindOrCreateATicketTrakingService";
 import Setting from "../../models/Setting";
 import Whatsapp from "../../models/Whatsapp";
+import { logger } from "../../utils/logger";
 
 interface TicketData {
   status?: string;
@@ -105,6 +106,17 @@ const FindOrCreateTicketService = async (
   });
 
   if (!ticket) {
+    logger.info(
+      {
+        findOrCreateTicketService: true,
+        action: "Ticket.create",
+        contactId: groupContact ? groupContact.id : contact.id,
+        contactNumber: groupContact ? groupContact.number : contact.number,
+        whatsappId,
+        companyId
+      },
+      "[FlowBuilder][DEBUG] FindOrCreateTicketService: novo ticket criado no banco"
+    );
     ticket = await Ticket.create({
       contactId: groupContact ? groupContact.id : contact.id,
       status: "pending",

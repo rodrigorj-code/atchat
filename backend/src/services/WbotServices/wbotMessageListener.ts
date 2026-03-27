@@ -26,6 +26,7 @@ import CreateMessageService from "../MessageServices/CreateMessageService";
 import { logger } from "../../utils/logger";
 import CreateOrUpdateContactService from "../ContactServices/CreateOrUpdateContactService";
 import FindOrCreateTicketService from "../TicketServices/FindOrCreateTicketService";
+import ShowTicketService from "../TicketServices/ShowTicketService";
 import ShowWhatsAppService from "../WhatsappService/ShowWhatsAppService";
 import UpdateTicketService from "../TicketServices/UpdateTicketService";
 import formatBody from "../../helpers/Mustache";
@@ -487,6 +488,60 @@ const getContactJidForChat = (msg: proto.IWebMessageInfo): string => {
     }
   }
   return remoteJid;
+};
+
+/**
+ * Eco fromMe (resposta do bot): reutiliza o ticket do mesmo chat via Message.remoteJid.
+ * Sem isso, verifyContact pode criar outro "contato" (ex.: dígitos do LID) e FindOrCreateTicketService abre 2º ticket.
+ */
+const findTicketForOutgoingEcho = async (
+  companyId: number,
+  msg: proto.IWebMessageInfo,
+  whatsappId: number
+): Promise<Ticket | null> => {
+  if (!msg.key.fromMe || msg.key.remoteJid?.endsWith("@g.us")) {
+    return null;
+  }
+  const candidates = new Set<string>();
+  if (msg.key.remoteJid) {
+    candidates.add(msg.key.remoteJid);
+    try {
+      candidates.add(jidNormalizedUser(msg.key.remoteJid));
+    } catch {
+      /* ignore */
+    }
+  }
+  const altJid = getContactJidForChat(msg);
+  if (altJid) {
+    candidates.add(altJid);
+    try {
+      candidates.add(jidNormalizedUser(altJid));
+    } catch {
+      /* ignore */
+    }
+  }
+  const list = [...candidates].filter(Boolean);
+  if (!list.length) {
+    return null;
+  }
+
+  const anchor = await Message.findOne({
+    where: {
+      companyId,
+      remoteJid: { [Op.in]: list }
+    },
+    order: [["createdAt", "DESC"]],
+    attributes: ["ticketId"]
+  });
+  if (!anchor?.ticketId) {
+    return null;
+  }
+
+  const t = await ShowTicketService(anchor.ticketId, companyId);
+  if (Number(t.whatsappId) !== Number(whatsappId)) {
+    return null;
+  }
+  return t;
 };
 
 const getContactMessage = async (msg: proto.IWebMessageInfo, wbot: Session) => {
@@ -2536,7 +2591,34 @@ const handleMessage = async (
     }
 
     const whatsapp = await ShowWhatsAppService(wbot.id!, companyId);
-    const contact = await verifyContact(msgContact, wbot, companyId);
+
+    let contact: Contact;
+    let ticketFromEcho: Ticket | null = null;
+
+    if (!isGroup && msg.key.fromMe) {
+      ticketFromEcho = await findTicketForOutgoingEcho(
+        companyId,
+        msg,
+        whatsapp.id
+      );
+      if (ticketFromEcho) {
+        contact = ticketFromEcho.contact;
+        logger.info(
+          {
+            flowBuilderFromMeEcho: true,
+            ticketId: ticketFromEcho.id,
+            contactId: contact.id,
+            contactNumber: contact.number,
+            remoteJid: msg.key.remoteJid
+          },
+          "[FlowBuilder][DEBUG] fromMe echo: ticket reutilizado (sem novo contato/ticket)"
+        );
+      }
+    }
+
+    if (!ticketFromEcho) {
+      contact = await verifyContact(msgContact, wbot, companyId);
+    }
 
     let unreadMessages = 0;
 
@@ -2568,13 +2650,20 @@ const handleMessage = async (
       return;
     }
 
-    const ticket = await FindOrCreateTicketService(
-      contact,
-      wbot.id!,
-      unreadMessages,
-      companyId,
-      groupContact
-    );
+    let ticket: Ticket;
+
+    if (ticketFromEcho) {
+      ticket = ticketFromEcho;
+      await ticket.update({ unreadMessages });
+    } else {
+      ticket = await FindOrCreateTicketService(
+        contact,
+        wbot.id!,
+        unreadMessages,
+        companyId,
+        groupContact
+      );
+    }
 
     // Persistir remoteJid para envio correto (essencial em conversas LID)
     const existingData = parseTicketDataWebhook(ticket.dataWebhook);

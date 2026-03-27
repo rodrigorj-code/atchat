@@ -240,6 +240,18 @@ export const ActionsWebhookService = async (
     let noAlterNext = false;
 
     for (var i = 0; i < lengthLoop; i++) {
+      logger.info(
+        {
+          flowBuilderNodeLoop: true,
+          idFlowDb,
+          idTicket,
+          ticketIdStable: ticket?.id,
+          loopIndex: i,
+          nextStage: next,
+          pressKey: pressKey ?? null
+        },
+        "[FlowBuilder][DEBUG] ActionsWebhookService: iteração do fluxo"
+      );
       let nodeSelected: any;
       let ticketInit: Ticket;
 
