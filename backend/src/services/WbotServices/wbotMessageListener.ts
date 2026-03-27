@@ -2584,6 +2584,23 @@ const handleMessage = async (
       } as any);
     }
 
+    if (!msg.key.fromMe) {
+      await ticket.reload();
+      logger.info(
+        {
+          flowBuilderHandleMsg: true,
+          ticketId: ticket.id,
+          contactId: contact.id,
+          contactNumber: contact.number,
+          ticketContactId: ticket.contactId,
+          ticketWhatsappId: ticket.whatsappId,
+          ticketQueueId: ticket.queueId,
+          remoteJid: msg.key.remoteJid
+        },
+        "[FlowBuilder][DEBUG] handleMessage: ticket/contato após FindOrCreate + remoteJid"
+      );
+    }
+
     await provider(ticket, msg, companyId, contact, wbot as WASocket);
 
     // voltar para o menu inicial

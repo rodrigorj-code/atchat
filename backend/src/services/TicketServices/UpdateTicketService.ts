@@ -262,7 +262,7 @@ const UpdateTicketService = async ({
       queueOptionId
     });
 
-    await ticket.reload();
+    const ticketForEmit = await ShowTicketService(ticketId, companyId);
 
     if (status !== undefined && ["pending"].indexOf(status) > -1) {
       ticketTraking.update({
@@ -279,36 +279,38 @@ const UpdateTicketService = async ({
         ratingAt: null,
         rated: false,
         whatsappId,
-        userId: ticket.userId
+        userId: ticketForEmit.userId
       });
     }
 
     await ticketTraking.save();
 
-    if (ticket.status !== oldStatus || ticket.user?.id !== oldUserId) {
-
-      io.to(`company-${companyId}-${oldStatus}`)
-        .to(`queue-${ticket.queueId}-${oldStatus}`)
-        .to(`user-${oldUserId}`)
-        .emit(`company-${companyId}-ticket`, {
-          action: "delete",
-          ticketId: ticket.id
-        });
+    if (ticketForEmit.status !== oldStatus || ticketForEmit.user?.id !== oldUserId) {
+      let deleteEmitter = io
+        .to(`company-${companyId}-${oldStatus}`)
+        .to(`user-${oldUserId}`);
+      if (oldQueueId != null) {
+        deleteEmitter = deleteEmitter.to(`queue-${oldQueueId}-${oldStatus}`);
+      }
+      deleteEmitter.emit(`company-${companyId}-ticket`, {
+        action: "delete",
+        ticketId: ticketForEmit.id
+      });
     }
 
-    io.to(`company-${companyId}-${ticket.status}`)
+    io.to(`company-${companyId}-${ticketForEmit.status}`)
       .to(`company-${companyId}-notification`)
-      .to(`queue-${ticket.queueId}-${ticket.status}`)
-      .to(`queue-${ticket.queueId}-notification`)
+      .to(`queue-${ticketForEmit.queueId}-${ticketForEmit.status}`)
+      .to(`queue-${ticketForEmit.queueId}-notification`)
       .to(ticketId.toString())
-      .to(`user-${ticket?.userId}`)
+      .to(`user-${ticketForEmit?.userId}`)
       .to(`user-${oldUserId}`)
       .emit(`company-${companyId}-ticket`, {
         action: "update",
-        ticket
+        ticket: ticketForEmit
       });
 
-    return { ticket, oldStatus, oldUserId };
+    return { ticket: ticketForEmit, oldStatus, oldUserId };
   } catch (err) {
     Sentry.captureException(err);
     throw err;

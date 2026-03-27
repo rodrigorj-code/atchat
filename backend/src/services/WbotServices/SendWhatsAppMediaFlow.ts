@@ -1,4 +1,4 @@
-import { WAMessage, AnyMessageContent, WAPresence } from "@whiskeysockets/baileys";
+import { WAMessage, AnyMessageContent, WAPresence, jidNormalizedUser } from "@whiskeysockets/baileys";
 import * as Sentry from "@sentry/node";
 import fs from "fs";
 import { exec } from "child_process";
@@ -6,6 +6,7 @@ import path from "path";
 import ffmpegPath from "@ffmpeg-installer/ffmpeg";
 import AppError from "../../errors/AppError";
 import GetTicketWbot from "../../helpers/GetTicketWbot";
+import { getTicketRemoteJid } from "../../helpers/GetTicketRemoteJid";
 import Ticket from "../../models/Ticket";
 import mime from "mime-types";
 import Contact from "../../models/Contact";
@@ -66,15 +67,23 @@ export const typeSimulation = async (ticket: Ticket, presence: WAPresence) => {
 
   const wbot = await GetTicketWbot(ticket);
 
-  let contact = await Contact.findOne({
+  const contact = await Contact.findOne({
     where: {
       id: ticket.contactId,
     }
   });
 
-  await wbot.sendPresenceUpdate(presence, `${contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`);
+  let chatJid = await getTicketRemoteJid(ticket);
+  if (!chatJid && contact) {
+    const dest = String(contact.number || "").replace(/\D/g, "");
+    chatJid = ticket.isGroup ? `${dest}@g.us` : `${dest}@s.whatsapp.net`;
+  }
+  if (!chatJid) return;
+
+  const jid = chatJid.includes("@") ? jidNormalizedUser(chatJid) : chatJid;
+  await wbot.sendPresenceUpdate(presence, jid);
   await delay(5000);
-  await wbot.sendPresenceUpdate('paused', `${contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`);
+  await wbot.sendPresenceUpdate("paused", jid);
 
 }
 
@@ -147,18 +156,25 @@ const SendWhatsAppMediaFlow = async ({
       };
     }
 
-    let contact = await Contact.findOne({
-      where: {
-        id: ticket.contactId,
+    let chatJid = await getTicketRemoteJid(ticket);
+    if (!chatJid) {
+      const contactRow = await Contact.findOne({
+        where: { id: ticket.contactId }
+      });
+      const destNumber = String(contactRow?.number || "").replace(/\D/g, "");
+      if (ticket.isGroup) {
+        chatJid = `${destNumber}@g.us`;
+      } else if (!destNumber) {
+        throw new AppError("Não foi possível obter o destino da mídia (LID sem remoteJid).");
+      } else {
+        chatJid = `${destNumber}@s.whatsapp.net`;
       }
-    });
+    }
+    const dest = chatJid.includes("@") ? jidNormalizedUser(chatJid) : chatJid;
 
-    const sentMessage = await wbot.sendMessage(
-      `${contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`,
-      {
-        ...options
-      }
-    );
+    const sentMessage = await wbot.sendMessage(dest, {
+      ...options
+    });
 
     await ticket.update({ lastMessage: mediaName });
 

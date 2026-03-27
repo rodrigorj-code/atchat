@@ -47,7 +47,7 @@ import { proto } from "@whiskeysockets/baileys";
 import { handleOpenAi } from "../IntegrationsServices/OpenAiService";
 import { IOpenAi } from "../../@types/openai";
 import { v4 as uuidv4 } from "uuid";
-import { parseTicketDataWebhook } from "../../helpers/GetTicketRemoteJid";
+import { getTicketRemoteJid, parseTicketDataWebhook } from "../../helpers/GetTicketRemoteJid";
 
 interface IAddContact {
   companyId: number;
@@ -223,6 +223,20 @@ export const ActionsWebhookService = async (
       });
     }
 
+    if (idTicket && ticket) {
+      logger.info(
+        {
+          flowBuilderTicketEmit: true,
+          idTicket,
+          contactId: ticket.contactId,
+          contactNumber: ticket.contact?.number,
+          queueId: ticket.queueId,
+          whatsappId: ticket.whatsappId
+        },
+        "[FlowBuilder][DEBUG] ActionsWebhookService: ticket no início do fluxo"
+      );
+    }
+
     let noAlterNext = false;
 
     for (var i = 0; i < lengthLoop; i++) {
@@ -280,8 +294,22 @@ export const ActionsWebhookService = async (
 
         if (ticket && ticket.contact) {
           const ticketDetails = await ShowTicketService(ticket.id, companyId);
+          const destJid =
+            (await getTicketRemoteJid(ticketDetails)) ||
+            originalWhatsAppMsg?.key?.remoteJid ||
+            null;
+          logger.info(
+            {
+              flowBuilderSendDest: true,
+              ticketId: ticketDetails.id,
+              contactId: ticketDetails.contactId,
+              contactNumber: ticketDetails.contact?.number,
+              destJid
+            },
+            "[FlowBuilder][DEBUG] message node: destino do envio (ticket)"
+          );
           await delay(500);
-          await typeSimulation(ticket, "composing");
+          await typeSimulation(ticketDetails, "composing");
           // Usar remoteJid da mensagem original para conversas LID (garante que a resposta chegue ao cliente)
           const sentMessage = await SendWhatsAppMessage({
             body: msg.body,
@@ -307,6 +335,60 @@ export const ActionsWebhookService = async (
             });
           }
           SetTicketMessagesAsRead(ticketDetails);
+        } else if (idTicket) {
+          const ticketDetails = await ShowTicketService(idTicket, companyId);
+          if (ticketDetails.contact) {
+            const destJid =
+              (await getTicketRemoteJid(ticketDetails)) ||
+              originalWhatsAppMsg?.key?.remoteJid ||
+              null;
+            logger.info(
+              {
+                flowBuilderSendDest: true,
+                ticketId: ticketDetails.id,
+                branch: "message_node_recovered_ticket",
+                contactNumber: ticketDetails.contact?.number,
+                numberClientFallback: numberClient,
+                destJid
+              },
+              "[FlowBuilder][DEBUG] message node: ticket sem contact na 1ª carga — usando ShowTicketService"
+            );
+            await delay(500);
+            await typeSimulation(ticketDetails, "composing");
+            const sentMessage = await SendWhatsAppMessage({
+              body: msg.body,
+              ticket: ticketDetails,
+              quotedMsg: null,
+              ...(originalWhatsAppMsg?.key?.remoteJid && { remoteJid: originalWhatsAppMsg.key.remoteJid })
+            });
+            if (sentMessage) {
+              const bodyToSave = formatBody(msg.body, ticketDetails.contact);
+              await CreateMessageService({
+                messageData: {
+                  id: (sentMessage as any)?.key?.id || uuidv4(),
+                  ticketId: ticketDetails.id,
+                  body: bodyToSave,
+                  fromMe: true,
+                  read: true,
+                  ack: (sentMessage as any)?.status,
+                  mediaType: "conversation",
+                  remoteJid: (sentMessage as any)?.key?.remoteJid,
+                  ...((sentMessage as any) ? { dataJson: JSON.stringify(sentMessage as any) } : {})
+                } as MessageData,
+                companyId: ticketDetails.companyId
+              });
+            }
+            SetTicketMessagesAsRead(ticketDetails);
+          } else {
+            logger.warn(
+              { ticketId: idTicket, numberClient },
+              "[FlowBuilder] message node: sem contact no ticket — fallback SendMessage (pode duplicar conversa em LID)"
+            );
+            await SendMessage(whatsapp, {
+              number: numberClient,
+              body: msg.body
+            });
+          }
         } else {
           await SendMessage(whatsapp, {
             number: numberClient,
@@ -522,9 +604,16 @@ export const ActionsWebhookService = async (
               ticketId: String(idTicket),
               companyId
             });
-            ticket = await Ticket.findOne({
-              where: { id: idTicket, companyId }
-            });
+            ticket = await ShowTicketService(idTicket, companyId);
+            logger.info(
+              {
+                flowBuilderSector: true,
+                ticketId: idTicket,
+                queueId: ticket.queueId,
+                queueName: ticket.queue?.name
+              },
+              "[FlowBuilder][DEBUG] sector node: ticket após transferência de fila"
+            );
           }
         }
         await intervalWhats("1");
@@ -610,28 +699,38 @@ export const ActionsWebhookService = async (
           }
 
           if (elementNowSelected.includes("img")) {
-            await typeSimulation(ticket, "composing");
+            const mediaPath =
+              process.env.BACKEND_URL.includes("http://localhost")
+                ? `${__dirname.split("src")[0].split("\\").join("/")}public/${
+                    nodeSelected.data.elements.filter(
+                      item => item.number === elementNowSelected
+                    )[0].value
+                  }`
+                : `${__dirname
+                    .split("dist")[0]
+                    .split("\\")
+                    .join("/")}public/${
+                    nodeSelected.data.elements.filter(
+                      item => item.number === elementNowSelected
+                    )[0].value
+                  }`;
 
-            logger.info(__dirname.split("src")[0].split("\\").join("/"));
+            const ticketForImg = await ShowTicketService(idTicket, companyId);
+            logger.info(
+              {
+                flowBuilderSendDest: true,
+                ticketId: ticketForImg.id,
+                branch: "singleBlock_img",
+                mediaPath: mediaPath.split("/").slice(-2).join("/")
+              },
+              "[FlowBuilder][DEBUG] singleBlock img: envio via ticket (getTicketRemoteJid)"
+            );
+            await typeSimulation(ticketForImg, "composing");
 
-            await SendMessage(whatsapp, {
-              number: numberClient,
-              body: "",
-              mediaPath:
-                process.env.BACKEND_URL.includes("http://localhost")
-                  ? `${__dirname.split("src")[0].split("\\").join("/")}public/${
-                      nodeSelected.data.elements.filter(
-                        item => item.number === elementNowSelected
-                      )[0].value
-                    }`
-                  : `${__dirname
-                      .split("dist")[0]
-                      .split("\\")
-                      .join("/")}public/${
-                      nodeSelected.data.elements.filter(
-                        item => item.number === elementNowSelected
-                      )[0].value
-                    }`
+            await SendWhatsAppMediaFlow({
+              media: mediaPath,
+              ticket: ticketForImg,
+              body: ""
             });
             await intervalWhats("1");
           }
