@@ -26,7 +26,8 @@ const UploadAllFlowBuilderService = async ({
       if (
         medias[i].mimetype.split("/")[1] === "png" ||
         medias[i].mimetype.split("/")[1] === "jpg" ||
-        medias[i].mimetype.split("/")[1] === "jpeg"
+        medias[i].mimetype.split("/")[1] === "jpeg" ||
+        medias[i].mimetype.split("/")[1] === "webp"
       ) {
         await FlowImgModel.create({
           userId: userId,

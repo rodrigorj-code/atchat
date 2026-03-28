@@ -42,7 +42,11 @@ const toastError = err => {
         return;
     } else {
         const msg = err?.message || err?.response?.statusText;
-        const isNetworkError = err?.message === "Network Error" || err?.code === "ERR_NETWORK" || !err?.response;
+        const isAxios = err?.isAxiosError === true;
+        const isNetworkError =
+            err?.message === "Network Error" ||
+            err?.code === "ERR_NETWORK" ||
+            (isAxios && !err?.response && err?.request);
         console.error("An error occurred!", err);
         const displayMsg = isNetworkError
             ? (i18n.exists("errors.connectionError") ? i18n.t("errors.connectionError") : "Não foi possível conectar ao servidor. Verifique a URL do backend e se o servidor está online.")

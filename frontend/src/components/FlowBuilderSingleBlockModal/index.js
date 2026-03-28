@@ -79,6 +79,39 @@ const buildFlowContentFormData = async (mediasList) => {
   return formData;
 };
 
+/** Resposta do POST /flowbuilder/content: sempre array de nomes de arquivo na ordem do FormData. */
+const normalizeUploadFileNames = (data) => {
+  if (Array.isArray(data)) return data;
+  if (data == null) return [];
+  if (typeof data === "string") return [data];
+  return [];
+};
+
+/**
+ * Localiza o índice em `medias` (e na resposta do servidor) pelo slot do bloco (ex.: img3),
+ * usando previewImg / previewAudios / previewVideos — evita desalinhamento por reordenação ou extensão (.webp, .JPG).
+ */
+const getMediaIndexForSlot = (
+  slotId,
+  kind,
+  mediasList,
+  previewImg,
+  previewAudios,
+  previewVideos
+) => {
+  const prefix =
+    kind === "img" ? "img" : kind === "audio" ? "audio" : "video";
+  const list =
+    kind === "img"
+      ? previewImg
+      : kind === "audio"
+        ? previewAudios
+        : previewVideos;
+  const preview = list.find((p) => `${prefix}${p.number}` === slotId);
+  if (!preview) return -1;
+  return mediasList.findIndex((m) => m && m.name === preview.name);
+};
+
 const useStyles = makeStyles((theme) => ({
   root: {
     display: "flex",
@@ -220,22 +253,22 @@ const FlowBuilderSingleBlockModal = ({
       console.log("int");
     }
 
+    const serverNames = normalizeUploadFileNames(newNameFiles);
+    if (process.env.NODE_ENV === "development") {
+      console.debug("[FlowBuilderSingleBlock] handleElements mídia", {
+        serverNames,
+        mediasNames: medias.map((m) => (m ? m.name : m)),
+        numberImg,
+        numberAudio,
+        numberVideo,
+        newArrImg,
+        newArrAudio,
+        newArrVideo,
+      });
+    }
+
     //Todas as imagens
     for (let i = 0; i < numberImg; i++) {
-      const onlyImg =
-        newNameFiles !== null &&
-        newNameFiles.filter(
-          (file) =>
-            file.includes("png") ||
-            file.includes("jpg") ||
-            file.includes("jpeg")
-        );
-      const onlyImgNameOriginal = medias.filter(
-        (file) =>
-          file.name.includes("png") ||
-          file.name.includes("jpg") ||
-          file.name.includes("jpeg")
-      );
       if (elementsSeqEdit.includes(newArrImg[i])) {
         const itemSelectedEdit = elementsEdit.filter(
           (item) => item.number === newArrImg[i]
@@ -247,40 +280,37 @@ const FlowBuilderSingleBlockModal = ({
           number: itemSelectedEdit.number,
         });
       } else {
-        let indexElem = 0;
-        if (elementsSeqEdit.filter((item) => item.includes("img")).length > 0) {
-          indexElem =
-            elementsSeqEdit.filter((item) => item.includes("img")).length - i;
-        } else {
-          indexElem = i;
+        const j = getMediaIndexForSlot(
+          newArrImg[i],
+          "img",
+          medias,
+          previewImg,
+          previewAudios,
+          previewVideos
+        );
+        if (j < 0 || !medias[j]) {
+          setLoading(false);
+          throw new Error(
+            `Não foi possível associar o arquivo ao slot de imagem (${newArrImg[i]}). Selecione a imagem novamente.`
+          );
+        }
+        const uploaded = serverNames[j];
+        if (uploaded == null || uploaded === "") {
+          setLoading(false);
+          throw new Error(
+            "Resposta do servidor incompleta para o upload (nome do arquivo ausente)."
+          );
         }
         elementsSequence.push({
           type: "img",
-          value: onlyImg[indexElem],
-          original: onlyImgNameOriginal[indexElem].name,
+          value: uploaded,
+          original: medias[j].name,
           number: newArrImg[i],
         });
       }
     }
     //Todos os audios
     for (let i = 0; i < numberAudio; i++) {
-      const onlyAudio =
-        newNameFiles !== null &&
-        newNameFiles.filter(
-          (file) =>
-            file.includes("mp3") ||
-            file.includes("ogg") ||
-            file.includes("mpeg") ||
-            file.includes("opus")
-        );
-      const onlyAudioNameOriginal = medias.filter(
-        (file) =>
-          file.name.includes("mp3") ||
-          file.name.includes("ogg") ||
-          file.name.includes("mpeg") ||
-          file.name.includes("opus")
-      );
-
       if (elementsSeqEdit.includes(newArrAudio[i])) {
         const itemSelectedEdit = elementsEdit.filter(
           (item) => item.number === newArrAudio[i]
@@ -295,19 +325,31 @@ const FlowBuilderSingleBlockModal = ({
             .querySelector(".PrivateSwitchBase-input").checked,
         });
       } else {
-        let indexElem = 0;
-        if (
-          elementsSeqEdit.filter((item) => item.includes("audio")).length > 0
-        ) {
-          indexElem =
-            elementsSeqEdit.filter((item) => item.includes("audio")).length - i;
-        } else {
-          indexElem = i;
+        const j = getMediaIndexForSlot(
+          newArrAudio[i],
+          "audio",
+          medias,
+          previewImg,
+          previewAudios,
+          previewVideos
+        );
+        if (j < 0 || !medias[j]) {
+          setLoading(false);
+          throw new Error(
+            `Não foi possível associar o arquivo ao slot de áudio (${newArrAudio[i]}). Selecione o áudio novamente.`
+          );
+        }
+        const uploaded = serverNames[j];
+        if (uploaded == null || uploaded === "") {
+          setLoading(false);
+          throw new Error(
+            "Resposta do servidor incompleta para o upload (nome do arquivo ausente)."
+          );
         }
         elementsSequence.push({
           type: "audio",
-          value: onlyAudio[indexElem],
-          original: onlyAudioNameOriginal[indexElem].name,
+          value: uploaded,
+          original: medias[j].name,
           number: newArrAudio[i],
           record: document
             .querySelector(`.check${newArrAudio[i]}`)
@@ -317,14 +359,6 @@ const FlowBuilderSingleBlockModal = ({
     }
     //Todos os videos
     for (let i = 0; i < numberVideo; i++) {
-      const onlyVideo =
-        newNameFiles !== null &&
-        newNameFiles.filter(
-          (file) => file.includes("mp4") || file.includes("avi")
-        );
-      const onlyVideoNameOriginal = medias.filter(
-        (file) => file.name.includes("mp4") || file.name.includes("avi")
-      );
       if (elementsSeqEdit.includes(newArrVideo[i])) {
         const itemSelectedEdit = elementsEdit.filter(
           (item) => item.number === newArrVideo[i]
@@ -336,19 +370,31 @@ const FlowBuilderSingleBlockModal = ({
           number: itemSelectedEdit.number,
         });
       } else {
-        let indexElem = 0;
-        if (
-          elementsSeqEdit.filter((item) => item.includes("video")).length > 0
-        ) {
-          indexElem =
-            elementsSeqEdit.filter((item) => item.includes("video")).length - i;
-        } else {
-          indexElem = i;
+        const j = getMediaIndexForSlot(
+          newArrVideo[i],
+          "video",
+          medias,
+          previewImg,
+          previewAudios,
+          previewVideos
+        );
+        if (j < 0 || !medias[j]) {
+          setLoading(false);
+          throw new Error(
+            `Não foi possível associar o arquivo ao slot de vídeo (${newArrVideo[i]}). Selecione o vídeo novamente.`
+          );
+        }
+        const uploaded = serverNames[j];
+        if (uploaded == null || uploaded === "") {
+          setLoading(false);
+          throw new Error(
+            "Resposta do servidor incompleta para o upload (nome do arquivo ausente)."
+          );
         }
         elementsSequence.push({
           type: "video",
-          value: onlyVideo[indexElem],
-          original: onlyVideoNameOriginal[indexElem].name,
+          value: uploaded,
+          original: medias[j].name,
           number: newArrVideo[i],
         });
       }
@@ -627,7 +673,7 @@ const FlowBuilderSingleBlockModal = ({
             Enviar imagem
             <input
               type="file"
-              accept="image/png, image/jpg, image/jpeg"
+              accept="image/png,image/jpeg,image/jpg,image/webp"
               hidden
               onChange={(e) => handleChangeMediasImg(e, number)}
             />
@@ -1070,11 +1116,23 @@ const FlowBuilderSingleBlockModal = ({
         });
 
         const res = await api.post("/flowbuilder/content", formData);
-        flowLog("resposta OK", { status: res.status, data: res.data });
+        const uploadNames = normalizeUploadFileNames(res.data);
+        const expectedFiles = medias.filter(Boolean).length;
+        flowLog("resposta OK", {
+          status: res.status,
+          rawData: res.data,
+          uploadNames,
+          expectedFiles,
+        });
+        if (expectedFiles > 0 && uploadNames.length !== expectedFiles) {
+          throw new Error(
+            `Upload incompleto: o servidor retornou ${uploadNames.length} arquivo(s), esperado ${expectedFiles}.`
+          );
+        }
 
         const mountData = {
           seq: elementsSeq,
-          elements: handleElements(res.data),
+          elements: handleElements(uploadNames),
         };
         onUpdate({
           ...data,
@@ -1119,11 +1177,23 @@ const FlowBuilderSingleBlockModal = ({
         });
 
         const res = await api.post("/flowbuilder/content", formData);
-        flowLog("resposta OK", { status: res.status, data: res.data });
+        const uploadNames = normalizeUploadFileNames(res.data);
+        const expectedFiles = medias.filter(Boolean).length;
+        flowLog("resposta OK", {
+          status: res.status,
+          rawData: res.data,
+          uploadNames,
+          expectedFiles,
+        });
+        if (expectedFiles > 0 && uploadNames.length !== expectedFiles) {
+          throw new Error(
+            `Upload incompleto: o servidor retornou ${uploadNames.length} arquivo(s), esperado ${expectedFiles}.`
+          );
+        }
 
         const mountData = {
           seq: elementsSeq,
-          elements: handleElements(res.data),
+          elements: handleElements(uploadNames),
         };
         onSave({
           ...mountData,
