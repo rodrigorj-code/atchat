@@ -15,6 +15,8 @@ import {
   Ballot as BallotIcon,
   ConfirmationNumber,
   HourglassEmpty,
+  FilterList,
+  Person,
 } from "@mui/icons-material";
 import typebotIcon from "../../assets/typebot-ico.png";
 import { SiOpenai } from "react-icons/si";
@@ -85,6 +87,12 @@ const NODE_ACTIONS = [
     category: "atendimento",
   },
   {
+    icon: <Person sx={{ color: "#673AB7" }} />,
+    name: "Atendente",
+    type: "attendant",
+    category: "atendimento",
+  },
+  {
     icon: (
       <Box component="img" sx={{ width: 24, height: 24 }} src={typebotIcon} alt="typebot" />
     ),
@@ -97,6 +105,12 @@ const NODE_ACTIONS = [
     name: "OpenAI",
     type: "openai",
     category: "integracoes",
+  },
+  {
+    icon: <FilterList sx={{ color: "#228B22" }} />,
+    name: "Condição",
+    type: "condition",
+    category: "utilitarios",
   },
   {
     icon: <CallSplit sx={{ color: "#1FBADC" }} />,

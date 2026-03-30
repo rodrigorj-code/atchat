@@ -13,6 +13,7 @@ import { SendMessage } from "../../helpers/SendMessage";
 import GetDefaultWhatsApp from "../../helpers/GetDefaultWhatsApp";
 import ShowWhatsAppService from "../WhatsappService/ShowWhatsAppService";
 import Ticket from "../../models/Ticket";
+import User from "../../models/User";
 import fs from "fs";
 import GetWhatsappWbot from "../../helpers/GetWhatsappWbot";
 import path from "path";
@@ -48,6 +49,10 @@ import { handleOpenAi } from "../IntegrationsServices/OpenAiService";
 import { IOpenAi } from "../../@types/openai";
 import { v4 as uuidv4 } from "uuid";
 import { getTicketRemoteJid, parseTicketDataWebhook } from "../../helpers/GetTicketRemoteJid";
+import {
+  evaluateFlowCondition,
+  pickConditionEdgeTarget
+} from "../FlowBuilderService/EvaluateFlowConditionService";
 
 interface IAddContact {
   companyId: number;
@@ -238,6 +243,8 @@ export const ActionsWebhookService = async (
     }
 
     let noAlterNext = false;
+    /** Após nó attendant bem-sucedido, não zerar userId no fim da iteração (nem nas seguintes). */
+    let flowAssignedHumanUser = false;
 
     for (var i = 0; i < lengthLoop; i++) {
       logger.info(
@@ -637,6 +644,86 @@ export const ActionsWebhookService = async (
         await intervalWhats("1");
       }
 
+      if (nodeSelected.type === "attendant" && idTicket) {
+        /** Padrão: parar o fluxo após transferência; `stopFlowAfterTransfer: false` permite seguir (ex.: mensagem pós-transferência). */
+        const stopFlowAfterTransfer =
+          nodeSelected.data?.stopFlowAfterTransfer !== false;
+        const targetUserId = Number(nodeSelected.data?.user?.id);
+        if (!targetUserId || Number.isNaN(targetUserId)) {
+          logger.warn(
+            { flowBuilderAttendant: true, ticketId: idTicket },
+            "[FlowBuilder][attendant] user.id inválido — ignorando transferência"
+          );
+        } else {
+          const assignUser = await User.findOne({
+            where: { id: targetUserId, companyId }
+          });
+          if (!assignUser) {
+            logger.warn(
+              {
+                flowBuilderAttendant: true,
+                ticketId: idTicket,
+                targetUserId
+              },
+              "[FlowBuilder][attendant] usuário não encontrado na empresa"
+            );
+          } else {
+            const currentTicket = await ShowTicketService(idTicket, companyId);
+            const previousUserId = currentTicket.userId;
+            const previousQueueId = currentTicket.queueId;
+            await UpdateTicketService({
+              ticketData: {
+                status: "open",
+                userId: targetUserId,
+                queueId: currentTicket.queueId ?? null,
+                chatbot: false
+              },
+              ticketId: String(idTicket),
+              companyId
+            });
+            ticket = await ShowTicketService(idTicket, companyId);
+            flowAssignedHumanUser = true;
+
+            logger.info(
+              {
+                flowBuilderAttendant: true,
+                ticketId: idTicket,
+                finalUserId: ticket.userId,
+                queueId: ticket.queueId,
+                previousQueueId,
+                status: ticket.status,
+                previousUserId,
+                stopFlowAfterTransfer
+              },
+              "[FlowBuilder][attendant] transferência concluída (UpdateTicketService)"
+            );
+
+            if (stopFlowAfterTransfer) {
+              await ticket.update({
+                lastFlowId: nodeSelected.id,
+                hashFlowId: null,
+                flowWebhook: false,
+                flowStopped: idFlowDb.toString()
+              });
+              logger.info(
+                {
+                  flowBuilderAttendant: true,
+                  ticketId: idTicket,
+                  finalUserId: ticket.userId,
+                  queueId: ticket.queueId,
+                  status: ticket.status,
+                  flowInterruptedAfterAttendant: true
+                },
+                "[FlowBuilder][attendant] fluxo automático interrompido após transferência"
+              );
+              await intervalWhats("1");
+              break;
+            }
+          }
+        }
+        await intervalWhats("1");
+      }
+
       if (nodeSelected.type === "closeTicket" && idTicket) {
         await UpdateTicketService({
           ticketData: { status: "closed" },
@@ -837,6 +924,59 @@ export const ActionsWebhookService = async (
         isRandomizer = true;
       }
 
+      let isCondition = false;
+      if (nodeSelected.type === "condition" && idTicket) {
+        const ticketForCond = await Ticket.findOne({
+          where: { id: idTicket, companyId },
+          include: [{ model: Contact, as: "contact" }]
+        });
+        if (!ticketForCond) {
+          logger.warn(
+            { flowConditionNode: true, idTicket },
+            "[FlowBuilder][condition] ticket não encontrado"
+          );
+        }
+        const condResult = await evaluateFlowCondition(
+          ticketForCond || ticket,
+          ticketForCond?.contact || ticket?.contact,
+          nodeSelected.data as any,
+          originalWhatsAppMsg,
+          companyId
+        );
+        const handleChosen = condResult.passed ? "true" : "false";
+        const nextTarget = pickConditionEdgeTarget(
+          connects,
+          nodeSelected.id,
+          condResult.passed
+        );
+        logger.info(
+          {
+            flowConditionNode: true,
+            ticketId: idTicket,
+            nodeId: nodeSelected.id,
+            passed: condResult.passed,
+            handleChosen,
+            nextNodeId: nextTarget ?? null
+          },
+          "[FlowBuilder][condition] ramo escolhido"
+        );
+        if (nextTarget) {
+          next = nextTarget;
+          noAlterNext = true;
+        } else {
+          logger.warn(
+            {
+              flowConditionNode: true,
+              nodeId: nodeSelected.id,
+              handleChosen
+            },
+            "[FlowBuilder][condition] sem aresta para o handle — fluxo interrompido"
+          );
+          next = "";
+        }
+        isCondition = true;
+      }
+
       let isMenu: boolean;
 
       if (nodeSelected.type === "menu") {
@@ -1035,6 +1175,9 @@ export const ActionsWebhookService = async (
         } else if (isRandomizer) {
           isRandomizer = false;
           result = next;
+        } else if (isCondition) {
+          isCondition = false;
+          result = next;
         } else {
           result = connects.filter(connect => connect.source === next)[0];
         }
@@ -1103,7 +1246,7 @@ export const ActionsWebhookService = async (
       await ticket.update({
         whatsappId: whatsappId,
         queueId: ticket?.queueId,
-        userId: null,
+        ...(!flowAssignedHumanUser ? { userId: null } : {}),
         companyId: companyId,
         flowWebhook: true,
         lastFlowId: lastFlowIdToSave,

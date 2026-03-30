@@ -21,6 +21,8 @@ import menuNode from "./nodes/menuNode";
 import intervalNode from "./nodes/intervalNode";
 import imgNode from "./nodes/imgNode";
 import randomizerNode from "./nodes/randomizerNode";
+import conditionNode from "./nodes/conditionNode";
+import attendantNode from "./nodes/attendantNode";
 import videoNode from "./nodes/videoNode";
 import questionNode from "./nodes/questionNode";
 import RemoveEdge from "./nodes/removeEdge";
@@ -63,6 +65,7 @@ import ReactFlow, {
 import FlowBuilderAddTextModal from "../../components/FlowBuilderAddTextModal";
 import FlowBuilderIntervalModal from "../../components/FlowBuilderIntervalModal";
 import FlowBuilderConditionModal from "../../components/FlowBuilderConditionModal";
+import FlowBuilderAttendantModal from "../../components/FlowBuilderAttendantModal";
 import FlowBuilderMenuModal from "../../components/FlowBuilderMenuModal";
 import FlowBuilderAddImgModal from "../../components/FlowBuilderAddImgModal";
 import FlowBuilderTicketModal from "../../components/FlowBuilderAddTicketModal";
@@ -127,6 +130,8 @@ const nodeTypes = {
   closeTicket: closeTicketNode,
   tag: tagNode,
   waitForInteraction: waitForInteractionNode,
+  condition: conditionNode,
+  attendant: attendantNode,
 };
 
 const edgeTypes = {
@@ -172,6 +177,8 @@ const FlowBuilderConfig = () => {
   const [modalAddSector, setModalAddSector] = useState(null);
   const [modalAddTag, setModalAddTag] = useState(null);
   const [modalAddCloseTicket, setModalAddCloseTicket] = useState(null);
+  const [modalAddCondition, setModalAddCondition] = useState(null);
+  const [modalAddAttendant, setModalAddAttendant] = useState(null);
   const [addNodeMenuAnchor, setAddNodeMenuAnchor] = useState(null);
 
   const connectionLineStyle = { stroke: "#2b2b2b", strokeWidth: "6px" };
@@ -228,9 +235,8 @@ const FlowBuilderConfig = () => {
             id: geraStringAleatoria(30),
             position: { x: posX, y: posY },
             data: {
-              key: data.key,
-              condition: data.condition,
-              value: data.value,
+              mode: data.mode || "all",
+              rules: Array.isArray(data.rules) ? data.rules : [],
             },
             type: "condition",
           },
@@ -430,6 +436,22 @@ const FlowBuilderConfig = () => {
         ];
       });
     }
+
+    if (type === "attendant") {
+      return setNodes((old) => {
+        return [
+          ...old,
+          {
+            id: geraStringAleatoria(30),
+            position: { x: posX, y: posY },
+            data: data?.user
+              ? { user: data.user }
+              : { user: { id: 0, name: "" } },
+            type: "attendant",
+          },
+        ];
+      });
+    }
   };
 
   const textAdd = (data) => {
@@ -498,6 +520,10 @@ const FlowBuilderConfig = () => {
 
   const waitForInteractionAdd = () => {
     addNode("waitForInteraction", {});
+  };
+
+  const attendantAdd = (data) => {
+    addNode("attendant", data);
   };
 
   const loadMore = () => {
@@ -585,6 +611,12 @@ const FlowBuilderConfig = () => {
     if (node.type === "closeTicket") {
       setModalAddCloseTicket("edit");
     }
+    if (node.type === "condition") {
+      setModalAddCondition("edit");
+    }
+    if (node.type === "attendant") {
+      setModalAddAttendant("edit");
+    }
   };
 
   const clickNode = (event, node) => {
@@ -632,6 +664,8 @@ const FlowBuilderConfig = () => {
     setModalAddSector(null);
     setModalAddTag(null);
     setModalAddCloseTicket(null);
+    setModalAddCondition(null);
+    setModalAddAttendant(null);
   };
 
   const clickActions = (type) => {
@@ -674,6 +708,12 @@ const FlowBuilderConfig = () => {
         break;
       case "waitForInteraction":
         waitForInteractionAdd();
+        break;
+      case "condition":
+        setModalAddCondition("create");
+        break;
+      case "attendant":
+        setModalAddAttendant("create");
         break;
       default:
     }
@@ -857,6 +897,20 @@ const FlowBuilderConfig = () => {
         data={dataNode}
         onUpdate={updateNode}
         close={setModalAddCloseTicket}
+      />
+      <FlowBuilderConditionModal
+        open={modalAddCondition}
+        onSave={conditionAdd}
+        data={dataNode}
+        onUpdate={updateNode}
+        close={setModalAddCondition}
+      />
+      <FlowBuilderAttendantModal
+        open={modalAddAttendant}
+        onSave={attendantAdd}
+        data={dataNode}
+        onUpdate={updateNode}
+        close={setModalAddAttendant}
       />
 
       <MainHeader>
