@@ -212,6 +212,35 @@ const messages = {
 				},
 				open: "Open",
 				seeTicket: "View Ticket",
+				column: {
+					pending: "Waiting",
+					open: "In progress",
+					closed: "Closed",
+				},
+				lastInteraction: "Last activity",
+				queue: "Queue",
+				attendant: "Agent",
+				unread: "Unread",
+				emptyColumnTitle: "Nothing here yet",
+				emptyColumnHint: "Drag a card from another column or wait for new tickets.",
+				noQueuesHint:
+					"No queue linked to your user. Kanban needs queues to list tickets.",
+				loading: "Loading board…",
+				quickActions: {
+					menuAria: "Ticket actions",
+					assign: "Assign agent",
+					unassign: "Unassign agent",
+					changeQueue: "Change queue",
+					tags: "Tags",
+					close: "Close ticket",
+					selectUser: "Agent",
+					selectQueue: "Queue",
+					tagsPlaceholder: "Select tags",
+					confirmClose:
+						"Close this ticket? The conversation will end according to your existing rules (auto messages, survey, etc.).",
+					cancel: "Cancel",
+					save: "Save",
+				},
 			},
 			invoices: {
 				title: "Invoices",
@@ -830,6 +859,16 @@ const messages = {
 				assignedHeader: "In Progress",
 				noTicketsTitle: "Nothing here!",
 				noTicketsMessage: "No service found with this status or search term",
+				emptyStateTitle: "No conversations here",
+				emptyStateMessage:
+					"No tickets match this view or your current filters and search.",
+				emptyStateHint:
+					"Adjust filters or search, or wait for new contacts. When tickets appear, select one to open the conversation.",
+				searchInputAria: "Search tickets",
+				keyboardShortcutsHint:
+					"Shortcuts: / focus search · Alt+1 Open · Alt+2 Resolved · Alt+3 Filters · Alt+4 Groups · arrows in list",
+				compactListOn: "Compact list",
+				compactListOff: "Comfortable list",
 				buttons: {
 					accept: "Accept",
 					closed: "Finish",
@@ -837,6 +876,7 @@ const messages = {
 				},
 			},
 			ticketsListItem: {
+				ariaTicketRow: "Ticket",
 				tooltip: {
 					chatbot: "Chatbot",
 					peek: "Peek Conversation",

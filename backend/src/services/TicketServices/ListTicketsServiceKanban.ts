@@ -1,5 +1,5 @@
 import { Op, fn, where, col, Filterable, Includeable } from "sequelize";
-import { startOfDay, endOfDay, parseISO } from "date-fns";
+import { startOfDay, endOfDay, parseISO, subDays } from "date-fns";
 
 import Ticket from "../../models/Ticket";
 import Contact from "../../models/Contact";
@@ -81,19 +81,31 @@ const ListTicketsServiceKanban = async ({
     },
   ];
 
+  const thirtyDaysAgo = subDays(new Date(), 30);
+  const statusKanbanFilter =
+    status && ["pending", "open", "closed"].includes(status)
+      ? { status }
+      : {
+          [Op.or]: [
+            { status: "pending" },
+            { status: "open" },
+            { status: "closed", updatedAt: { [Op.gte]: thirtyDaysAgo } }
+          ]
+        };
+
   if (showAll === "true") {
-    whereCondition = {}; 
+    whereCondition = statusKanbanFilter;
   } else {
     whereCondition = {
-      ...whereCondition,
-      queueId: { [Op.or]: [queueIds, null] }
+      [Op.and]: [
+        {
+          [Op.or]: [{ userId }, { status: "pending" }],
+          queueId: { [Op.or]: [queueIds, null] }
+        },
+        statusKanbanFilter
+      ]
     };
   }
-
-  whereCondition = {
-    ...whereCondition,
-    status: { [Op.or]: ["pending", "open"] }
-  };
 
   if (searchParam) {
     const sanitizedSearchParam = searchParam.toLocaleLowerCase().trim();

@@ -269,6 +269,35 @@ const messages = {
         },
         open: "Em aberto",
         seeTicket: "Ver Ticket",
+        column: {
+          pending: "Aguardando",
+          open: "Em atendimento",
+          closed: "Finalizado",
+        },
+        lastInteraction: "Última interação",
+        queue: "Setor",
+        attendant: "Atendente",
+        unread: "Não lidas",
+        emptyColumnTitle: "Nada por aqui",
+        emptyColumnHint: "Arraste um card de outra coluna ou aguarde novos tickets.",
+        noQueuesHint:
+          "Nenhum setor vinculado ao seu usuário. O Kanban precisa de filas para listar tickets.",
+        loading: "Carregando quadro…",
+        quickActions: {
+          menuAria: "Ações do ticket",
+          assign: "Atribuir atendente",
+          unassign: "Remover atendente",
+          changeQueue: "Alterar setor",
+          tags: "Tags",
+          close: "Fechar ticket",
+          selectUser: "Atendente",
+          selectQueue: "Setor",
+          tagsPlaceholder: "Selecione as tags",
+          confirmClose:
+            "Fechar este ticket? O atendimento será encerrado conforme as regras já configuradas (mensagens automáticas, pesquisa, etc.).",
+          cancel: "Cancelar",
+          save: "Salvar",
+        },
       },
       invoices: {
         title: "Faturas",
@@ -899,6 +928,16 @@ const messages = {
         noTicketsTitle: "Nada aqui!",
         noTicketsMessage:
             "Nenhum atendimento encontrado com esse status ou termo pesquisado",
+        emptyStateTitle: "Nenhum atendimento por aqui",
+        emptyStateMessage:
+            "Não há tickets nesta visualização ou com os filtros e a busca atuais.",
+        emptyStateHint:
+            "Ajuste os filtros ou a pesquisa, ou aguarde novos contatos. Quando aparecerem atendimentos, selecione um na lista para abrir a conversa.",
+        searchInputAria: "Buscar atendimentos",
+        keyboardShortcutsHint:
+            "Atalhos: / foca a busca · Alt+1 Abertas · Alt+2 Resolvidos · Alt+3 Filtros · Alt+4 Grupos · setas na lista",
+        compactListOn: "Lista compacta",
+        compactListOff: "Lista confortável",
         buttons: {
           accept: "Aceitar",
           closed: "Finalizar",
@@ -906,6 +945,7 @@ const messages = {
         },
       },
       ticketsListItem: {
+        ariaTicketRow: "Atendimento",
         tooltip: {
           chatbot: "Chatbot",
           peek: "Espiar Conversa",

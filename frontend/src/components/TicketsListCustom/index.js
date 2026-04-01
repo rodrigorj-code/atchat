@@ -3,7 +3,14 @@ import React, { useState, useEffect, useReducer, useContext } from "react";
 import { makeStyles } from "@material-ui/core/styles";
 import List from "@material-ui/core/List";
 import Paper from "@material-ui/core/Paper";
+import Box from "@material-ui/core/Box";
+import Typography from "@material-ui/core/Typography";
+import InboxOutlinedIcon from "@material-ui/icons/InboxOutlined";
 
+/**
+ * Lista de tickets usada na tela de Atendimentos (fluxo atual).
+ * Preferir este componente a `TicketsList` (legado).
+ */
 import TicketListItem from "../TicketListItemCustom";
 import TicketsListSkeleton from "../TicketsListSkeleton";
 
@@ -28,14 +35,14 @@ const useStyles = makeStyles((theme) => ({
     maxHeight: "100%",
     overflowY: "scroll",
     ...theme.scrollbarStyles,
-    borderTop: "2px solid rgba(0, 0, 0, 0.12)",
+    borderTop: `2px solid ${theme.palette.divider}`,
   },
 
   ticketsListHeader: {
-    color: "rgb(67, 83, 105)",
+    color: theme.palette.text.primary,
     zIndex: 2,
-    backgroundColor: "white",
-    borderBottom: "1px solid rgba(0, 0, 0, 0.12)",
+    backgroundColor: theme.palette.background.paper,
+    borderBottom: `1px solid ${theme.palette.divider}`,
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
@@ -43,34 +50,53 @@ const useStyles = makeStyles((theme) => ({
 
   ticketsCount: {
     fontWeight: "normal",
-    color: "rgb(104, 121, 146)",
-    marginLeft: "8px",
-    fontSize: "14px",
+    color: theme.palette.text.secondary,
+    marginLeft: theme.spacing(1),
+    fontSize: "0.875rem",
   },
 
-  noTicketsText: {
-    textAlign: "center",
-    color: "rgb(104, 121, 146)",
-    fontSize: "14px",
-    lineHeight: "1.4",
-  },
-
-  noTicketsTitle: {
-    textAlign: "center",
-    fontSize: "16px",
-    fontWeight: "600",
-    margin: "0px",
-  },
-
-  noTicketsDiv: {
+  emptyState: {
     display: "flex",
-    height: "100%",
-    margin: 0,
-    width: "100%",
     flexDirection: "column",
     alignItems: "center",
-    justifyContent: "flex-start",
-    paddingTop: 90,
+    justifyContent: "center",
+    textAlign: "center",
+    padding: theme.spacing(4, 3),
+    minHeight: 220,
+    maxWidth: 360,
+    margin: "0 auto",
+    [theme.breakpoints.down("xs")]: {
+      padding: theme.spacing(3, 2),
+      minHeight: 180,
+    },
+  },
+  emptyIcon: {
+    fontSize: 56,
+    marginBottom: theme.spacing(1.5),
+    color: theme.palette.text.secondary,
+    opacity: 0.45,
+  },
+  emptyTitle: {
+    fontWeight: 700,
+    fontSize: "1.125rem",
+    marginBottom: theme.spacing(1),
+    color: theme.palette.text.primary,
+  },
+  emptyMessage: {
+    color: theme.palette.text.secondary,
+    fontSize: "0.875rem",
+    lineHeight: 1.5,
+    marginBottom: theme.spacing(1.5),
+  },
+  emptyHint: {
+    color: theme.palette.text.secondary,
+    fontSize: "0.8125rem",
+    lineHeight: 1.5,
+    padding: theme.spacing(1.5, 2),
+    borderRadius: theme.shape.borderRadius,
+    backgroundColor:
+      theme.palette.type === "dark" ? "rgba(255,255,255,0.06)" : theme.palette.grey[100],
+    border: `1px dashed ${theme.palette.divider}`,
   },
 }));
 
@@ -166,6 +192,10 @@ const TicketsListCustom = (props) => {
     chatbotOnly = false,
     updateCount,
     style,
+    /** Lista mais densa (Fase 3) */
+    compact = false,
+    // false: não registra socket (ex.: lista oculta na mesma aba com outras instâncias)
+    socketActive = true,
   } = props;
   const classes = useStyles();
   const [pageNumber, setPageNumber] = useState(1);
@@ -214,6 +244,8 @@ const TicketsListCustom = (props) => {
   }, [tickets, status, searchParam, safeQueues, profile, chatbotOnly]);
 
   useEffect(() => {
+    if (!socketActive) return undefined;
+
     const companyId = localStorage.getItem("companyId");
     const socket = socketManager.getSocket(companyId);
 
@@ -310,7 +342,19 @@ const TicketsListCustom = (props) => {
     return () => {
       socket.disconnect();
     };
-  }, [status, showAll, user, selectedQueueIds, tags, users, profile, queues, socketManager, chatbotOnly]);
+  }, [
+    socketActive,
+    status,
+    showAll,
+    user,
+    selectedQueueIds,
+    tags,
+    users,
+    profile,
+    queues,
+    socketManager,
+    chatbotOnly,
+  ]);
 
   useEffect(() => {
     if (typeof updateCount === "function") {
@@ -334,7 +378,7 @@ const TicketsListCustom = (props) => {
   };
 
   return (
-    <Paper className={classes.ticketsListWrapper} style={style}>
+    <Paper className={classes.ticketsListWrapper} style={style} data-tickets-list-panel>
       <Paper
         square
         name="closed"
@@ -344,18 +388,22 @@ const TicketsListCustom = (props) => {
       >
         <List style={{ paddingTop: 0, height: "100%" }}>
           {ticketsList.length === 0 && !loading ? (
-            <div className={classes.noTicketsDiv}>
-              <span className={classes.noTicketsTitle}>
-                {i18n.t("ticketsList.noTicketsTitle")}
-              </span>
-              <p className={classes.noTicketsText}>
-                {i18n.t("ticketsList.noTicketsMessage")}
-              </p>
-            </div>
+            <Box className={classes.emptyState} aria-live="polite">
+              <InboxOutlinedIcon className={classes.emptyIcon} aria-hidden />
+              <Typography component="h2" className={classes.emptyTitle}>
+                {i18n.t("ticketsList.emptyStateTitle")}
+              </Typography>
+              <Typography className={classes.emptyMessage}>
+                {i18n.t("ticketsList.emptyStateMessage")}
+              </Typography>
+              <Typography component="p" className={classes.emptyHint}>
+                {i18n.t("ticketsList.emptyStateHint")}
+              </Typography>
+            </Box>
           ) : (
             <>
               {ticketsList.map((ticket) => (
-                <TicketListItem ticket={ticket} key={ticket.id} />
+                <TicketListItem ticket={ticket} key={ticket.id} compact={compact} />
               ))}
             </>
           )}

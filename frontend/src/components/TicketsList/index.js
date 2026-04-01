@@ -1,3 +1,7 @@
+/**
+ * @deprecated Lista de tickets legada (socket via `socket-io` local).
+ * Use `TicketsListCustom` na tela de Atendimentos atual.
+ */
 import React, { useState, useEffect, useReducer, useContext } from "react";
 import openSocket from "../../services/socket-io";
 

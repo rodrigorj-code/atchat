@@ -177,6 +177,7 @@ const Ticket = () => {
         className={clsx(classes.mainWrapper, {
           [classes.mainWrapperShift]: drawerOpen,
         })}
+        data-ticket-chat-panel
       >
         <TicketHeader loading={loading}>
           {renderTicketInfo()}

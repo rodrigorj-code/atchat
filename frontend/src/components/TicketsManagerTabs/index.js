@@ -1,5 +1,6 @@
 import React, { useContext, useEffect, useRef, useState } from "react";
 import { useHistory } from "react-router-dom";
+import clsx from "clsx";
 
 import { makeStyles } from "@material-ui/core/styles";
 import Paper from "@material-ui/core/Paper";
@@ -7,7 +8,6 @@ import SearchIcon from "@material-ui/icons/Search";
 import InputBase from "@material-ui/core/InputBase";
 import Tabs from "@material-ui/core/Tabs";
 import Tab from "@material-ui/core/Tab";
-import Badge from "@material-ui/core/Badge";
 import Fab from "@material-ui/core/Fab";
 import Typography from "@material-ui/core/Typography";
 import AddIcon from "@material-ui/icons/Add";
@@ -16,6 +16,7 @@ import FlashOnIcon from "@material-ui/icons/FlashOn";
 import FormControlLabel from "@material-ui/core/FormControlLabel";
 import Switch from "@material-ui/core/Switch";
 import IconButton from "@material-ui/core/IconButton";
+import Tooltip from "@material-ui/core/Tooltip";
 import Dialog from "@material-ui/core/Dialog";
 import DialogTitle from "@material-ui/core/DialogTitle";
 import DialogContent from "@material-ui/core/DialogContent";
@@ -47,7 +48,15 @@ import { UsersFilter } from "../UsersFilter";
 import CheckCircleIcon from "@material-ui/icons/CheckCircle";
 import GroupIcon from "@material-ui/icons/Group";
 import FilterListIcon from "@material-ui/icons/FilterList";
+import ViewCompactOutlined from "@material-ui/icons/ViewCompactOutlined";
 
+import useTicketsKeyboardShortcuts from "../../hooks/useTicketsKeyboardShortcuts";
+
+/**
+ * Atendimentos (desktop): abas, busca, filtros e lista.
+ * Fluxo oficial: este arquivo + `TicketsListCustom` (importado como `TicketsList` abaixo).
+ * Não confundir com `TicketsManager`/`TicketsList` legados.
+ */
 const useStyles = makeStyles(theme => ({
 	ticketsWrapper: {
 		position: "relative",
@@ -57,16 +66,19 @@ const useStyles = makeStyles(theme => ({
 		overflow: "hidden",
 		borderTopRightRadius: 0,
 		borderBottomRightRadius: 0,
-		borderRadius:0,
+		borderRadius: 0,
 	},
 
 	tabsHeader: {
 		flex: "none",
-		backgroundColor: "#fff",
+		backgroundColor: theme.palette.background.paper,
 		borderTopLeftRadius: 12,
 		borderTopRightRadius: 12,
+		borderBottom: `1px solid ${theme.palette.divider}`,
 		"& .MuiTabs-indicator": {
-			backgroundColor: "#000",
+			height: 3,
+			borderRadius: 2,
+			backgroundColor: theme.palette.primary.main,
 		},
 	},
 
@@ -82,12 +94,26 @@ const useStyles = makeStyles(theme => ({
 	},
 
 	tab: {
-		minWidth: 120,
-		width: 120,
-		color: "rgba(0,0,0,0.45)",
-		"&.Mui-selected": {
-			color: "rgba(0,0,0,0.87)",
+		minWidth: 72,
+		[theme.breakpoints.down("sm")]: {
+			minWidth: 0,
+			paddingLeft: theme.spacing(0.5),
+			paddingRight: theme.spacing(0.5),
 		},
+		color: theme.palette.text.secondary,
+		opacity: 0.95,
+		transition: theme.transitions.create(["color", "opacity"], { duration: 150 }),
+		"&.Mui-selected": {
+			color: theme.palette.primary.main,
+			opacity: 1,
+			fontWeight: 700,
+		},
+	},
+	tabMenuIcon: {
+		fontSize: 18,
+		marginRight: theme.spacing(0.75),
+		verticalAlign: "middle",
+		color: theme.palette.success.main,
 	},
 
 	internalTab: {
@@ -178,11 +204,12 @@ const useStyles = makeStyles(theme => ({
 		display: "flex",
 		flexWrap: "wrap",
 		gap: theme.spacing(1),
-		padding: theme.spacing(1, 0),
+		padding: theme.spacing(1, 1),
 		backgroundColor: theme.palette.background.paper,
 		justifyContent: "center",
 		alignItems: "center",
 		width: "100%",
+		borderBottom: `1px solid ${theme.palette.divider}`,
 	},
 	statusPill: {
 		fontSize: "0.75rem",
@@ -202,80 +229,106 @@ const useStyles = makeStyles(theme => ({
 		fontSize: 16,
 	},
 	statusCountGreen: {
-		width: 20,
-		height: 20,
+		width: 22,
+		height: 22,
 		borderRadius: "50%",
 		display: "flex",
 		alignItems: "center",
 		justifyContent: "center",
-		backgroundColor: "#24c776",
+		backgroundColor: theme.palette.success.main,
 		border: "none",
-		color: "#fff",
+		color: theme.palette.success.contrastText,
 		fontWeight: 700,
 		fontSize: "0.72rem",
 	},
 	statusCountPink: {
-		width: 20,
-		height: 20,
+		width: 22,
+		height: 22,
 		borderRadius: "50%",
 		display: "flex",
 		alignItems: "center",
 		justifyContent: "center",
-		backgroundColor: "#e91e63",
+		backgroundColor: theme.palette.secondary.main,
 		border: "none",
-		color: "#fff",
+		color: theme.palette.getContrastText(theme.palette.secondary.main),
 		fontWeight: 700,
 		fontSize: "0.72rem",
 	},
 	statusPillGreen: {
-		backgroundColor: "#fff",
-		border: "1px solid transparent",
-		color: "rgba(0,0,0,0.45)",
+		backgroundColor: theme.palette.background.paper,
+		border: `1px solid ${theme.palette.divider}`,
+		color: theme.palette.text.secondary,
+		borderRadius: theme.shape.borderRadius,
 	},
 	statusPillGreenActive: {
-		borderBottom: "2px solid #000",
+		borderColor: theme.palette.success.main,
+		boxShadow: `inset 0 -2px 0 ${theme.palette.success.main}`,
 	},
 	statusPillPink: {
-		backgroundColor: "#fff",
-		border: "1px solid transparent",
-		color: "rgba(0,0,0,0.45)",
+		backgroundColor: theme.palette.background.paper,
+		border: `1px solid ${theme.palette.divider}`,
+		color: theme.palette.text.secondary,
+		borderRadius: theme.shape.borderRadius,
 	},
 	statusPillPinkActive: {
-		borderBottom: "2px solid #000",
+		borderColor: theme.palette.secondary.main,
+		boxShadow: `inset 0 -2px 0 ${theme.palette.secondary.main}`,
 	},
 	statusPillText: {
-		color: "rgba(0,0,0,0.45)",
+		color: theme.palette.text.secondary,
 	},
 	statusPillTextActive: {
-		color: "rgba(0,0,0,0.87)",
+		color: theme.palette.text.primary,
+	},
+	statusIconGreen: {
+		fontSize: 16,
+		color: theme.palette.success.main,
+	},
+	statusIconPink: {
+		fontSize: 16,
+		color: theme.palette.secondary.main,
 	},
 	searchRow: {
 		display: "flex",
 		alignItems: "center",
+		flexWrap: "wrap",
+		gap: theme.spacing(1),
 		padding: theme.spacing(1, 1.5),
-		borderBottom: "1px solid rgba(0,0,0,0.08)",
-		backgroundColor: "#f4f4f4",
+		borderBottom: `1px solid ${theme.palette.divider}`,
+		backgroundColor:
+			theme.palette.type === "dark" ? theme.palette.background.default : theme.palette.grey[100],
+		[theme.breakpoints.down("xs")]: {
+			padding: theme.spacing(1),
+		},
 	},
 	searchInputWrap: {
 		flex: 1,
+		minWidth: 0,
 		display: "flex",
 		alignItems: "center",
-		border: "1px solid rgba(0,0,0,0.12)",
-		borderRadius: 4,
-		padding: "6px 10px",
-		backgroundColor: "#fff",
+		border: `1px solid ${theme.palette.divider}`,
+		borderRadius: theme.shape.borderRadius,
+		padding: theme.spacing(0.75, 1.25),
+		backgroundColor: theme.palette.background.paper,
 	},
 	searchButton: {
-		backgroundColor: "#1a1a1a",
-		color: "#fff",
+		backgroundColor: theme.palette.primary.main,
+		color: theme.palette.primary.contrastText,
 		marginLeft: theme.spacing(1),
-		borderRadius: 8,
-		width: 34,
-		height: 34,
+		borderRadius: theme.shape.borderRadius,
+		width: 36,
+		height: 36,
 		padding: 0,
 		"&:hover": {
-			backgroundColor: "#333",
+			backgroundColor: theme.palette.primary.dark,
 		},
+	},
+	compactToggle: {
+		border: `1px solid ${theme.palette.divider}`,
+		backgroundColor: theme.palette.background.paper,
+		width: 36,
+		height: 36,
+		padding: 0,
 	},
 	fabsWrap: {
 		position: "absolute",
@@ -287,17 +340,17 @@ const useStyles = makeStyles(theme => ({
 		zIndex: 10,
 	},
 	fabGreen: {
-		backgroundColor: "#24c776",
-		color: "#fff",
-		boxShadow: "0 4px 14px rgba(36, 199, 118, 0.45)",
+		backgroundColor: theme.palette.success.main,
+		color: theme.palette.success.contrastText,
+		boxShadow: theme.shadows[4],
 		animation: "$fabPulse 2s ease-in-out infinite",
 		"&:hover": {
-			backgroundColor: "#1fb865",
+			backgroundColor: theme.palette.success.dark,
 		},
 	},
 	"@keyframes fabPulse": {
-		"0%, 100%": { boxShadow: "0 4px 14px rgba(36, 199, 118, 0.45)" },
-		"50%": { boxShadow: "0 4px 20px rgba(36, 199, 118, 0.7)" },
+		"0%, 100%": { boxShadow: theme.shadows[4] },
+		"50%": { boxShadow: theme.shadows[8] },
 	},
 	// Modal Ações em massa
 	bulkModalTitle: {
@@ -350,6 +403,8 @@ const TicketsManagerTabs = () => {
   const history = useHistory();
 
   const [searchParam, setSearchParam] = useState("");
+  /** Texto exibido no campo (debounce só atualiza `searchParam` para a API) */
+  const [searchInputDraft, setSearchInputDraft] = useState("");
   const [tab, setTab] = useState("open");
   const [tabOpen, setTabOpen] = useState("open");
   const [newTicketModalOpen, setNewTicketModalOpen] = useState(false);
@@ -360,6 +415,8 @@ const TicketsManagerTabs = () => {
   const [bulkAssigning, setBulkAssigning] = useState(false);
   const [showAllTickets, setShowAllTickets] = useState(false);
   const searchInputRef = useRef();
+  const searchDebounceRef = useRef(null);
+  const [compactList, setCompactList] = useState(() => localStorage.getItem("ticketsListCompact") === "1");
   const { user } = useContext(AuthContext);
   const { whatsApps } = useContext(WhatsAppsContext);
   const { profile } = user;
@@ -374,6 +431,20 @@ const TicketsManagerTabs = () => {
   const [selectedUsers, setSelectedUsers] = useState([]);
 
   useEffect(() => {
+    return () => {
+      if (searchDebounceRef.current) {
+        clearTimeout(searchDebounceRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem("ticketsListCompact", compactList ? "1" : "0");
+  }, [compactList]);
+
+  useTicketsKeyboardShortcuts({ searchInputRef, setTab });
+
+  useEffect(() => {
     if (user.profile.toUpperCase() === "ADMIN") {
       setShowAllTickets(true);
     }
@@ -382,34 +453,35 @@ const TicketsManagerTabs = () => {
 
   useEffect(() => {
     if (tab === "search") {
-      searchInputRef.current.focus();
+      const el = searchInputRef.current;
+      if (el && typeof el.focus === "function") {
+        el.focus();
+      }
     }
   }, [tab]);
 
-  let searchTimeout;
-
   const handleSearch = (e) => {
-    const searchedTerm = e.target.value.toLowerCase();
+    const raw = e.target.value;
+    const searchedTerm = raw.toLowerCase();
+    setSearchInputDraft(raw);
 
-    clearTimeout(searchTimeout);
+    if (searchDebounceRef.current) {
+      clearTimeout(searchDebounceRef.current);
+    }
 
     if (searchedTerm === "") {
-      setSearchParam(searchedTerm);
+      setSearchParam("");
       setTab("open");
       return;
     }
 
-    searchTimeout = setTimeout(() => {
+    searchDebounceRef.current = setTimeout(() => {
       setSearchParam(searchedTerm);
-    }, 500);
+    }, 350);
   };
 
   const handleChangeTab = (e, newValue) => {
     setTab(newValue);
-  };
-
-  const handleChangeTabOpen = (e, newValue) => {
-    setTabOpen(newValue);
   };
 
   const handleCloseOrOpenTicket = (ticket) => {
@@ -483,37 +555,6 @@ const TicketsManagerTabs = () => {
           Ações em massa - Tickets
         </DialogTitle>
         <DialogContent style={{ padding: 0 }}>
-          <div className={classes.bulkSection}>
-            <Typography className={classes.bulkSectionTitle}>
-              FECHAR TODOS TICKETS:
-            </Typography>
-            <div className={classes.bulkButtonsRow}>
-              <Button
-                variant="outlined"
-                className={classes.bulkButton}
-                startIcon={<FolderOpenIcon />}
-                onClick={() => {}}
-              >
-                Abertos
-              </Button>
-              <Button
-                variant="outlined"
-                className={classes.bulkButton}
-                startIcon={<PersonIcon />}
-                onClick={() => {}}
-              >
-                Pendentes
-              </Button>
-              <Button
-                variant="outlined"
-                className={classes.bulkButton}
-                startIcon={<AndroidIcon />}
-                onClick={() => {}}
-              >
-                CHATBOT
-              </Button>
-            </div>
-          </div>
           <div className={`${classes.bulkSection} ${classes.bulkAssignRow}`}>
             <Typography className={classes.bulkSectionTitle}>
               ATRIBUIR TODOS TICKETS SEM CONEXÃO:
@@ -573,14 +614,15 @@ const TicketsManagerTabs = () => {
           value={tab}
           onChange={handleChangeTab}
           variant="fullWidth"
-          indicatorColor="inherit"
+          indicatorColor="primary"
+          textColor="primary"
         >
           <Tab
             value={"open"}
             classes={{ root: classes.tab }}
             label={
               <span className={classes.tabLabel}>
-                <FolderOpenIcon style={{ fontSize: 16, color: "#24c776", marginRight: 6 }} />
+                <FolderOpenIcon className={classes.tabMenuIcon} />
                 ABERTAS
               </span>
             }
@@ -590,7 +632,7 @@ const TicketsManagerTabs = () => {
             classes={{ root: classes.tab }}
             label={
               <span className={classes.tabLabel}>
-                <CheckCircleIcon style={{ fontSize: 16, color: "#24c776", marginRight: 6 }} />
+                <CheckCircleIcon className={classes.tabMenuIcon} />
                 RESOLVIDOS
               </span>
             }
@@ -600,7 +642,7 @@ const TicketsManagerTabs = () => {
             classes={{ root: classes.tab, label: classes.tabLabel }}
             label={
               <span className={classes.tabLabel}>
-                <GroupIcon style={{ fontSize: 16, color: "#24c776", marginRight: 6 }} />
+                <GroupIcon className={classes.tabMenuIcon} />
                 GRUPOS
               </span>
             }
@@ -610,7 +652,7 @@ const TicketsManagerTabs = () => {
             classes={{ root: classes.tab, label: classes.tabLabel }}
             label={
               <span className={classes.tabLabel}>
-                <FilterListIcon style={{ fontSize: 16, color: "#24c776", marginRight: 6 }} />
+                <FilterListIcon className={classes.tabMenuIcon} />
                 FILTROS
               </span>
             }
@@ -627,10 +669,7 @@ const TicketsManagerTabs = () => {
             onClick={() => setTabOpen("open")}
           >
             <span className={classes.statusCountGreen}>{openCount}</span>
-            <FolderOpenIcon
-              className={classes.statusPillIcon}
-              style={{ color: "#24c776" }}
-            />
+            <FolderOpenIcon className={clsx(classes.statusPillIcon, classes.statusIconGreen)} />
             <span
               className={
                 tabOpen === "open" ? classes.statusPillTextActive : classes.statusPillText
@@ -647,10 +686,7 @@ const TicketsManagerTabs = () => {
             onClick={() => setTabOpen("pending")}
           >
             <span className={classes.statusCountPink}>{pendingCount}</span>
-            <PersonIcon
-              className={classes.statusPillIcon}
-              style={{ color: "#e91e63" }}
-            />
+            <PersonIcon className={clsx(classes.statusPillIcon, classes.statusIconPink)} />
             <span
               className={
                 tabOpen === "pending" ? classes.statusPillTextActive : classes.statusPillText
@@ -667,10 +703,7 @@ const TicketsManagerTabs = () => {
             onClick={() => setTabOpen("chatbot")}
           >
             <span className={classes.statusCountGreen}>{chatbotCount}</span>
-            <AndroidIcon
-              className={classes.statusPillIcon}
-              style={{ color: "#24c776" }}
-            />
+            <AndroidIcon className={clsx(classes.statusPillIcon, classes.statusIconGreen)} />
             <span
               className={
                 tabOpen === "chatbot" ? classes.statusPillTextActive : classes.statusPillText
@@ -689,7 +722,7 @@ const TicketsManagerTabs = () => {
             inputRef={searchInputRef}
             placeholder="Buscar atendimento e mensagens"
             type="search"
-            value={searchParam}
+            value={searchInputDraft}
             onChange={(e) => {
               if (e.target.value.trim()) setTab("search");
               handleSearch(e);
@@ -697,16 +730,43 @@ const TicketsManagerTabs = () => {
             onFocus={() => tab !== "search" && setTab("search")}
             fullWidth
             style={{ marginLeft: 4 }}
+            inputProps={{
+              "aria-label": i18n.t("ticketsList.searchInputAria"),
+              title: i18n.t("ticketsList.keyboardShortcutsHint"),
+            }}
           />
         </div>
-        <IconButton
-          className={classes.searchButton}
-          size="small"
-          onClick={() => searchInputRef.current?.focus()}
-          aria-label="Buscar"
+        <Tooltip title={i18n.t("ticketsList.keyboardShortcutsHint")}>
+          <IconButton
+            className={classes.searchButton}
+            size="small"
+            onClick={() => searchInputRef.current?.focus()}
+            aria-label={i18n.t("ticketsList.searchInputAria")}
+          >
+            <SearchIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+        <Tooltip
+          title={
+            compactList
+              ? i18n.t("ticketsList.compactListOff")
+              : i18n.t("ticketsList.compactListOn")
+          }
         >
-          <SearchIcon fontSize="small" />
-        </IconButton>
+          <IconButton
+            className={classes.compactToggle}
+            size="small"
+            onClick={() => setCompactList((c) => !c)}
+            aria-pressed={compactList}
+            aria-label={
+              compactList
+                ? i18n.t("ticketsList.compactListOff")
+                : i18n.t("ticketsList.compactListOn")
+            }
+          >
+            <ViewCompactOutlined fontSize="small" color={compactList ? "primary" : "inherit"} />
+          </IconButton>
+        </Tooltip>
       </div>
 
       {tab === "search" && (
@@ -748,12 +808,16 @@ const TicketsManagerTabs = () => {
             showAll={showAllTickets}
             selectedQueueIds={selectedQueueIds}
             updateCount={(val) => setOpenCount(val)}
+            socketActive={tabOpen === "open"}
+            compact={compactList}
             style={{ display: tabOpen === "open" ? "flex" : "none" }}
           />
           <TicketsList
             status="pending"
             selectedQueueIds={selectedQueueIds}
             updateCount={(val) => setPendingCount(val)}
+            socketActive={tabOpen === "pending"}
+            compact={compactList}
             style={{ display: tabOpen === "pending" ? "flex" : "none" }}
           />
           <TicketsList
@@ -761,6 +825,8 @@ const TicketsManagerTabs = () => {
             selectedQueueIds={selectedQueueIds}
             chatbotOnly
             updateCount={(val) => setChatbotCount(val)}
+            socketActive={tabOpen === "chatbot"}
+            compact={compactList}
             style={{ display: tabOpen === "chatbot" ? "flex" : "none" }}
           />
         </Paper>
@@ -770,6 +836,7 @@ const TicketsManagerTabs = () => {
           status="closed"
           showAll={true}
           selectedQueueIds={selectedQueueIds}
+          compact={compactList}
         />
       </TabPanel>
       <TabPanel value={tab} name="search" className={classes.ticketsWrapper}>
@@ -783,6 +850,7 @@ const TicketsManagerTabs = () => {
           tags={selectedTags}
           users={selectedUsers}
           selectedQueueIds={selectedQueueIds}
+          compact={compactList}
         />
       </TabPanel>
 

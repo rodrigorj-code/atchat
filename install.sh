@@ -220,6 +220,10 @@ fi
 
 ###############################################################################
 # FRONTEND
+# - As alterações de UI (React, atalhos, Kanban, etc.) não exigem pacotes
+#   extras no SO: basta manter Node 20 e rodar npm install && npm run build.
+# - Em servidor já instalado, após git pull: cd frontend && npm install && npm run build
+#   e recarregar Nginx se necessário (o build gera frontend/build estático).
 ###############################################################################
 echo "==> Configurando frontend (.env)"
 cd "${PROJETO_DIR}/frontend"

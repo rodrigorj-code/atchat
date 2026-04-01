@@ -1,3 +1,8 @@
+/**
+ * @deprecated Layout antigo de Atendimentos (abas + TicketsList legado).
+ * Fluxo atual no desktop: `TicketsManagerTabs` + `TicketsListCustom`.
+ * Mantido para referência ou telas que ainda importem explicitamente.
+ */
 import React, { useContext, useEffect, useState } from "react";
 
 import { 

@@ -213,6 +213,35 @@ const messages = {
         },
         open: "Abierto",
         seeTicket: "Ver Ticket",
+        column: {
+          pending: "En espera",
+          open: "En atención",
+          closed: "Finalizado",
+        },
+        lastInteraction: "Última actividad",
+        queue: "Sector",
+        attendant: "Agente",
+        unread: "No leídos",
+        emptyColumnTitle: "Nada por aquí",
+        emptyColumnHint: "Arrastre una tarjeta de otra columna o espere nuevos tickets.",
+        noQueuesHint:
+          "Ningún sector vinculado a su usuario. El Kanban necesita colas para listar tickets.",
+        loading: "Cargando tablero…",
+        quickActions: {
+          menuAria: "Acciones del ticket",
+          assign: "Asignar agente",
+          unassign: "Quitar agente",
+          changeQueue: "Cambiar sector",
+          tags: "Etiquetas",
+          close: "Cerrar ticket",
+          selectUser: "Agente",
+          selectQueue: "Cola",
+          tagsPlaceholder: "Seleccione etiquetas",
+          confirmClose:
+            "¿Cerrar este ticket? El atención finalizará según las reglas configuradas (mensajes automáticos, encuesta, etc.).",
+          cancel: "Cancelar",
+          save: "Guardar",
+        },
       },
       invoices: {
         title: "Facturas",
@@ -835,6 +864,16 @@ const messages = {
         noTicketsTitle: "¡Nada aquí!",
         noTicketsMessage:
             "Ninguna atención encontrada con ese estado o término buscado",
+        emptyStateTitle: "No hay atenciones aquí",
+        emptyStateMessage:
+            "No hay tickets en esta vista o con los filtros y la búsqueda actuales.",
+        emptyStateHint:
+            "Ajusta los filtros o la búsqueda, o espera nuevos contactos. Cuando aparezcan, selecciona uno para abrir la conversación.",
+        searchInputAria: "Buscar atenciones",
+        keyboardShortcutsHint:
+            "Atajos: / enfoque búsqueda · Alt+1 Abiertas · Alt+2 Resueltas · Alt+3 Filtros · Alt+4 Grupos · flechas en lista",
+        compactListOn: "Lista compacta",
+        compactListOff: "Lista cómoda",
         buttons: {
           accept: "Aceptar",
           closed: "Finalizar",
@@ -842,6 +881,7 @@ const messages = {
         },
       },
       ticketsListItem: {
+        ariaTicketRow: "Atención",
         tooltip: {
           chatbot: "Chatbot",
           peek: "Espiar Conversación",
