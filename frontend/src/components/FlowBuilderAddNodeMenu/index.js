@@ -17,10 +17,13 @@ import {
   HourglassEmpty,
   FilterList,
   Person,
+  NotificationsActive,
+  Block,
+  TrendingUp,
 } from "@mui/icons-material";
 import typebotIcon from "../../assets/typebot-ico.png";
 import { SiOpenai } from "react-icons/si";
-import { AccountTree, Cancel, LocalOffer } from "@mui/icons-material";
+import { AccountTree, Cancel, LocalOffer, Api } from "@mui/icons-material";
 import { Box } from "@mui/material";
 
 const CATEGORIES = {
@@ -107,6 +110,18 @@ const NODE_ACTIONS = [
     category: "integracoes",
   },
   {
+    icon: <Api sx={{ color: "#0277bd" }} />,
+    name: "HTTP Request",
+    type: "httpRequest",
+    category: "integracoes",
+  },
+  {
+    icon: <TrendingUp sx={{ color: "#2e7d32" }} />,
+    name: "FlowUp",
+    type: "flowUp",
+    category: "integracoes",
+  },
+  {
     icon: <FilterList sx={{ color: "#228B22" }} />,
     name: "Condição",
     type: "condition",
@@ -122,6 +137,18 @@ const NODE_ACTIONS = [
     icon: <AccessTime sx={{ color: "#F7953B" }} />,
     name: "Intervalo",
     type: "interval",
+    category: "utilitarios",
+  },
+  {
+    icon: <NotificationsActive sx={{ color: "#f57c00" }} />,
+    name: "Notificação",
+    type: "notification",
+    category: "utilitarios",
+  },
+  {
+    icon: <Block sx={{ color: "#616161" }} />,
+    name: "Blacklist",
+    type: "blacklist",
     category: "utilitarios",
   },
 ];

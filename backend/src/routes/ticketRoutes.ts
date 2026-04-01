@@ -2,6 +2,7 @@ import express from "express";
 import isAuth from "../middleware/isAuth";
 
 import * as TicketController from "../controllers/TicketController";
+import * as FlowExecutionLogController from "../controllers/FlowExecutionLogController";
 
 const ticketRoutes = express.Router();
 
@@ -10,6 +11,12 @@ ticketRoutes.get("/tickets/without-connection", isAuth, TicketController.listWit
 ticketRoutes.post("/tickets/bulk-assign-connection", isAuth, TicketController.bulkAssignConnection);
 
 ticketRoutes.get("/tickets/:ticketId", isAuth, TicketController.show);
+
+ticketRoutes.get(
+  "/tickets/:ticketId/flow-execution-logs",
+  isAuth,
+  FlowExecutionLogController.indexByTicket
+);
 
 ticketRoutes.get("/ticket/kanban", isAuth, TicketController.kanban);
 

@@ -10,7 +10,7 @@ import {
   MenuItem,
   Select,
 } from "@material-ui/core";
-import { Stack } from "@mui/material";
+import { Stack, CircularProgress } from "@mui/material";
 import { i18n } from "../../translate/i18n";
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
@@ -26,12 +26,14 @@ const FlowBuilderTagModal = ({ open, onSave, data, onUpdate, close }) => {
   const classes = useStyles();
   const isMounted = useRef(true);
   const [activeModal, setActiveModal] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [tags, setTags] = useState([]);
   const [selectedTag, setTagSelected] = useState("");
 
   useEffect(() => {
     if (open === "edit" || open === "create") {
       (async () => {
+        setLoading(true);
         try {
           const { data: resData } = await api.get("/tags/list");
           const tagsList = Array.isArray(resData)
@@ -49,6 +51,8 @@ const FlowBuilderTagModal = ({ open, onSave, data, onUpdate, close }) => {
           setActiveModal(true);
         } catch (error) {
           toastError(error);
+        } finally {
+          setLoading(false);
         }
       })();
     }
@@ -63,6 +67,15 @@ const FlowBuilderTagModal = ({ open, onSave, data, onUpdate, close }) => {
   };
 
   const handleSave = () => {
+    if (loading) {
+      toast.error("Aguarde o carregamento das tags.");
+      return;
+    }
+    const list = Array.isArray(tags) ? tags : [];
+    if (list.length === 0) {
+      toast.error("Nenhuma tag cadastrada. Crie tags no Kanban antes de usar este nó.");
+      return;
+    }
     if (!selectedTag) {
       toast.error("Selecione uma tag");
       return;
@@ -85,43 +98,54 @@ const FlowBuilderTagModal = ({ open, onSave, data, onUpdate, close }) => {
         </DialogTitle>
         <Stack>
           <DialogContent dividers>
-            <Select
-              value={selectedTag}
-              style={{ width: "100%" }}
-              onChange={(e) => setTagSelected(e.target.value)}
-              displayEmpty
-              renderValue={(v) => {
-                if (!v) return "Selecione uma tag";
-                const t = tags.find((w) => w.id === v);
-                return t ? t.name : "Selecione uma tag";
-              }}
-            >
-              <MenuItem value="">
-                <em>Selecione uma tag</em>
-              </MenuItem>
-              {(Array.isArray(tags) ? tags : []).map((tag) => (
-                <MenuItem key={tag.id} value={tag.id}>
-                  <span
-                    style={{
-                      display: "inline-block",
-                      width: 12,
-                      height: 12,
-                      borderRadius: "50%",
-                      backgroundColor: tag.color || "#6366f1",
-                      marginRight: 8,
-                      verticalAlign: "middle",
-                    }}
-                  />
-                  {tag.name}
+            {loading ? (
+              <Stack alignItems="center" py={2}>
+                <CircularProgress size={32} />
+              </Stack>
+            ) : (
+              <Select
+                value={selectedTag}
+                style={{ width: "100%" }}
+                onChange={(e) => setTagSelected(e.target.value)}
+                displayEmpty
+                renderValue={(v) => {
+                  if (!v) return "Selecione uma tag";
+                  const t = tags.find((w) => w.id === v);
+                  return t ? t.name : "Selecione uma tag";
+                }}
+              >
+                <MenuItem value="">
+                  <em>Selecione uma tag</em>
                 </MenuItem>
-              ))}
-            </Select>
+                {(Array.isArray(tags) ? tags : []).map((tag) => (
+                  <MenuItem key={tag.id} value={tag.id}>
+                    <span
+                      style={{
+                        display: "inline-block",
+                        width: 12,
+                        height: 12,
+                        borderRadius: "50%",
+                        backgroundColor: tag.color || "#6366f1",
+                        marginRight: 8,
+                        verticalAlign: "middle",
+                      }}
+                    />
+                    {tag.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            )}
           </DialogContent>
           <DialogActions>
             <Button onClick={handleClose} color="secondary" variant="outlined">
               {i18n.t("contactModal.buttons.cancel")}
             </Button>
-            <Button color="primary" variant="contained" onClick={handleSave}>
+            <Button
+              color="primary"
+              variant="contained"
+              onClick={handleSave}
+              disabled={loading}
+            >
               {open === "create" ? "Adicionar" : "Editar"}
             </Button>
           </DialogActions>

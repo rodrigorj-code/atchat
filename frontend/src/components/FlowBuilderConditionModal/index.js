@@ -189,8 +189,21 @@ const FlowBuilderConditionModal = ({ open, onSave, onUpdate, data, close }) => {
         toast.error(`Regra ${i + 1}: preencha origem e operador.`);
         return false;
       }
-      if (!String(r.field || "").trim()) {
+      const fieldTrim = String(r.field || "").trim();
+      if (!fieldTrim) {
         toast.error(`Regra ${i + 1}: informe o campo.`);
+        return false;
+      }
+      if (r.source !== "variable") {
+        const allowed = (FIELDS_BY_SOURCE[r.source] || []).map((f) => f.v);
+        if (!allowed.includes(fieldTrim)) {
+          toast.error(
+            `Regra ${i + 1}: selecione um campo válido para a origem escolhida.`
+          );
+          return false;
+        }
+      } else if (fieldTrim.length > 120) {
+        toast.error(`Regra ${i + 1}: nome da variável muito longo (máx. 120 caracteres).`);
         return false;
       }
       const needVal = !OPERATORS_NO_VALUE.includes(r.operator);

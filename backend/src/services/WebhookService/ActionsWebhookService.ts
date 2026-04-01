@@ -7,6 +7,7 @@ import { ParamsDictionary } from "express-serve-static-core";
 import { ParsedQs } from "qs";
 import CreateContactService from "../ContactServices/CreateContactService";
 import Contact from "../../models/Contact";
+import SetContactDisableBotService from "../ContactServices/SetContactDisableBotService";
 //import CreateTicketService from "../TicketServices/CreateTicketService";
 //import CreateTicketServiceWebhook from "../TicketServices/CreateTicketServiceWebhook";
 import { SendMessage } from "../../helpers/SendMessage";
@@ -53,6 +54,13 @@ import {
   evaluateFlowCondition,
   pickConditionEdgeTarget
 } from "../FlowBuilderService/EvaluateFlowConditionService";
+import {
+  executeFlowHttpRequestAndPersist,
+  pickHttpRequestEdgeTarget
+} from "../FlowBuilderService/ExecuteFlowHttpRequestService";
+import AddContactToContactListFromTicketService from "../FlowBuilderService/AddContactToContactListFromTicketService";
+import { isFlowBuilderDebugEnabled } from "../../utils/flowBuilderDebug";
+import { createFlowExecutionLogIfTicket } from "../FlowBuilderService/FlowExecutionLogService";
 
 interface IAddContact {
   companyId: number;
@@ -81,20 +89,19 @@ export const ActionsWebhookService = async (
     const io = getIO();
     const originalWhatsAppMsg = msg;
     let next = nextStage;
-    console.log(
-      "ActionWebhookService | 53",
-      idFlowDb,
-      companyId,
-      nodes,
-      connects,
-      nextStage,
-      dataWebhook,
-      details,
-      hashWebhookId,
-      pressKey,
-      idTicket,
-      numberPhrase
-    );
+    if (isFlowBuilderDebugEnabled()) {
+      logger.info(
+        {
+          flowBuilderDebug: true,
+          idFlowDb,
+          companyId,
+          nextStage,
+          idTicket,
+          pressKey: pressKey ?? null
+        },
+        "[FlowBuilder][debug] ActionsWebhookService entrada"
+      );
+    }
     if (
       pressKey != null &&
       pressKey !== "999" &&
@@ -228,7 +235,7 @@ export const ActionsWebhookService = async (
       });
     }
 
-    if (idTicket && ticket) {
+    if (idTicket && ticket && isFlowBuilderDebugEnabled()) {
       logger.info(
         {
           flowBuilderTicketEmit: true,
@@ -238,7 +245,7 @@ export const ActionsWebhookService = async (
           queueId: ticket.queueId,
           whatsappId: ticket.whatsappId
         },
-        "[FlowBuilder][DEBUG] ActionsWebhookService: ticket no início do fluxo"
+        "[FlowBuilder][debug] ticket no início do fluxo"
       );
     }
 
@@ -247,27 +254,26 @@ export const ActionsWebhookService = async (
     let flowAssignedHumanUser = false;
 
     for (var i = 0; i < lengthLoop; i++) {
-      logger.info(
-        {
-          flowBuilderNodeLoop: true,
-          idFlowDb,
-          idTicket,
-          ticketIdStable: ticket?.id,
-          loopIndex: i,
-          nextStage: next,
-          pressKey: pressKey ?? null
-        },
-        "[FlowBuilder][DEBUG] ActionsWebhookService: iteração do fluxo"
-      );
+      if (isFlowBuilderDebugEnabled()) {
+        logger.info(
+          {
+            flowBuilderNodeLoop: true,
+            idFlowDb,
+            idTicket,
+            ticketIdStable: ticket?.id,
+            loopIndex: i,
+            nextStage: next,
+            pressKey: pressKey ?? null
+          },
+          "[FlowBuilder][debug] iteração do fluxo"
+        );
+      }
       let nodeSelected: any;
       let ticketInit: Ticket;
 
       if (pressKey) {
-        console.log("UPDATE2...");
         if (pressKey === "parar") {
-          console.log("UPDATE3...");
           if (idTicket) {
-            console.log("UPDATE4...");
             ticketInit = await Ticket.findOne({
               where: { id: idTicket, whatsappId }
             });
@@ -279,20 +285,60 @@ export const ActionsWebhookService = async (
         }
 
         if (execFn === "") {
-          console.log("UPDATE5...");
           nodeSelected = {
             type: "menu"
           };
         } else {
-          console.log("UPDATE6...");
           nodeSelected = nodes.filter(node => node.id === execFn)[0];
         }
       } else {
-        console.log("UPDATE7...");
         const otherNode = nodes.filter(node => node.id === next)[0];
         if (otherNode) {
           nodeSelected = otherNode;
         }
+      }
+
+      if (!nodeSelected) {
+        logger.warn(
+          { flowBuilder: true, next, pressKey: pressKey ?? null },
+          "[FlowBuilder] nó atual não resolvido — interrompendo fluxo"
+        );
+        await createFlowExecutionLogIfTicket(
+          idTicket,
+          companyId,
+          idFlowDb,
+          "-",
+          "-",
+          "flow_error",
+          "error",
+          { reason: "node_not_resolved", next, pressKey: pressKey ?? null }
+        );
+        break;
+      }
+
+      if (idTicket) {
+        if (i === 0) {
+          await createFlowExecutionLogIfTicket(
+            idTicket,
+            companyId,
+            idFlowDb,
+            String(nodeSelected.id),
+            String(nodeSelected.type),
+            "flow_started",
+            "ok",
+            { initialNext: nextStage, pressKey: pressKey ?? null }
+          );
+        }
+        await createFlowExecutionLogIfTicket(
+          idTicket,
+          companyId,
+          idFlowDb,
+          String(nodeSelected.id),
+          String(nodeSelected.type),
+          "node_executed",
+          "ok",
+          { loopIndex: i, pressKey: pressKey ?? null }
+        );
       }
 
       if (nodeSelected.type === "message") {
@@ -315,16 +361,18 @@ export const ActionsWebhookService = async (
             (await getTicketRemoteJid(ticketDetails)) ||
             originalWhatsAppMsg?.key?.remoteJid ||
             null;
-          logger.info(
-            {
-              flowBuilderSendDest: true,
-              ticketId: ticketDetails.id,
-              contactId: ticketDetails.contactId,
-              contactNumber: ticketDetails.contact?.number,
-              destJid
-            },
-            "[FlowBuilder][DEBUG] message node: destino do envio (ticket)"
-          );
+          if (isFlowBuilderDebugEnabled()) {
+            logger.info(
+              {
+                flowBuilderSendDest: true,
+                ticketId: ticketDetails.id,
+                contactId: ticketDetails.contactId,
+                contactNumber: ticketDetails.contact?.number,
+                destJid
+              },
+              "[FlowBuilder] message node: destino do envio (ticket)"
+            );
+          }
           await delay(500);
           await typeSimulation(ticketDetails, "composing");
           // Usar remoteJid da mensagem original para conversas LID (garante que a resposta chegue ao cliente)
@@ -358,17 +406,19 @@ export const ActionsWebhookService = async (
               (await getTicketRemoteJid(ticketDetails)) ||
               originalWhatsAppMsg?.key?.remoteJid ||
               null;
-            logger.info(
-              {
-                flowBuilderSendDest: true,
-                ticketId: ticketDetails.id,
-                branch: "message_node_recovered_ticket",
-                contactNumber: ticketDetails.contact?.number,
-                numberClientFallback: numberClient,
-                destJid
-              },
-              "[FlowBuilder][DEBUG] message node: ticket sem contact na 1ª carga — usando ShowTicketService"
-            );
+            if (isFlowBuilderDebugEnabled()) {
+              logger.info(
+                {
+                  flowBuilderSendDest: true,
+                  ticketId: ticketDetails.id,
+                  branch: "message_node_recovered_ticket",
+                  contactNumber: ticketDetails.contact?.number,
+                  numberClientFallback: numberClient,
+                  destJid
+                },
+                "[FlowBuilder] message node: ticket sem contact na 1ª carga — usando ShowTicketService"
+              );
+            }
             await delay(500);
             await typeSimulation(ticketDetails, "composing");
             const sentMessage = await SendWhatsAppMessage({
@@ -413,9 +463,7 @@ export const ActionsWebhookService = async (
 
         await intervalWhats("1");
       }
-      console.log("273");
       if (nodeSelected.type === "typebot") {
-        console.log("275");
         const wbot = getWbot(whatsapp.id);
         await typebotListener({
           wbot: wbot,
@@ -487,15 +535,17 @@ export const ActionsWebhookService = async (
           ticketDetails.contact
         );
 
-        logger.info(
-          {
-            flowBuilderQuestionSend: true,
-            ticketId: ticket.id,
-            preview: bodyFila.slice(0, 120),
-            varsKeys: Object.keys(getFlowVariablesFromTicket(ticket))
-          },
-          "[FlowBuilder] enviando pergunta (interpolação {{chave}} + Mustache contato)"
-        );
+        if (isFlowBuilderDebugEnabled()) {
+          logger.info(
+            {
+              flowBuilderQuestionSend: true,
+              ticketId: ticket.id,
+              preview: bodyFila.slice(0, 120),
+              varsKeys: Object.keys(getFlowVariablesFromTicket(ticket))
+            },
+            "[FlowBuilder][debug] enviando pergunta (interpolação {{chave}} + Mustache contato)"
+          );
+        }
 
         await delay(3000);
         await typeSimulation(ticket, "composing");
@@ -630,15 +680,27 @@ export const ActionsWebhookService = async (
               companyId
             });
             ticket = await ShowTicketService(idTicket, companyId);
-            logger.info(
-              {
-                flowBuilderSector: true,
-                ticketId: idTicket,
-                queueId: ticket.queueId,
-                queueName: ticket.queue?.name
-              },
-              "[FlowBuilder][DEBUG] sector node: ticket após transferência de fila"
+            await createFlowExecutionLogIfTicket(
+              idTicket,
+              companyId,
+              idFlowDb,
+              String(nodeSelected.id),
+              "sector",
+              "transferred_to_queue",
+              "ok",
+              { queueId: queue.id, queueName: queue.name }
             );
+            if (isFlowBuilderDebugEnabled()) {
+              logger.info(
+                {
+                  flowBuilderSector: true,
+                  ticketId: idTicket,
+                  queueId: ticket.queueId,
+                  queueName: ticket.queue?.name
+                },
+                "[FlowBuilder] sector node: ticket após transferência de fila"
+              );
+            }
           }
         }
         await intervalWhats("1");
@@ -671,9 +733,11 @@ export const ActionsWebhookService = async (
             const currentTicket = await ShowTicketService(idTicket, companyId);
             const previousUserId = currentTicket.userId;
             const previousQueueId = currentTicket.queueId;
+            const previousStatus = currentTicket.status;
             await UpdateTicketService({
               ticketData: {
-                status: "open",
+                /** pending: atendente designado vê como aguardando e pode assumir (open = “em atendimento”). */
+                status: "pending",
                 userId: targetUserId,
                 queueId: currentTicket.queueId ?? null,
                 chatbot: false
@@ -684,15 +748,31 @@ export const ActionsWebhookService = async (
             ticket = await ShowTicketService(idTicket, companyId);
             flowAssignedHumanUser = true;
 
+            await createFlowExecutionLogIfTicket(
+              idTicket,
+              companyId,
+              idFlowDb,
+              String(nodeSelected.id),
+              "attendant",
+              "transferred_to_attendant",
+              "ok",
+              {
+                userId: targetUserId,
+                userName: assignUser.name,
+                stopFlowAfterTransfer
+              }
+            );
+
             logger.info(
               {
                 flowBuilderAttendant: true,
                 ticketId: idTicket,
-                finalUserId: ticket.userId,
+                previousUserId,
+                newUserId: ticket.userId,
+                previousStatus,
+                finalStatus: ticket.status,
                 queueId: ticket.queueId,
                 previousQueueId,
-                status: ticket.status,
-                previousUserId,
                 stopFlowAfterTransfer
               },
               "[FlowBuilder][attendant] transferência concluída (UpdateTicketService)"
@@ -705,13 +785,25 @@ export const ActionsWebhookService = async (
                 flowWebhook: false,
                 flowStopped: idFlowDb.toString()
               });
+              await createFlowExecutionLogIfTicket(
+                idTicket,
+                companyId,
+                idFlowDb,
+                String(nodeSelected.id),
+                "attendant",
+                "flow_stopped",
+                "ok",
+                { reason: "after_attendant_transfer" }
+              );
               logger.info(
                 {
                   flowBuilderAttendant: true,
                   ticketId: idTicket,
-                  finalUserId: ticket.userId,
+                  previousUserId,
+                  newUserId: ticket.userId,
+                  previousStatus,
+                  finalStatus: ticket.status,
                   queueId: ticket.queueId,
-                  status: ticket.status,
                   flowInterruptedAfterAttendant: true
                 },
                 "[FlowBuilder][attendant] fluxo automático interrompido após transferência"
@@ -730,6 +822,16 @@ export const ActionsWebhookService = async (
           ticketId: String(idTicket),
           companyId
         });
+        await createFlowExecutionLogIfTicket(
+          idTicket,
+          companyId,
+          idFlowDb,
+          String(nodeSelected.id),
+          "closeTicket",
+          "ticket_closed",
+          "ok",
+          {}
+        );
         ticket = await Ticket.findOne({
           where: { id: idTicket, companyId }
         });
@@ -749,6 +851,265 @@ export const ActionsWebhookService = async (
           if (!existing) {
             await TicketTag.create({ ticketId: idTicket, tagId });
           }
+        }
+        await intervalWhats("1");
+      }
+
+      if (nodeSelected.type === "notification" && idTicket) {
+        try {
+          const ticketDetails = await ShowTicketService(idTicket, companyId);
+          const rawPhone = String(nodeSelected.data?.phone ?? "").trim();
+          const rawMsg = String(nodeSelected.data?.message ?? "");
+          const phoneInterpolated = interpolateFlowMessage(
+            rawPhone,
+            ticketDetails,
+            ticketDetails.contact
+          );
+          const messageInterpolated = interpolateFlowMessage(
+            rawMsg,
+            ticketDetails,
+            ticketDetails.contact
+          );
+          const destDigits = phoneInterpolated.replace(/\D/g, "");
+          if (!destDigits || destDigits.length < 8) {
+            await createFlowExecutionLogIfTicket(
+              idTicket,
+              companyId,
+              idFlowDb,
+              String(nodeSelected.id),
+              "notification",
+              "notification_sent",
+              "error",
+              { reason: "invalid_phone_after_interpolation" }
+            );
+            logger.warn(
+              {
+                flowBuilderNotification: true,
+                ticketId: idTicket,
+                success: false,
+                reason: "invalid_phone"
+              },
+              "[FlowBuilder][notification] telefone inválido após interpolação"
+            );
+          } else {
+            await SendMessage(whatsapp, {
+              number: destDigits,
+              body: messageInterpolated
+            });
+            await createFlowExecutionLogIfTicket(
+              idTicket,
+              companyId,
+              idFlowDb,
+              String(nodeSelected.id),
+              "notification",
+              "notification_sent",
+              "ok",
+              {
+                destinationDigits: destDigits,
+                messagePreview: messageInterpolated.slice(0, 200)
+              }
+            );
+            logger.info(
+              {
+                flowBuilderNotification: true,
+                ticketId: idTicket,
+                destination: destDigits,
+                messageInterpolated: messageInterpolated.slice(0, 500),
+                success: true
+              },
+              "[FlowBuilder][notification] envio WhatsApp (fora do ticket do cliente)"
+            );
+          }
+        } catch (err: any) {
+          await createFlowExecutionLogIfTicket(
+            idTicket,
+            companyId,
+            idFlowDb,
+            String(nodeSelected.id),
+            "notification",
+            "notification_sent",
+            "error",
+            { err: String(err?.message || err).slice(0, 300) }
+          );
+          logger.warn(
+            {
+              flowBuilderNotification: true,
+              ticketId: idTicket,
+              success: false,
+              err: String(err?.message || err).slice(0, 300)
+            },
+            "[FlowBuilder][notification] falha no envio"
+          );
+        }
+        await intervalWhats("1");
+      }
+
+      if (nodeSelected.type === "blacklist" && idTicket) {
+        const rawAction = String(nodeSelected.data?.action ?? "add").toLowerCase();
+        const action = rawAction === "remove" ? "remove" : "add";
+        const disableBot = action === "add";
+        try {
+          const ticketBl = await Ticket.findOne({
+            where: { id: idTicket, companyId },
+            attributes: ["id", "contactId"]
+          });
+          const contactId = ticketBl?.contactId;
+          if (!contactId) {
+            await createFlowExecutionLogIfTicket(
+              idTicket,
+              companyId,
+              idFlowDb,
+              String(nodeSelected.id),
+              "blacklist",
+              "blacklist_changed",
+              "warning",
+              { action, reason: "no_contact_on_ticket" }
+            );
+            logger.warn(
+              {
+                flowBuilderBlacklist: true,
+                ticketId: idTicket,
+                success: false,
+                action,
+                reason: "no_contact_on_ticket"
+              },
+              "[FlowBuilder][blacklist] ticket sem contactId"
+            );
+          } else {
+            const contactAfter = await SetContactDisableBotService({
+              contactId,
+              companyId,
+              disableBot
+            });
+            await createFlowExecutionLogIfTicket(
+              idTicket,
+              companyId,
+              idFlowDb,
+              String(nodeSelected.id),
+              "blacklist",
+              "blacklist_changed",
+              "ok",
+              { action, disableBot: contactAfter.disableBot, contactId }
+            );
+            logger.info(
+              {
+                flowBuilderBlacklist: true,
+                ticketId: idTicket,
+                contactId: contactAfter.id,
+                contactNumber: contactAfter.number,
+                action,
+                disableBot: contactAfter.disableBot,
+                success: true
+              },
+              "[FlowBuilder][blacklist] disableBot aplicado no contato"
+            );
+          }
+        } catch (err: any) {
+          await createFlowExecutionLogIfTicket(
+            idTicket,
+            companyId,
+            idFlowDb,
+            String(nodeSelected.id),
+            "blacklist",
+            "blacklist_changed",
+            "error",
+            { action, err: String(err?.message || err).slice(0, 300) }
+          );
+          logger.warn(
+            {
+              flowBuilderBlacklist: true,
+              ticketId: idTicket,
+              action,
+              success: false,
+              err: String(err?.message || err).slice(0, 300)
+            },
+            "[FlowBuilder][blacklist] falha ao aplicar"
+          );
+        }
+        await intervalWhats("1");
+      }
+
+      if (nodeSelected.type === "flowUp" && idTicket) {
+        const listId = Number(
+          nodeSelected.data?.contactList?.id ?? nodeSelected.data?.id
+        );
+        try {
+          if (!listId || Number.isNaN(listId)) {
+            await createFlowExecutionLogIfTicket(
+              idTicket,
+              companyId,
+              idFlowDb,
+              String(nodeSelected.id),
+              "flowUp",
+              "flowup_added",
+              "error",
+              { reason: "missing_contact_list_id" }
+            );
+            logger.warn(
+              {
+                flowBuilderFlowUp: true,
+                ticketId: idTicket,
+                success: false,
+                reason: "missing_contact_list_id"
+              },
+              "[FlowBuilder][flowUp] lista não configurada"
+            );
+          } else {
+            const result = await AddContactToContactListFromTicketService({
+              ticketId: idTicket,
+              companyId,
+              contactListId: listId
+            });
+            await createFlowExecutionLogIfTicket(
+              idTicket,
+              companyId,
+              idFlowDb,
+              String(nodeSelected.id),
+              "flowUp",
+              "flowup_added",
+              result.success ? "ok" : "warning",
+              {
+                contactListId: result.contactListId,
+                contactListName: result.contactListName,
+                alreadyInList: result.alreadyInList
+              }
+            );
+            logger.info(
+              {
+                flowBuilderFlowUp: true,
+                ticketId: idTicket,
+                contactId: result.contactId,
+                contactNumber: result.contactNumber,
+                contactListId: result.contactListId,
+                contactListName: result.contactListName,
+                contactListItemId: result.contactListItemId,
+                alreadyInList: result.alreadyInList,
+                inserted: !result.alreadyInList,
+                success: result.success
+              },
+              "[FlowBuilder][flowUp] contato na lista de remarketing"
+            );
+          }
+        } catch (err: any) {
+          await createFlowExecutionLogIfTicket(
+            idTicket,
+            companyId,
+            idFlowDb,
+            String(nodeSelected.id),
+            "flowUp",
+            "flowup_added",
+            "error",
+            { err: String(err?.message || err).slice(0, 300) }
+          );
+          logger.warn(
+            {
+              flowBuilderFlowUp: true,
+              ticketId: idTicket,
+              success: false,
+              err: String(err?.message || err).slice(0, 300)
+            },
+            "[FlowBuilder][flowUp] falha ao adicionar à lista"
+          );
         }
         await intervalWhats("1");
       }
@@ -774,14 +1135,16 @@ export const ActionsWebhookService = async (
               ticketDetails.contact
             );
 
-            logger.info(
-              {
-                flowBuilderSingleBlockMsg: true,
-                ticketId: idTicket,
-                preview: String(msg).slice(0, 100)
-              },
-              "[FlowBuilder] singleBlock: mensagem com {{variáveis}} + Mustache"
-            );
+            if (isFlowBuilderDebugEnabled()) {
+              logger.info(
+                {
+                  flowBuilderSingleBlockMsg: true,
+                  ticketId: idTicket,
+                  preview: String(msg).slice(0, 100)
+                },
+                "[FlowBuilder][debug] singleBlock: mensagem com {{variáveis}} + Mustache"
+              );
+            }
 
             await delay(3000);
             await typeSimulation(ticket, "composing");
@@ -826,15 +1189,17 @@ export const ActionsWebhookService = async (
                   }`;
 
             const ticketForImg = await ShowTicketService(idTicket, companyId);
-            logger.info(
-              {
-                flowBuilderSendDest: true,
-                ticketId: ticketForImg.id,
-                branch: "singleBlock_img",
-                mediaPath: mediaPath.split("/").slice(-2).join("/")
-              },
-              "[FlowBuilder][DEBUG] singleBlock img: envio via ticket (getTicketRemoteJid)"
-            );
+            if (isFlowBuilderDebugEnabled()) {
+              logger.info(
+                {
+                  flowBuilderSendDest: true,
+                  ticketId: ticketForImg.id,
+                  branch: "singleBlock_img",
+                  mediaPath: mediaPath.split("/").slice(-2).join("/")
+                },
+                "[FlowBuilder] singleBlock img: envio via ticket"
+              );
+            }
             await typeSimulation(ticketForImg, "composing");
 
             await SendWhatsAppMediaFlow({
@@ -949,17 +1314,19 @@ export const ActionsWebhookService = async (
           nodeSelected.id,
           condResult.passed
         );
-        logger.info(
-          {
-            flowConditionNode: true,
-            ticketId: idTicket,
-            nodeId: nodeSelected.id,
-            passed: condResult.passed,
-            handleChosen,
-            nextNodeId: nextTarget ?? null
-          },
-          "[FlowBuilder][condition] ramo escolhido"
-        );
+        if (isFlowBuilderDebugEnabled()) {
+          logger.info(
+            {
+              flowConditionNode: true,
+              ticketId: idTicket,
+              nodeId: nodeSelected.id,
+              passed: condResult.passed,
+              handleChosen,
+              nextNodeId: nextTarget ?? null
+            },
+            "[FlowBuilder][debug][condition] ramo escolhido"
+          );
+        }
         if (nextTarget) {
           next = nextTarget;
           noAlterNext = true;
@@ -974,7 +1341,107 @@ export const ActionsWebhookService = async (
           );
           next = "";
         }
+        await createFlowExecutionLogIfTicket(
+          idTicket,
+          companyId,
+          idFlowDb,
+          String(nodeSelected.id),
+          "condition",
+          "condition_evaluated",
+          nextTarget ? "ok" : "warning",
+          {
+            passed: condResult.passed,
+            handleChosen,
+            nextNodeId: nextTarget ?? null
+          }
+        );
         isCondition = true;
+      }
+
+      let isHttpRequest = false;
+      if (nodeSelected.type === "httpRequest" && idTicket) {
+        const ticketForHttp = await Ticket.findOne({
+          where: { id: idTicket, companyId },
+          include: [{ model: Contact, as: "contact" }]
+        });
+        if (!ticketForHttp) {
+          await createFlowExecutionLogIfTicket(
+            idTicket,
+            companyId,
+            idFlowDb,
+            String(nodeSelected.id),
+            "httpRequest",
+            "http_request_error",
+            "error",
+            { reason: "ticket_not_found" }
+          );
+          logger.warn(
+            { flowHttpRequest: true, ticketId: idTicket },
+            "[FlowBuilder][httpRequest] ticket não encontrado"
+          );
+          next = "";
+          noAlterNext = true;
+          isHttpRequest = true;
+        } else {
+          const httpResult = await executeFlowHttpRequestAndPersist({
+            nodeData: (nodeSelected.data || {}) as any,
+            ticketId: idTicket,
+            ticket: ticketForHttp,
+            contact: ticketForHttp.contact
+          });
+          ticket = await Ticket.findOne({
+            where: { id: idTicket, whatsappId, companyId },
+            include: [{ model: Contact, as: "contact" }]
+          });
+          const nextTarget = pickHttpRequestEdgeTarget(
+            connects,
+            nodeSelected.id,
+            httpResult.outcome
+          );
+          if (isFlowBuilderDebugEnabled()) {
+            logger.info(
+              {
+                flowHttpRequest: true,
+                ticketId: idTicket,
+                method: httpResult.method,
+                url: httpResult.urlForLog,
+                httpStatus: httpResult.httpStatus,
+                outcome: httpResult.outcome,
+                extractedKeys: httpResult.extractedKeys,
+                nextHandle: httpResult.nextHandle,
+                nextNodeId: nextTarget ?? null
+              },
+              "[FlowBuilder][debug][httpRequest] ramo e próximo nó"
+            );
+          }
+          if (nextTarget) {
+            next = nextTarget;
+            noAlterNext = true;
+          } else {
+            next = "";
+          }
+          await createFlowExecutionLogIfTicket(
+            idTicket,
+            companyId,
+            idFlowDb,
+            String(nodeSelected.id),
+            "httpRequest",
+            httpResult.outcome === "success"
+              ? "http_request_success"
+              : "http_request_error",
+            httpResult.outcome === "success" ? "ok" : "error",
+            {
+              method: httpResult.method,
+              url: httpResult.urlForLog,
+              httpStatus: httpResult.httpStatus,
+              extractedKeys: httpResult.extractedKeys,
+              nextHandle: httpResult.nextHandle,
+              nextNodeId: nextTarget ?? null
+            }
+          );
+          isHttpRequest = true;
+        }
+        await intervalWhats("1");
       }
 
       let isMenu: boolean;
@@ -1000,21 +1467,37 @@ export const ActionsWebhookService = async (
           } else {
             execFn = undefined;
           }
-          logger.info(
-            {
-              flowBuilderMenu: true,
-              clientReply: pressKey,
-              menuNodeId: next,
-              edgesFromMenu: filterOne.map(e => ({
-                sourceHandle: e.sourceHandle,
-                target: e.target
-              })),
-              matchedHandle: filterTwo[0]?.sourceHandle,
-              nextNodeId: execFn
-            },
-            "[FlowBuilder] menu: resposta do cliente e edge escolhida"
-          );
+          if (isFlowBuilderDebugEnabled()) {
+            logger.info(
+              {
+                flowBuilderMenu: true,
+                clientReply: pressKey,
+                menuNodeId: next,
+                edgesFromMenu: filterOne.map(e => ({
+                  sourceHandle: e.sourceHandle,
+                  target: e.target
+                })),
+                matchedHandle: filterTwo[0]?.sourceHandle,
+                nextNodeId: execFn
+              },
+              "[FlowBuilder][debug] menu: resposta do cliente e edge escolhida"
+            );
+          }
           if (execFn === undefined) {
+            await createFlowExecutionLogIfTicket(
+              idTicket,
+              companyId,
+              idFlowDb,
+              String(next),
+              "menu",
+              "flow_error",
+              "error",
+              {
+                reason: "no_edge_for_option",
+                clientReply: pressKey,
+                menuNodeId: next
+              }
+            );
             logger.warn(
               { flowBuilderMenu: true, menuNodeId: next, clientReply: pressKey },
               "[FlowBuilder] menu: nenhuma edge com sourceHandle a{opção}"
@@ -1029,14 +1512,16 @@ export const ActionsWebhookService = async (
           } else {
             isMenu = false;
           }
-          logger.info(
-            {
-              flowBuilderMenu: true,
-              nextNodeType: isNodeExist[0]?.type,
-              isNextNodeAlsoMenu: isMenu
-            },
-            "[FlowBuilder] menu: próximo nó após opção"
-          );
+          if (isFlowBuilderDebugEnabled()) {
+            logger.info(
+              {
+                flowBuilderMenu: true,
+                nextNodeType: isNodeExist[0]?.type,
+                isNextNodeAlsoMenu: isMenu
+              },
+              "[FlowBuilder][debug] menu: próximo nó após opção"
+            );
+          }
         } else {
           let optionsMenu = "";
           nodeSelected.data.arrayOption.map(item => {
@@ -1052,14 +1537,16 @@ export const ActionsWebhookService = async (
             ticketDetails.contact
           );
 
-          logger.info(
-            {
-              flowBuilderMenuBody: true,
-              ticketId: ticket.id,
-              preview: menuBody.slice(0, 100)
-            },
-            "[FlowBuilder] menu: corpo após {{variáveis}} e Mustache"
-          );
+          if (isFlowBuilderDebugEnabled()) {
+            logger.info(
+              {
+                flowBuilderMenuBody: true,
+                ticketId: ticket.id,
+                preview: menuBody.slice(0, 100)
+              },
+              "[FlowBuilder][debug] menu: corpo após {{variáveis}} e Mustache"
+            );
+          }
 
           const msg = {
             body: menuBody,
@@ -1168,15 +1655,20 @@ export const ActionsWebhookService = async (
           result = { target: execFn };
           isContinue = true;
           pressKey = undefined;
-          logger.info(
-            { flowBuilderMenu: true, nextTarget: execFn },
-            "[FlowBuilder] menu: avançando para nó após opção (não-menu)"
-          );
+          if (isFlowBuilderDebugEnabled()) {
+            logger.info(
+              { flowBuilderMenu: true, nextTarget: execFn },
+              "[FlowBuilder][debug] menu: avançando para nó após opção (não-menu)"
+            );
+          }
         } else if (isRandomizer) {
           isRandomizer = false;
           result = next;
         } else if (isCondition) {
           isCondition = false;
+          result = next;
+        } else if (isHttpRequest) {
+          isHttpRequest = false;
           result = next;
         } else {
           result = connects.filter(connect => connect.source === next)[0];
@@ -1196,12 +1688,20 @@ export const ActionsWebhookService = async (
           connect => connect.source === nodeSelected.id
         ).length;
 
-        console.log(626, "ActionsWebhookService");
-
         if (nextNode === 0) {
           await Ticket.findOne({
             where: { id: idTicket, whatsappId, companyId: companyId }
           });
+          await createFlowExecutionLogIfTicket(
+            idTicket,
+            companyId,
+            idFlowDb,
+            String(nodeSelected.id),
+            String(nodeSelected.type),
+            "flow_stopped",
+            "ok",
+            { reason: "no_outgoing_edge", lastFlowId: nodeSelected.id }
+          );
           await ticket.update({
             lastFlowId: nodeSelected.id,
             hashFlowId: null,
@@ -1218,7 +1718,6 @@ export const ActionsWebhookService = async (
         break;
       }
 
-      console.log("UPDATE10...");
       ticket = await Ticket.findOne({
         where: { id: idTicket, whatsappId, companyId: companyId }
       });
@@ -1234,15 +1733,17 @@ export const ActionsWebhookService = async (
       }
 
       const lastFlowIdToSave = nodeSelected?.id ?? next;
-      logger.info(
-        {
-          flowBuilder: true,
-          lastFlowIdToSave,
-          nextAfterStep: next,
-          nodeType: nodeSelected?.type
-        },
-        "[FlowBuilder] persistindo lastFlowId no ticket"
-      );
+      if (isFlowBuilderDebugEnabled()) {
+        logger.info(
+          {
+            flowBuilder: true,
+            lastFlowIdToSave,
+            nextAfterStep: next,
+            nodeType: nodeSelected?.type
+          },
+          "[FlowBuilder] persistindo lastFlowId no ticket"
+        );
+      }
       await ticket.update({
         whatsappId: whatsappId,
         queueId: ticket?.queueId,
@@ -1261,6 +1762,18 @@ export const ActionsWebhookService = async (
     return "ds";
   } catch (error) {
     logger.error(error);
+    const errMsg =
+      error instanceof Error ? error.message : String(error).slice(0, 500);
+    await createFlowExecutionLogIfTicket(
+      idTicket,
+      companyId,
+      idFlowDb,
+      "-",
+      "-",
+      "flow_error",
+      "error",
+      { message: errMsg }
+    );
   }
 };
 

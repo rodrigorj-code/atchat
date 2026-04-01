@@ -10,6 +10,7 @@ import { getTicketRemoteJid } from "../../helpers/GetTicketRemoteJid";
 import Ticket from "../../models/Ticket";
 import mime from "mime-types";
 import Contact from "../../models/Contact";
+import { isFlowBuilderDebugEnabled } from "../../utils/flowBuilderDebug";
 import { logger } from "../../utils/logger";
 
 interface Request {
@@ -108,19 +109,21 @@ const SendWhatsAppMediaFlow = async ({
       typeMessage = mimetype.split("/")[0];
     }
 
-    logger.info(
-      {
-        flowMediaSend: true,
-        ticketId: ticket.id,
-        pathMedia,
-        fileExists,
-        mimetype: mimetype || "(mime não detectado)",
-        typeMessage: typeMessage || "(vazio)",
-        fileName: mediaName,
-        isFlow
-      },
-      "[FlowBuilder] SendWhatsAppMediaFlow: arquivo antes do envio"
-    );
+    if (isFlowBuilderDebugEnabled()) {
+      logger.info(
+        {
+          flowMediaSend: true,
+          ticketId: ticket.id,
+          pathMedia,
+          fileExists,
+          mimetype: mimetype || "(mime não detectado)",
+          typeMessage: typeMessage || "(vazio)",
+          fileName: mediaName,
+          isFlow
+        },
+        "[FlowBuilder][debug] SendWhatsAppMediaFlow: arquivo antes do envio"
+      );
+    }
 
     if (!fileExists) {
       const errMsg = `Arquivo de mídia não encontrado: ${pathMedia}`;
@@ -213,31 +216,35 @@ const SendWhatsAppMediaFlow = async ({
     }
     const dest = chatJid.includes("@") ? jidNormalizedUser(chatJid) : chatJid;
 
-    logger.info(
-      {
-        flowMediaSend: true,
-        ticketId: ticket.id,
-        destJid: dest,
-        payloadKeys: Object.keys(options),
-        payloadSummary
-      },
-      "[FlowBuilder] SendWhatsAppMediaFlow: enviando ao WhatsApp (buffers resumidos)"
-    );
+    if (isFlowBuilderDebugEnabled()) {
+      logger.info(
+        {
+          flowMediaSend: true,
+          ticketId: ticket.id,
+          destJid: dest,
+          payloadKeys: Object.keys(options),
+          payloadSummary
+        },
+        "[FlowBuilder][debug] SendWhatsAppMediaFlow: enviando ao WhatsApp (buffers resumidos)"
+      );
+    }
 
     const sentMessage = await wbot.sendMessage(dest, {
       ...options
     });
 
-    logger.info(
-      {
-        flowMediaSend: true,
-        ticketId: ticket.id,
-        destJid: dest,
-        messageId: (sentMessage as any)?.key?.id,
-        success: true
-      },
-      "[FlowBuilder] SendWhatsAppMediaFlow: envio concluído"
-    );
+    if (isFlowBuilderDebugEnabled()) {
+      logger.info(
+        {
+          flowMediaSend: true,
+          ticketId: ticket.id,
+          destJid: dest,
+          messageId: (sentMessage as any)?.key?.id,
+          success: true
+        },
+        "[FlowBuilder][debug] SendWhatsAppMediaFlow: envio concluído"
+      );
+    }
 
     await ticket.update({ lastMessage: mediaName });
 
@@ -253,7 +260,6 @@ const SendWhatsAppMediaFlow = async ({
       },
       "[FlowBuilder] SendWhatsAppMediaFlow: falha no envio"
     );
-    console.log(err);
     if (err instanceof AppError) {
       throw err;
     }

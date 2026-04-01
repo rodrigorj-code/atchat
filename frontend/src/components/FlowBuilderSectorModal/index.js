@@ -10,7 +10,7 @@ import {
   MenuItem,
   Select,
 } from "@material-ui/core";
-import { Stack } from "@mui/material";
+import { Stack, CircularProgress } from "@mui/material";
 import { i18n } from "../../translate/i18n";
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
@@ -26,12 +26,14 @@ const FlowBuilderSectorModal = ({ open, onSave, data, onUpdate, close }) => {
   const classes = useStyles();
   const isMounted = useRef(true);
   const [activeModal, setActiveModal] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [queues, setQueues] = useState([]);
   const [selectedQueue, setQueueSelected] = useState("");
 
   useEffect(() => {
     if (open === "edit" || open === "create") {
       (async () => {
+        setLoading(true);
         try {
           const { data: resData } = await api.get("/queue");
           const queuesList = Array.isArray(resData)
@@ -48,6 +50,8 @@ const FlowBuilderSectorModal = ({ open, onSave, data, onUpdate, close }) => {
           setActiveModal(true);
         } catch (error) {
           toastError(error);
+        } finally {
+          setLoading(false);
         }
       })();
     }
@@ -62,6 +66,15 @@ const FlowBuilderSectorModal = ({ open, onSave, data, onUpdate, close }) => {
   };
 
   const handleSave = () => {
+    if (loading) {
+      toast.error("Aguarde o carregamento dos setores.");
+      return;
+    }
+    const list = Array.isArray(queues) ? queues : [];
+    if (list.length === 0) {
+      toast.error("Nenhum setor cadastrado. Cadastre filas/setores antes de usar este nó.");
+      return;
+    }
     if (!selectedQueue) {
       toast.error("Selecione um setor");
       return;
@@ -84,32 +97,43 @@ const FlowBuilderSectorModal = ({ open, onSave, data, onUpdate, close }) => {
         </DialogTitle>
         <Stack>
           <DialogContent dividers>
-            <Select
-              value={selectedQueue}
-              style={{ width: "100%" }}
-              onChange={(e) => setQueueSelected(e.target.value)}
-              displayEmpty
-              renderValue={(v) => {
-                if (!v) return "Selecione um setor";
-                const q = queues.find((w) => w.id === v);
-                return q ? q.name : "Selecione um setor";
-              }}
-            >
-              <MenuItem value="">
-                <em>Selecione um setor</em>
-              </MenuItem>
-              {(Array.isArray(queues) ? queues : []).map((queue) => (
-                <MenuItem key={queue.id} value={queue.id}>
-                  {queue.name}
+            {loading ? (
+              <Stack alignItems="center" py={2}>
+                <CircularProgress size={32} />
+              </Stack>
+            ) : (
+              <Select
+                value={selectedQueue}
+                style={{ width: "100%" }}
+                onChange={(e) => setQueueSelected(e.target.value)}
+                displayEmpty
+                renderValue={(v) => {
+                  if (!v) return "Selecione um setor";
+                  const q = queues.find((w) => w.id === v);
+                  return q ? q.name : "Selecione um setor";
+                }}
+              >
+                <MenuItem value="">
+                  <em>Selecione um setor</em>
                 </MenuItem>
-              ))}
-            </Select>
+                {(Array.isArray(queues) ? queues : []).map((queue) => (
+                  <MenuItem key={queue.id} value={queue.id}>
+                    {queue.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            )}
           </DialogContent>
           <DialogActions>
             <Button onClick={handleClose} color="secondary" variant="outlined">
               {i18n.t("contactModal.buttons.cancel")}
             </Button>
-            <Button color="primary" variant="contained" onClick={handleSave}>
+            <Button
+              color="primary"
+              variant="contained"
+              onClick={handleSave}
+              disabled={loading}
+            >
               {open === "create" ? "Adicionar" : "Editar"}
             </Button>
           </DialogActions>

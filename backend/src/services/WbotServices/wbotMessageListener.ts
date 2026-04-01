@@ -24,6 +24,7 @@ import Message from "../../models/Message";
 import { getIO } from "../../libs/socket";
 import CreateMessageService from "../MessageServices/CreateMessageService";
 import { logger } from "../../utils/logger";
+import { isFlowBuilderDebugEnabled } from "../../utils/flowBuilderDebug";
 import CreateOrUpdateContactService from "../ContactServices/CreateOrUpdateContactService";
 import FindOrCreateTicketService from "../TicketServices/FindOrCreateTicketService";
 import ShowTicketService from "../TicketServices/ShowTicketService";
@@ -2001,22 +2002,24 @@ const flowbuilderIntegration = async (
     }
   });
 
-  logger.info(
-    {
-      flowBuilderEntry: true,
-      stage: "flowbuilderIntegration:start",
-      body: body?.slice?.(0, 500) ?? body,
-      ticketId: ticket.id,
-      queueId: ticket.queueId,
-      flowWebhook: ticket.flowWebhook,
-      flowStopped: ticket.flowStopped,
-      whatsappId: whatsapp.id,
-      flowIdWelcome: whatsapp.flowIdWelcome,
-      flowIdNotPhrase: whatsapp.flowIdNotPhrase,
-      isFirstMsgTicketId: isFirstMsg?.id ?? null
-    },
-    "[FlowBuilder][DEBUG] entrada flowbuilderIntegration"
-  );
+  if (isFlowBuilderDebugEnabled()) {
+    logger.info(
+      {
+        flowBuilderEntry: true,
+        stage: "flowbuilderIntegration:start",
+        body: body?.slice?.(0, 500) ?? body,
+        ticketId: ticket.id,
+        queueId: ticket.queueId,
+        flowWebhook: ticket.flowWebhook,
+        flowStopped: ticket.flowStopped,
+        whatsappId: whatsapp.id,
+        flowIdWelcome: whatsapp.flowIdWelcome,
+        flowIdNotPhrase: whatsapp.flowIdNotPhrase,
+        isFirstMsgTicketId: isFirstMsg?.id ?? null
+      },
+      "[FlowBuilder][debug] entrada flowbuilderIntegration"
+    );
+  }
 
   // Welcome flow — não usar !isFirstMsg: isFirstMsg costuma ser o próprio ticket atual (find DESC) e bloqueava o welcome nas rotas que passam esse parâmetro.
   if (
@@ -2043,18 +2046,20 @@ const flowbuilderIntegration = async (
       const connections: IConnections[] = flow.flow["connections"];
       const resolved = resolveFirstFlowExecutableNodeId(nodes, connections);
 
-      logger.info(
-        {
-          flowBuilderWelcome: true,
-          flowId: whatsapp.flowIdWelcome,
-          startNodeId: resolved.startNodeId,
-          firstEdgeTarget: resolved.firstEdgeTarget,
-          firstExecutableNodeId: resolved.firstExecutableNodeId,
-          firstExecutableNodeType: resolved.firstExecutableNodeType,
-          ticketId: ticket.id
-        },
-        "[FlowBuilder][DEBUG] welcome: primeiro node executável resolvido"
-      );
+      if (isFlowBuilderDebugEnabled()) {
+        logger.info(
+          {
+            flowBuilderWelcome: true,
+            flowId: whatsapp.flowIdWelcome,
+            startNodeId: resolved.startNodeId,
+            firstEdgeTarget: resolved.firstEdgeTarget,
+            firstExecutableNodeId: resolved.firstExecutableNodeId,
+            firstExecutableNodeType: resolved.firstExecutableNodeType,
+            ticketId: ticket.id
+          },
+          "[FlowBuilder][debug] welcome: primeiro node executável resolvido"
+        );
+      }
 
       if (!resolved.firstExecutableNodeId) {
         logger.warn(
@@ -2282,16 +2287,18 @@ const flowbuilderIntegration = async (
       //   console.log(`Mensagem do worker: ${message}`);
       // });
 
-      logger.info(
-        {
-          flowBuilderInbound: true,
-          body,
-          lastFlowId: ticket.lastFlowId,
-          flowStopped: ticket.flowStopped,
-          hashFlowId: ticket.hashFlowId
-        },
-        "[FlowBuilder] fluxo ativo (webhook config): chamando ActionsWebhookService"
-      );
+      if (isFlowBuilderDebugEnabled()) {
+        logger.info(
+          {
+            flowBuilderInbound: true,
+            body,
+            lastFlowId: ticket.lastFlowId,
+            flowStopped: ticket.flowStopped,
+            hashFlowId: ticket.hashFlowId
+          },
+          "[FlowBuilder][debug] fluxo ativo (webhook config): chamando ActionsWebhookService"
+        );
+      }
 
       await ActionsWebhookService(
         whatsapp.id,
@@ -2348,15 +2355,17 @@ const flowbuilderIntegration = async (
       //   console.log(`Mensagem do worker: ${message}`);
       // });
 
-      logger.info(
-        {
-          flowBuilderInbound: true,
-          body,
-          lastFlowId: ticket.lastFlowId,
-          flowStopped: ticket.flowStopped
-        },
-        "[FlowBuilder] fluxo ativo (flowStopped): chamando ActionsWebhookService"
-      );
+      if (isFlowBuilderDebugEnabled()) {
+        logger.info(
+          {
+            flowBuilderInbound: true,
+            body,
+            lastFlowId: ticket.lastFlowId,
+            flowStopped: ticket.flowStopped
+          },
+          "[FlowBuilder][debug] fluxo ativo (flowStopped): chamando ActionsWebhookService"
+        );
+      }
 
       await ActionsWebhookService(
         whatsapp.id,
@@ -2413,23 +2422,24 @@ export const handleMessageIntegration = async (
       }
     }
   } else if (queueIntegration.type === "typebot") {
-    console.log("entrou no typebot");
     // await typebots(ticket, msg, wbot, queueIntegration);
     await typebotListener({ ticket, msg, wbot, typebot: queueIntegration });
   } else if(queueIntegration.type === "flowbuilder") {
-    logger.info(
-      {
-        flowBuilderEntry: true,
-        stage: "handleMessageIntegration:flowbuilder",
-        integrationId: queueIntegration.id,
-        integrationName: queueIntegration.name,
-        isMenu,
-        ticketId: ticket.id,
-        queueId: ticket.queueId,
-        isFirstMsgTicketId: isFirstMsg?.id ?? null
-      },
-      "[FlowBuilder][DEBUG] handleMessageIntegration → flowbuilder"
-    );
+    if (isFlowBuilderDebugEnabled()) {
+      logger.info(
+        {
+          flowBuilderEntry: true,
+          stage: "handleMessageIntegration:flowbuilder",
+          integrationId: queueIntegration.id,
+          integrationName: queueIntegration.name,
+          isMenu,
+          ticketId: ticket.id,
+          queueId: ticket.queueId,
+          isFirstMsgTicketId: isFirstMsg?.id ?? null
+        },
+        "[FlowBuilder][debug] handleMessageIntegration → flowbuilder"
+      );
+    }
     if (!isMenu) {
 
       await flowbuilderIntegration(
@@ -2603,16 +2613,18 @@ const handleMessage = async (
       );
       if (ticketFromEcho) {
         contact = ticketFromEcho.contact;
-        logger.info(
-          {
-            flowBuilderFromMeEcho: true,
-            ticketId: ticketFromEcho.id,
-            contactId: contact.id,
-            contactNumber: contact.number,
-            remoteJid: msg.key.remoteJid
-          },
-          "[FlowBuilder][DEBUG] fromMe echo: ticket reutilizado (sem novo contato/ticket)"
-        );
+        if (isFlowBuilderDebugEnabled()) {
+          logger.info(
+            {
+              flowBuilderFromMeEcho: true,
+              ticketId: ticketFromEcho.id,
+              contactId: contact.id,
+              contactNumber: contact.number,
+              remoteJid: msg.key.remoteJid
+            },
+            "[FlowBuilder][debug] fromMe echo: ticket reutilizado"
+          );
+        }
       }
     }
 
@@ -2675,19 +2687,21 @@ const handleMessage = async (
 
     if (!msg.key.fromMe) {
       await ticket.reload();
-      logger.info(
-        {
-          flowBuilderHandleMsg: true,
-          ticketId: ticket.id,
-          contactId: contact.id,
-          contactNumber: contact.number,
-          ticketContactId: ticket.contactId,
-          ticketWhatsappId: ticket.whatsappId,
-          ticketQueueId: ticket.queueId,
-          remoteJid: msg.key.remoteJid
-        },
-        "[FlowBuilder][DEBUG] handleMessage: ticket/contato após FindOrCreate + remoteJid"
-      );
+      if (isFlowBuilderDebugEnabled()) {
+        logger.info(
+          {
+            flowBuilderHandleMsg: true,
+            ticketId: ticket.id,
+            contactId: contact.id,
+            contactNumber: contact.number,
+            ticketContactId: ticket.contactId,
+            ticketWhatsappId: ticket.whatsappId,
+            ticketQueueId: ticket.queueId,
+            remoteJid: msg.key.remoteJid
+          },
+          "[FlowBuilder][debug] handleMessage: ticket/contato após FindOrCreate + remoteJid"
+        );
+      }
     }
 
     await provider(ticket, msg, companyId, contact, wbot as WASocket);
@@ -3059,41 +3073,43 @@ const handleMessage = async (
         ? whatsapp.queues[0]?.integrationId ?? null
         : null;
     const sessionVsTicketMatch = ticket.whatsappId === wbotSessionId;
-    logger.info(
-      {
-        flowBuilderGate: "connection_pre",
-        ticketId: ticket.id,
-        ticketWhatsappId: ticket.whatsappId,
-        wbotSessionId,
-        sessionVsTicketMatch,
-        whatsappFromShowId: whatsapp.id,
-        whatsappFromShowName: whatsapp.name,
-        whatsappIntegrationId: whatsapp.integrationId,
-        whatsappFlowIdWelcome: whatsapp.flowIdWelcome,
-        whatsappDbId: whatsappDbRow?.id ?? null,
-        whatsappDbName: whatsappDbRow?.name ?? null,
-        whatsappDbIntegrationId: whatsappDbRow?.integrationId ?? null,
-        whatsappDbFlowIdWelcome: whatsappDbRow?.flowIdWelcome ?? null,
-        showVsDbIntegrationMatch:
-          whatsapp.integrationId === (whatsappDbRow?.integrationId ?? null),
-        queueId: ticket.queueId,
-        queueIntegrationIdFromTicket: ticket.queue?.integrationId ?? null,
-        queuesLinkedCount: whatsapp.queues?.length ?? 0,
-        queuesLinked,
-        singleQueueIntegrationId,
-        hint:
-          !whatsapp.integrationId && !whatsappDbRow?.integrationId && singleQueueIntegrationId
-            ? "Integração só na FILA (Queues.integrationId); Whatsapps.integrationId está null — o gate da conexão usa só a coluna da tabela Whatsapps"
-            : !whatsapp.queues?.length
-              ? "Nenhuma fila vinculada à conexão — verifyQueue não roda e fila/integração por fila não aplicam"
-              : null,
-        chatbot: ticket.chatbot,
-        hasQueue: !!ticket.queue,
-        hasUser: !!ticket.user,
-        useIntegration: ticket.useIntegration
-      },
-      "[FlowBuilder][DEBUG] checagem integração na conexão (antes do if)"
-    );
+    if (isFlowBuilderDebugEnabled()) {
+      logger.info(
+        {
+          flowBuilderGate: "connection_pre",
+          ticketId: ticket.id,
+          ticketWhatsappId: ticket.whatsappId,
+          wbotSessionId,
+          sessionVsTicketMatch,
+          whatsappFromShowId: whatsapp.id,
+          whatsappFromShowName: whatsapp.name,
+          whatsappIntegrationId: whatsapp.integrationId,
+          whatsappFlowIdWelcome: whatsapp.flowIdWelcome,
+          whatsappDbId: whatsappDbRow?.id ?? null,
+          whatsappDbName: whatsappDbRow?.name ?? null,
+          whatsappDbIntegrationId: whatsappDbRow?.integrationId ?? null,
+          whatsappDbFlowIdWelcome: whatsappDbRow?.flowIdWelcome ?? null,
+          showVsDbIntegrationMatch:
+            whatsapp.integrationId === (whatsappDbRow?.integrationId ?? null),
+          queueId: ticket.queueId,
+          queueIntegrationIdFromTicket: ticket.queue?.integrationId ?? null,
+          queuesLinkedCount: whatsapp.queues?.length ?? 0,
+          queuesLinked,
+          singleQueueIntegrationId,
+          hint:
+            !whatsapp.integrationId && !whatsappDbRow?.integrationId && singleQueueIntegrationId
+              ? "Integração só na FILA (Queues.integrationId); Whatsapps.integrationId está null — o gate da conexão usa só a coluna da tabela Whatsapps"
+              : !whatsapp.queues?.length
+                ? "Nenhuma fila vinculada à conexão — verifyQueue não roda e fila/integração por fila não aplicam"
+                : null,
+          chatbot: ticket.chatbot,
+          hasQueue: !!ticket.queue,
+          hasUser: !!ticket.user,
+          useIntegration: ticket.useIntegration
+        },
+        "[FlowBuilder][debug] checagem integração na conexão (antes do if)"
+      );
+    }
     if (
       !msg.key.fromMe &&
       !ticket.isGroup &&
@@ -3204,30 +3220,32 @@ const handleMessage = async (
     const whatsappDbPost = await Whatsapp.findByPk(ticket.whatsappId, {
       attributes: ["id", "name", "integrationId", "flowIdWelcome", "flowIdNotPhrase"]
     });
-    logger.info(
-      {
-        flowBuilderGate: "connection_post_verifyQueue",
-        ticketId: ticket.id,
-        ticketWhatsappId: ticket.whatsappId,
-        wbotSessionId,
-        whatsappFromShowId: whatsapp.id,
-        whatsappFromShowName: whatsapp.name,
-        whatsappIntegrationId: whatsapp.integrationId,
-        whatsappFlowIdWelcome: whatsapp.flowIdWelcome,
-        whatsappDbIntegrationId: whatsappDbPost?.integrationId ?? null,
-        whatsappDbFlowIdWelcome: whatsappDbPost?.flowIdWelcome ?? null,
-        hasQueue: !!ticket.queue,
-        queueId: ticket.queueId,
-        queueIntegrationIdFromTicket: ticket.queue?.integrationId ?? null,
-        queuesLinkedCount: whatsapp.queues?.length ?? 0,
-        queuesLinked,
-        singleQueueIntegrationId,
-        hasUser: !!ticket.user,
-        useIntegration: ticket.useIntegration,
-        isFirstMsgTicketId: isFirstMsg?.id ?? null
-      },
-      "[FlowBuilder][DEBUG] checagem integração na conexão (após verifyQueue)"
-    );
+    if (isFlowBuilderDebugEnabled()) {
+      logger.info(
+        {
+          flowBuilderGate: "connection_post_verifyQueue",
+          ticketId: ticket.id,
+          ticketWhatsappId: ticket.whatsappId,
+          wbotSessionId,
+          whatsappFromShowId: whatsapp.id,
+          whatsappFromShowName: whatsapp.name,
+          whatsappIntegrationId: whatsapp.integrationId,
+          whatsappFlowIdWelcome: whatsapp.flowIdWelcome,
+          whatsappDbIntegrationId: whatsappDbPost?.integrationId ?? null,
+          whatsappDbFlowIdWelcome: whatsappDbPost?.flowIdWelcome ?? null,
+          hasQueue: !!ticket.queue,
+          queueId: ticket.queueId,
+          queueIntegrationIdFromTicket: ticket.queue?.integrationId ?? null,
+          queuesLinkedCount: whatsapp.queues?.length ?? 0,
+          queuesLinked,
+          singleQueueIntegrationId,
+          hasUser: !!ticket.user,
+          useIntegration: ticket.useIntegration,
+          isFirstMsgTicketId: isFirstMsg?.id ?? null
+        },
+        "[FlowBuilder][debug] checagem integração na conexão (após verifyQueue)"
+      );
+    }
     if (
       !msg.key.fromMe &&
       !ticket.isGroup &&

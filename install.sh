@@ -191,19 +191,32 @@ DB_NAME=${DB_NAME}
 REDIS_URI=${REDIS_URI}
 REDIS_OPT_LIMITER_MAX=1
 REDIS_OPT_LIMITER_DURATION=3000
+
+# Debug opcional do FlowBuilder (HTTP Request, nós do fluxo, etc.) — descomente para logs no journalctl
+# DEBUG_FLOWBUILDER=true
 EOF
 
 echo "==> Instalando dependências do backend"
 npm install --production=false
 
-echo "==> Build do backend"
+echo "==> Build do backend (TypeScript → dist/; necessário antes das migrations)"
 npm run build
 
-echo "==> Migrações do banco"
+if [ ! -f dist/server.js ]; then
+  echo ">> ERRO: o build não gerou dist/server.js. Corrija erros de compilação e rode o script novamente."
+  exit 1
+fi
+
+echo "==> Migrações do banco (Sequelize → dist/database/migrations)"
+echo "    Inclui tabelas usadas por FlowBuilder, FlowExecutionLogs, import/export de fluxo, etc."
 npx sequelize db:migrate
 
-echo "==> Seeds do banco"
-npx sequelize db:seed:all || true
+echo "==> Seeds do banco (dados iniciais; em atualizações pode falhar sem problema)"
+if npx sequelize db:seed:all; then
+  echo "    [OK] Seeds aplicados"
+else
+  echo "    [AVISO] Seeds não aplicados (dados já existentes ou seed duplicado). Continuando."
+fi
 
 ###############################################################################
 # FRONTEND

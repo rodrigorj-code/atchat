@@ -10,6 +10,8 @@ import UploadImgFlowBuilderService from "../services/FlowBuilderService/UploadIm
 import UploadAudioFlowBuilderService from "../services/FlowBuilderService/UploadAudioFlowBuilderService";
 import DuplicateFlowBuilderService from "../services/FlowBuilderService/DuplicateFlowBuilderService";
 import UploadAllFlowBuilderService from "../services/FlowBuilderService/UploadAllFlowBuilderService";
+import { isFlowBuilderDebugEnabled } from "../utils/flowBuilderDebug";
+import { logger } from "../utils/logger";
 // import { handleMessage } from "../services/FacebookServices/facebookMessageListener";
 
 export const createFlow = async (
@@ -103,9 +105,12 @@ export const FlowDataUpdate = async (
 
   const { companyId } = req.user;
 
-  const keys = Object.keys(bodyData);
-
-  console.log(keys);
+  if (isFlowBuilderDebugEnabled()) {
+    logger.info(
+      { keys: Object.keys(bodyData) },
+      "[FlowBuilder][debug] FlowDataUpdate body keys"
+    );
+  }
 
   const webhook = await FlowUpdateDataService({
     companyId,
@@ -138,10 +143,17 @@ export const FlowUploadImg = async (req: Request, res: Response) => {
   const { companyId } = req.user;
   const userId = parseInt(req.user.id);
 
-  console.log("[FlowUploadImg] início", { filesCount: medias.length, companyId });
+  if (isFlowBuilderDebugEnabled()) {
+    logger.info(
+      { filesCount: medias.length, companyId },
+      "[FlowBuilder][debug] FlowUploadImg início"
+    );
+  }
 
   if (medias.length === 0) {
-    console.log("[FlowUploadImg] rejeitado: sem arquivos");
+    if (isFlowBuilderDebugEnabled()) {
+      logger.info("[FlowBuilder][debug] FlowUploadImg rejeitado: sem arquivos");
+    }
     return res.status(400).json("No File");
   }
 
@@ -157,10 +169,12 @@ export const FlowUploadImg = async (req: Request, res: Response) => {
       name: nameFile,
       companyId
     });
-    console.log("[FlowUploadImg] sucesso", { nameFile });
+    if (isFlowBuilderDebugEnabled()) {
+      logger.info({ nameFile }, "[FlowBuilder][debug] FlowUploadImg sucesso");
+    }
     return res.status(200).json(img);
   } catch (err) {
-    console.error("[FlowUploadImg] erro", err);
+    logger.error({ err }, "[FlowUploadImg] erro");
     return res.status(500).json({ error: "upload_failed" });
   }
 };
@@ -170,10 +184,17 @@ export const FlowUploadAudio = async (req: Request, res: Response) => {
   const { companyId } = req.user;
   const userId = parseInt(req.user.id);
 
-  console.log("[FlowUploadAudio] início", { filesCount: medias.length, companyId });
+  if (isFlowBuilderDebugEnabled()) {
+    logger.info(
+      { filesCount: medias.length, companyId },
+      "[FlowBuilder][debug] FlowUploadAudio início"
+    );
+  }
 
   if (medias.length === 0) {
-    console.log("[FlowUploadAudio] rejeitado: sem arquivos");
+    if (isFlowBuilderDebugEnabled()) {
+      logger.info("[FlowBuilder][debug] FlowUploadAudio rejeitado: sem arquivos");
+    }
     return res.status(400).json("No File");
   }
 
@@ -189,10 +210,12 @@ export const FlowUploadAudio = async (req: Request, res: Response) => {
       name: nameFile,
       companyId
     });
-    console.log("[FlowUploadAudio] sucesso", { nameFile });
+    if (isFlowBuilderDebugEnabled()) {
+      logger.info({ nameFile }, "[FlowBuilder][debug] FlowUploadAudio sucesso");
+    }
     return res.status(200).json(audio);
   } catch (err) {
-    console.error("[FlowUploadAudio] erro", err);
+    logger.error({ err }, "[FlowUploadAudio] erro");
     return res.status(500).json({ error: "upload_failed" });
   }
 };
@@ -211,14 +234,19 @@ export const FlowUploadAll = async (req: Request, res: Response) => {
   const { companyId } = req.user;
   const userId = parseInt(req.user.id);
 
-  console.log("[FlowUploadAll] início", {
-    filesCount: medias.length,
-    companyId,
-    userId
-  });
+  if (isFlowBuilderDebugEnabled()) {
+    logger.info(
+      { filesCount: medias.length, companyId, userId },
+      "[FlowBuilder][debug] FlowUploadAll início"
+    );
+  }
 
   if (medias.length === 0) {
-    console.log("[FlowUploadAll] rejeitado: sem arquivos (field medias vazio?)");
+    if (isFlowBuilderDebugEnabled()) {
+      logger.info(
+        "[FlowBuilder][debug] FlowUploadAll rejeitado: sem arquivos (field medias vazio?)"
+      );
+    }
     return res.status(400).json("No File");
   }
 
@@ -228,13 +256,18 @@ export const FlowUploadAll = async (req: Request, res: Response) => {
       medias,
       companyId
     });
-    console.log("[FlowUploadAll] sucesso", {
-      itemsCount: Array.isArray(items) ? items.length : 0,
-      items
-    });
+    if (isFlowBuilderDebugEnabled()) {
+      logger.info(
+        {
+          itemsCount: Array.isArray(items) ? items.length : 0,
+          items
+        },
+        "[FlowBuilder][debug] FlowUploadAll sucesso"
+      );
+    }
     return res.status(200).json(items);
   } catch (err) {
-    console.error("[FlowUploadAll] erro", err);
+    logger.error({ err }, "[FlowUploadAll] erro");
     return res.status(500).json({ error: "upload_failed" });
   }
 };

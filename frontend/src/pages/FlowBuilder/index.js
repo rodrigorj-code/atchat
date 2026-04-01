@@ -21,7 +21,7 @@ import MainContainer from "../../components/MainContainer";
 import toastError from "../../errors/toastError";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import NewTicketModal from "../../components/NewTicketModal";
-import { AddCircle, DevicesFold, MoreVert } from "@mui/icons-material";
+import { AddCircle, DevicesFold, MoreVert, PostAdd } from "@mui/icons-material";
 
 import {
   Button,
@@ -33,6 +33,8 @@ import {
 } from "@mui/material";
 
 import FlowBuilderModal from "../../components/FlowBuilderModal";
+import FlowBuilderTemplateModal from "../../components/FlowBuilderTemplateModal";
+import FlowBuilderImportFlowModal from "../../components/FlowBuilderImportFlowModal";
 
 const reducer = (state, action) => {
   if (action.type === "LOAD_CONTACTS") {
@@ -105,6 +107,7 @@ const FlowBuilder = () => {
   const [deletingContact, setDeletingContact] = useState(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmDuplicateOpen, setConfirmDuplicateOpen] = useState(false);
+  const [templateModalOpen, setTemplateModalOpen] = useState(false);
 
   const [hasMore, setHasMore] = useState(false);
   const [reloadData, setReloadData] = useState(false);
@@ -256,6 +259,11 @@ const FlowBuilder = () => {
         onSave={() => setReloadData((old) => !old)}
       />
 
+      <FlowBuilderTemplateModal
+        open={templateModalOpen}
+        onClose={() => setTemplateModalOpen(false)}
+      />
+
       <ConfirmationModal
         title={
           deletingContact
@@ -306,6 +314,17 @@ const FlowBuilder = () => {
               ),
             }}
           />
+          <FlowBuilderImportFlowModal />
+          <Button
+            variant="outlined"
+            onClick={() => setTemplateModalOpen(true)}
+            color="primary"
+          >
+            <Stack direction={"row"} gap={1}>
+              <PostAdd />
+              Criar a partir de template
+            </Stack>
+          </Button>
           <Button
             variant="contained"
             onClick={handleOpenContactModal}

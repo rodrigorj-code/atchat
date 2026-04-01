@@ -81,6 +81,10 @@ const FlowBuilderAttendantModal = ({ open, onSave, onUpdate, data, close }) => {
   };
 
   const handleSave = () => {
+    if (!loading && users.length === 0) {
+      toast.error("Nenhum usuário disponível para transferência.");
+      return;
+    }
     const id = parseInt(selectedId, 10);
     if (!id || Number.isNaN(id)) {
       toast.error("Selecione um atendente.");

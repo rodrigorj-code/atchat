@@ -3,6 +3,7 @@ import Contact from "../../models/Contact";
 import Message from "../../models/Message";
 import Ticket from "../../models/Ticket";
 import { parseTicketDataWebhook } from "../../helpers/GetTicketRemoteJid";
+import { isFlowBuilderDebugEnabled } from "../../utils/flowBuilderDebug";
 import { logger } from "../../utils/logger";
 
 const LOG_PREFIX = "[FlowBuilder][condition]";
@@ -357,25 +358,27 @@ export async function evaluateFlowCondition(
       ? ruleResults.some(r => r.ok)
       : ruleResults.every(r => r.ok);
 
-  logger.info(
-    {
-      ticketId: ticket.id,
-      mode,
-      passed,
-      ruleResults: ruleResults.map(r => ({
-        source: r.rule.source,
-        field: r.rule.field,
-        operator: r.rule.operator,
-        value: r.rule.value,
-        resolved:
-          typeof r.resolved === "object"
-            ? JSON.stringify(r.resolved)
-            : r.resolved,
-        ok: r.ok
-      }))
-    },
-    `${LOG_PREFIX} avaliação concluída`
-  );
+  if (isFlowBuilderDebugEnabled()) {
+    logger.info(
+      {
+        ticketId: ticket.id,
+        mode,
+        passed,
+        ruleResults: ruleResults.map(r => ({
+          source: r.rule.source,
+          field: r.rule.field,
+          operator: r.rule.operator,
+          value: r.rule.value,
+          resolved:
+            typeof r.resolved === "object"
+              ? JSON.stringify(r.resolved)
+              : r.resolved,
+          ok: r.ok
+        }))
+      },
+      `${LOG_PREFIX} avaliação concluída`
+    );
+  }
 
   return { passed, mode, ruleResults };
 }

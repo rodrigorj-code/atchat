@@ -23,6 +23,10 @@ import imgNode from "./nodes/imgNode";
 import randomizerNode from "./nodes/randomizerNode";
 import conditionNode from "./nodes/conditionNode";
 import attendantNode from "./nodes/attendantNode";
+import httpRequestNode from "./nodes/httpRequestNode";
+import notificationNode from "./nodes/notificationNode";
+import blacklistNode from "./nodes/blacklistNode";
+import flowUpNode from "./nodes/flowUpNode";
 import videoNode from "./nodes/videoNode";
 import questionNode from "./nodes/questionNode";
 import RemoveEdge from "./nodes/removeEdge";
@@ -66,6 +70,10 @@ import FlowBuilderAddTextModal from "../../components/FlowBuilderAddTextModal";
 import FlowBuilderIntervalModal from "../../components/FlowBuilderIntervalModal";
 import FlowBuilderConditionModal from "../../components/FlowBuilderConditionModal";
 import FlowBuilderAttendantModal from "../../components/FlowBuilderAttendantModal";
+import FlowBuilderHttpRequestModal from "../../components/FlowBuilderHttpRequestModal";
+import FlowBuilderNotificationModal from "../../components/FlowBuilderNotificationModal";
+import FlowBuilderBlacklistModal from "../../components/FlowBuilderBlacklistModal";
+import FlowBuilderFlowUpModal from "../../components/FlowBuilderFlowUpModal";
 import FlowBuilderMenuModal from "../../components/FlowBuilderMenuModal";
 import FlowBuilderAddImgModal from "../../components/FlowBuilderAddImgModal";
 import FlowBuilderTicketModal from "../../components/FlowBuilderAddTicketModal";
@@ -80,6 +88,12 @@ import FlowBuilderSectorModal from "../../components/FlowBuilderSectorModal";
 import FlowBuilderTagModal from "../../components/FlowBuilderTagModal";
 import FlowBuilderCloseTicketModal from "../../components/FlowBuilderCloseTicketModal";
 import FlowBuilderAddNodeMenu from "../../components/FlowBuilderAddNodeMenu";
+
+import {
+  buildFlowExportFile,
+  downloadJson,
+  sanitizeFilename,
+} from "../../flowBuilderTemplates/flowImportExport";
 
 import { Add } from "@mui/icons-material";
 
@@ -132,6 +146,10 @@ const nodeTypes = {
   waitForInteraction: waitForInteractionNode,
   condition: conditionNode,
   attendant: attendantNode,
+  httpRequest: httpRequestNode,
+  notification: notificationNode,
+  blacklist: blacklistNode,
+  flowUp: flowUpNode,
 };
 
 const edgeTypes = {
@@ -179,9 +197,25 @@ const FlowBuilderConfig = () => {
   const [modalAddCloseTicket, setModalAddCloseTicket] = useState(null);
   const [modalAddCondition, setModalAddCondition] = useState(null);
   const [modalAddAttendant, setModalAddAttendant] = useState(null);
+  const [modalAddHttpRequest, setModalAddHttpRequest] = useState(null);
+  const [modalAddNotification, setModalAddNotification] = useState(null);
+  const [modalAddBlacklist, setModalAddBlacklist] = useState(null);
+  const [modalAddFlowUp, setModalAddFlowUp] = useState(null);
   const [addNodeMenuAnchor, setAddNodeMenuAnchor] = useState(null);
+  const [flowDisplayName, setFlowDisplayName] = useState("Fluxo");
 
   const connectionLineStyle = { stroke: "#2b2b2b", strokeWidth: "6px" };
+
+  const handleExportFlow = () => {
+    try {
+      const payload = buildFlowExportFile(flowDisplayName, nodes, edges);
+      const fname = `fluxo-${sanitizeFilename(flowDisplayName)}-${Date.now()}.json`;
+      downloadJson(fname, payload);
+      toast.success("Fluxo exportado em JSON.");
+    } catch (e) {
+      toast.error("Não foi possível exportar o fluxo.");
+    }
+  };
 
   const addNode = (type, data) => {
 
@@ -452,6 +486,70 @@ const FlowBuilderConfig = () => {
         ];
       });
     }
+
+    if (type === "httpRequest") {
+      return setNodes((old) => {
+        return [
+          ...old,
+          {
+            id: geraStringAleatoria(30),
+            position: { x: posX, y: posY },
+            data: data && typeof data === "object" ? { ...data } : {},
+            type: "httpRequest",
+          },
+        ];
+      });
+    }
+
+    if (type === "notification") {
+      return setNodes((old) => {
+        return [
+          ...old,
+          {
+            id: geraStringAleatoria(30),
+            position: { x: posX, y: posY },
+            data:
+              data && typeof data === "object"
+                ? { phone: data.phone || "", message: data.message || "" }
+                : { phone: "", message: "" },
+            type: "notification",
+          },
+        ];
+      });
+    }
+
+    if (type === "blacklist") {
+      return setNodes((old) => {
+        return [
+          ...old,
+          {
+            id: geraStringAleatoria(30),
+            position: { x: posX, y: posY },
+            data: {
+              action:
+                data?.action === "remove" ? "remove" : "add",
+            },
+            type: "blacklist",
+          },
+        ];
+      });
+    }
+
+    if (type === "flowUp") {
+      return setNodes((old) => {
+        return [
+          ...old,
+          {
+            id: geraStringAleatoria(30),
+            position: { x: posX, y: posY },
+            data: {
+              contactList: data?.contactList || { id: 0, name: "" },
+            },
+            type: "flowUp",
+          },
+        ];
+      });
+    }
   };
 
   const textAdd = (data) => {
@@ -526,6 +624,22 @@ const FlowBuilderConfig = () => {
     addNode("attendant", data);
   };
 
+  const httpRequestAdd = (data) => {
+    addNode("httpRequest", data);
+  };
+
+  const notificationAdd = (data) => {
+    addNode("notification", data);
+  };
+
+  const blacklistAdd = (data) => {
+    addNode("blacklist", data);
+  };
+
+  const flowUpAdd = (data) => {
+    addNode("flowUp", data);
+  };
+
   const loadMore = () => {
     setPageNumber((prevState) => prevState + 1);
   };
@@ -555,6 +669,16 @@ const FlowBuilderConfig = () => {
   );
 
   const saveFlow = async () => {
+    const waitNodes = nodes.filter((n) => n.type === "waitForInteraction");
+    for (const w of waitNodes) {
+      const out = edges.filter((e) => e.source === w.id);
+      if (out.length === 0) {
+        toast.error(
+          'O nó "Aguardar Interação" precisa de uma conexão de saída para o próximo passo.'
+        );
+        return;
+      }
+    }
     await api
       .post("/flowbuilder/flow", {
         idFlow: id,
@@ -617,6 +741,18 @@ const FlowBuilderConfig = () => {
     if (node.type === "attendant") {
       setModalAddAttendant("edit");
     }
+    if (node.type === "httpRequest") {
+      setModalAddHttpRequest("edit");
+    }
+    if (node.type === "notification") {
+      setModalAddNotification("edit");
+    }
+    if (node.type === "blacklist") {
+      setModalAddBlacklist("edit");
+    }
+    if (node.type === "flowUp") {
+      setModalAddFlowUp("edit");
+    }
   };
 
   const clickNode = (event, node) => {
@@ -666,6 +802,10 @@ const FlowBuilderConfig = () => {
     setModalAddCloseTicket(null);
     setModalAddCondition(null);
     setModalAddAttendant(null);
+    setModalAddHttpRequest(null);
+    setModalAddNotification(null);
+    setModalAddBlacklist(null);
+    setModalAddFlowUp(null);
   };
 
   const clickActions = (type) => {
@@ -715,6 +855,18 @@ const FlowBuilderConfig = () => {
       case "attendant":
         setModalAddAttendant("create");
         break;
+      case "httpRequest":
+        setModalAddHttpRequest("create");
+        break;
+      case "notification":
+        setModalAddNotification("create");
+        break;
+      case "blacklist":
+        setModalAddBlacklist("create");
+        break;
+      case "flowUp":
+        setModalAddFlowUp("create");
+        break;
       default:
     }
   };
@@ -725,7 +877,10 @@ const FlowBuilderConfig = () => {
       const fetchContacts = async () => {
         try {
           const { data } = await api.get(`/flowbuilder/flow/${id}`);
-          if (data.flow.flow !== null) {
+          if (data?.flow) {
+            setFlowDisplayName(data.flow.name || "Fluxo");
+          }
+          if (data?.flow?.flow != null) {
             const flowNodes = data.flow.flow.nodes;
             setNodes(flowNodes);
             const connections = data.flow.flow.connections || [];
@@ -912,6 +1067,34 @@ const FlowBuilderConfig = () => {
         onUpdate={updateNode}
         close={setModalAddAttendant}
       />
+      <FlowBuilderHttpRequestModal
+        open={modalAddHttpRequest}
+        onSave={httpRequestAdd}
+        data={dataNode}
+        onUpdate={updateNode}
+        close={setModalAddHttpRequest}
+      />
+      <FlowBuilderNotificationModal
+        open={modalAddNotification}
+        onSave={notificationAdd}
+        data={dataNode}
+        onUpdate={updateNode}
+        close={setModalAddNotification}
+      />
+      <FlowBuilderBlacklistModal
+        open={modalAddBlacklist}
+        onSave={blacklistAdd}
+        data={dataNode}
+        onUpdate={updateNode}
+        close={setModalAddBlacklist}
+      />
+      <FlowBuilderFlowUpModal
+        open={modalAddFlowUp}
+        onSave={flowUpAdd}
+        data={dataNode}
+        onUpdate={updateNode}
+        close={setModalAddFlowUp}
+      />
 
       <MainHeader>
         <Title>Desenhe seu fluxo</Title>
@@ -959,7 +1142,15 @@ const FlowBuilderConfig = () => {
               Não se esqueça de salvar seu fluxo!
             </Typography>
           </Stack>
-          <Stack direction={"row"} justifyContent={"end"}>
+          <Stack direction={"row"} justifyContent={"end"} spacing={1}>
+            <Button
+              sx={{ textTransform: "none" }}
+              variant="outlined"
+              color="primary"
+              onClick={handleExportFlow}
+            >
+              Exportar JSON
+            </Button>
             <Button
               sx={{ textTransform: "none" }}
               variant="contained"
