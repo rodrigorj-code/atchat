@@ -28,8 +28,10 @@ const FlowBuilderImportFlowModal = () => {
   const [submitting, setSubmitting] = useState(false);
 
   const handlePickFile = () => {
-    if (fileRef.current) fileRef.current.value = "";
-    fileRef.current?.click();
+    const input = fileRef.current;
+    if (!input) return;
+    input.value = "";
+    input.click();
   };
 
   const onFileChange = async (e) => {
