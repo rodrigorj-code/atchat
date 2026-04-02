@@ -33,6 +33,16 @@ interface Response {
   hasMore: boolean;
 }
 
+/** Fila em uma das filas permitidas OU sem fila (null) — evita Op.or com array bruto (SQL inválido). */
+function queueInAllowedOrUnassigned(queueIds: number[]): Filterable["where"] {
+  if (!queueIds?.length) {
+    return { queueId: null };
+  }
+  return {
+    [Op.or]: [{ queueId: { [Op.in]: queueIds } }, { queueId: null }]
+  };
+}
+
 const ListTicketsServiceKanban = async ({
   searchParam = "",
   pageNumber = "1",
@@ -48,8 +58,10 @@ const ListTicketsServiceKanban = async ({
   companyId
 }: Request): Promise<Response> => {
   let whereCondition: Filterable["where"] = {
-    [Op.or]: [{ userId }, { status: "pending" }],
-    queueId: { [Op.or]: [queueIds, null] }
+    [Op.and]: [
+      { [Op.or]: [{ userId }, { status: "pending" }] },
+      queueInAllowedOrUnassigned(queueIds)
+    ]
   };
   let includeCondition: Includeable[];
 
@@ -99,8 +111,10 @@ const ListTicketsServiceKanban = async ({
     whereCondition = {
       [Op.and]: [
         {
-          [Op.or]: [{ userId }, { status: "pending" }],
-          queueId: { [Op.or]: [queueIds, null] }
+          [Op.and]: [
+            { [Op.or]: [{ userId }, { status: "pending" }] },
+            queueInAllowedOrUnassigned(queueIds)
+          ]
         },
         statusKanbanFilter
       ]
@@ -174,9 +188,11 @@ const ListTicketsServiceKanban = async ({
     const userQueueIds = user.queues.map(queue => queue.id);
 
     whereCondition = {
-      [Op.or]: [{ userId }, { status: "pending" }],
-      queueId: { [Op.or]: [userQueueIds, null] },
-      unreadMessages: { [Op.gt]: 0 }
+      [Op.and]: [
+        { [Op.or]: [{ userId }, { status: "pending" }] },
+        queueInAllowedOrUnassigned(userQueueIds),
+        { unreadMessages: { [Op.gt]: 0 } }
+      ]
     };
   }
 

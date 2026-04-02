@@ -24,6 +24,7 @@ import ExpandLessIcon from "@material-ui/icons/ExpandLess";
 import ExpandMoreIcon from "@material-ui/icons/ExpandMore";
 import DescriptionOutlinedIcon from "@material-ui/icons/DescriptionOutlined";
 import PeopleIcon from "@material-ui/icons/People";
+import GroupIcon from "@material-ui/icons/Group";
 import ListIcon from "@material-ui/icons/ListAlt";
 import AnnouncementIcon from "@material-ui/icons/Announcement";
 import ForumIcon from "@material-ui/icons/Forum";
@@ -234,7 +235,6 @@ const MainListItems = (props) => {
       "/queue-integration",
       "/settings",
       "/connections",
-      "/group-manager",
     ].some((p) => path === p || path.startsWith(p + "/"));
     setOpenAjustesSubmenu(shouldOpen);
   }, [location.pathname]);
@@ -460,6 +460,22 @@ const MainListItems = (props) => {
         listItemIconClassName={classes.listItemIcon}
         listItemTextClassName={classes.listItemText}
         selected={location.pathname === "/chats" || location.pathname.startsWith("/chats/")}
+      />
+
+      <Can
+        role={user.profile}
+        perform="drawer-admin-items:view"
+        yes={() => (
+          <ListItemLink
+            to="/group-manager"
+            primary="Gestão de Grupos"
+            icon={<GroupIcon />}
+            listItemClassName={classes.listItem}
+            listItemIconClassName={classes.listItemIcon}
+            listItemTextClassName={classes.listItemText}
+            selected={location.pathname === "/group-manager"}
+          />
+        )}
       />
 
       <ListItem
@@ -756,19 +772,6 @@ const MainListItems = (props) => {
                     </Badge>
                   </ListItemIcon>
                   <ListItemText primary="Conexões" className={classes.listItemText} />
-                </ListItem>
-                <ListItem
-                  button
-                  dense
-                  component={RouterLink}
-                  to="/group-manager"
-                  className={classes.listItem}
-                  selected={location.pathname === "/group-manager"}
-                >
-                  <ListItemIcon className={classes.listItemIcon}>
-                    <PeopleIcon />
-                  </ListItemIcon>
-                  <ListItemText primary="Grupos WhatsApp" className={classes.listItemText} />
                 </ListItem>
               </List>
             </Collapse>
