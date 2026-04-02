@@ -22,6 +22,7 @@ import ContactListItems from "../pages/ContactListItems/";
 // import Companies from "../pages/Companies/";
 import QuickMessages from "../pages/QuickMessages/";
 import Kanban from "../pages/Kanban";
+import GroupManager from "../pages/GroupManager";
 import { AuthProvider } from "../context/Auth/AuthContext";
 import { TicketsContextProvider } from "../context/Tickets/TicketsContext";
 import { WhatsAppsProvider } from "../context/WhatsApp/WhatsAppsContext";
@@ -119,6 +120,12 @@ const Routes = () => {
                   isPrivate
                 />
                 <Route exact path="/kanban" component={Kanban} isPrivate />
+                <Route
+                  exact
+                  path="/group-manager"
+                  component={GroupManager}
+                  isPrivate
+                />
                 <Route
                   exact
                   path="/financeiro"

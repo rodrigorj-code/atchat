@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useRef, useState } from "react";
-import { useHistory } from "react-router-dom";
+import { useHistory, useLocation } from "react-router-dom";
 import clsx from "clsx";
 
 import { makeStyles } from "@material-ui/core/styles";
@@ -401,6 +401,7 @@ const useStyles = makeStyles(theme => ({
 const TicketsManagerTabs = () => {
   const classes = useStyles();
   const history = useHistory();
+  const location = useLocation();
 
   const [searchParam, setSearchParam] = useState("");
   /** Texto exibido no campo (debounce só atualiza `searchParam` para a API) */
@@ -441,6 +442,15 @@ const TicketsManagerTabs = () => {
   useEffect(() => {
     localStorage.setItem("ticketsListCompact", compactList ? "1" : "0");
   }, [compactList]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get("inboxTab") !== "groups") return;
+    setTab("groups");
+    params.delete("inboxTab");
+    const qs = params.toString();
+    history.replace(`${location.pathname}${qs ? `?${qs}` : ""}`);
+  }, [location.search, location.pathname, history]);
 
   useTicketsKeyboardShortcuts({ searchInputRef, setTab });
 

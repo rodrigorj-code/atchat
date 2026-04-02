@@ -234,6 +234,7 @@ const MainListItems = (props) => {
       "/queue-integration",
       "/settings",
       "/connections",
+      "/group-manager",
     ].some((p) => path === p || path.startsWith(p + "/"));
     setOpenAjustesSubmenu(shouldOpen);
   }, [location.pathname]);
@@ -755,6 +756,19 @@ const MainListItems = (props) => {
                     </Badge>
                   </ListItemIcon>
                   <ListItemText primary="Conexões" className={classes.listItemText} />
+                </ListItem>
+                <ListItem
+                  button
+                  dense
+                  component={RouterLink}
+                  to="/group-manager"
+                  className={classes.listItem}
+                  selected={location.pathname === "/group-manager"}
+                >
+                  <ListItemIcon className={classes.listItemIcon}>
+                    <PeopleIcon />
+                  </ListItemIcon>
+                  <ListItemText primary="Grupos WhatsApp" className={classes.listItemText} />
                 </ListItem>
               </List>
             </Collapse>

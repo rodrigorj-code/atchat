@@ -36,6 +36,7 @@ import flowBuilder from "./flowBuilderRoutes";
 import flowCampaignRoutes from "./flowCampaignRoutes";
 import userRatingRoutes from "./userRatingRoutes";
 import ratingTemplateRoutes from "./ratingTemplateRoutes";
+import groupRoutes from "./groupRoutes";
 const routes = Router();
 
 routes.use(userRoutes);
@@ -76,5 +77,6 @@ routes.use(flowBuilder);
 routes.use(flowCampaignRoutes);
 routes.use(userRatingRoutes);
 routes.use(ratingTemplateRoutes);
+routes.use(groupRoutes);
 
 export default routes;
