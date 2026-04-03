@@ -23,6 +23,7 @@ import moment from "moment";
 import logo from "../../assets/logo.png";
 import { toast } from 'react-toastify'; 
 import toastError from '../../errors/toastError';
+import { getBackendBaseURL } from "../../config/backendUrl";
 import 'react-toastify/dist/ReactToastify.css';
 import { BrowserRouter as Router, Route, Switch } from "react-router-dom";
 
@@ -107,7 +108,7 @@ const handleSendEmail = async (values) => {
   const email = values.email;
   try {
     const response = await api.post(
-      `${process.env.REACT_APP_BACKEND_URL}/forgetpassword/${email}`
+      `${getBackendBaseURL()}/forgetpassword/${email}`
     );
     console.log("API Response:", response.data);
 
@@ -131,7 +132,7 @@ const handleSendEmail = async (values) => {
     if (newPassword === confirmPassword) {
       try {
         await api.post(
-          `${process.env.REACT_APP_BACKEND_URL}/resetpasswords/${email}/${token}/${newPassword}`
+          `${getBackendBaseURL()}/resetpasswords/${email}/${token}/${newPassword}`
         );
         setError(""); // Limpe o erro se não houver erro
         toast.success(i18n.t("resetPassword.toasts.passwordUpdated"));

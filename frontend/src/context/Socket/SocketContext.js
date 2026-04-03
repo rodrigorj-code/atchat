@@ -1,6 +1,7 @@
 import { createContext } from "react";
 import openSocket from "socket.io-client";
 import jwt from "jsonwebtoken";
+import { getBackendBaseURL } from "../../config/backendUrl";
 
 class ManagedSocket {
   constructor(socketManager) {
@@ -115,7 +116,7 @@ const SocketManager = {
       this.currentCompanyId = companyId;
       this.currentUserId = userId;
       
-      this.currentSocket = openSocket(process.env.REACT_APP_BACKEND_URL, {
+      this.currentSocket = openSocket(getBackendBaseURL(), {
         transports: ["polling"],
         pingTimeout: 18000,
         pingInterval: 18000,

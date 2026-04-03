@@ -21,6 +21,7 @@ import { i18n } from "../../translate/i18n";
 
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
+import { getBackendBaseURL } from "../../config/backendUrl";
 import {
   Checkbox,
   FormControl,
@@ -657,7 +658,7 @@ const FlowBuilderSingleBlockModal = ({
           <img
             src={
               valueDefault.length > 0
-                ? process.env.REACT_APP_BACKEND_URL + "/public/" + valueDefault
+                ? getBackendBaseURL() + "/public/" + valueDefault
                 : ""
             }
             className={`img${number}`}
@@ -726,7 +727,7 @@ const FlowBuilderSingleBlockModal = ({
             <audio controls="controls">
               <source
                 src={
-                  process.env.REACT_APP_BACKEND_URL + "/public/" + valueDefault
+                  getBackendBaseURL() + "/public/" + valueDefault
                 }
                 type="audio/mp3"
               />
@@ -790,7 +791,7 @@ const FlowBuilderSingleBlockModal = ({
             <video controls="controls" style={{ width: "200px" }}>
               <source
                 src={
-                  process.env.REACT_APP_BACKEND_URL + "/public/" + valueDefault
+                  getBackendBaseURL() + "/public/" + valueDefault
                 }
                 type="video/mp4"
               />

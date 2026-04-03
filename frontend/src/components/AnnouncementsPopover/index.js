@@ -24,6 +24,7 @@ import api from "../../services/api";
 import { isArray } from "lodash";
 import moment from "moment";
 import { SocketContext } from "../../context/Socket/SocketContext";
+import { getBackendBaseURL } from "../../config/backendUrl";
 
 const useStyles = makeStyles((theme) => ({
   popoverPaper: {
@@ -35,7 +36,7 @@ const useStyles = makeStyles((theme) => ({
 
 function AnnouncementDialog({ announcement, open, handleClose }) {
   const getMediaPath = (filename) => {
-    return `${process.env.REACT_APP_BACKEND_URL}/public/${filename}`;
+    return `${getBackendBaseURL()}/public/${filename}`;
   };
   return (
     <Dialog
@@ -220,7 +221,7 @@ export default function AnnouncementsPopover() {
   };
 
   const getMediaPath = (filename) => {
-    return `${process.env.REACT_APP_BACKEND_URL}/public/${filename}`;
+    return `${getBackendBaseURL()}/public/${filename}`;
   };
 
   const handleShowAnnouncementDialog = (record) => {
