@@ -1,4 +1,4 @@
-import React, { useContext, useState } from "react";
+import React, { useState } from "react";
 import {
   Stepper,
   Step,
@@ -7,9 +7,9 @@ import {
   Typography,
   CircularProgress,
 } from "@material-ui/core";
+import * as Yup from "yup";
 import { Formik, Form } from "formik";
 
-import AddressForm from "./Forms/AddressForm";
 import PaymentForm from "./Forms/PaymentForm";
 import ReviewOrder from "./ReviewOrder";
 import CheckoutSuccess from "./CheckoutSuccess";
@@ -17,83 +17,71 @@ import CheckoutSuccess from "./CheckoutSuccess";
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
 import { toast } from "react-toastify";
-import { AuthContext } from "../../context/Auth/AuthContext";
-
 
 import validationSchema from "./FormModel/validationSchema";
 import checkoutFormModel from "./FormModel/checkoutFormModel";
 import formInitialValues from "./FormModel/formInitialValues";
 
 import useStyles from "./styles";
-import Invoices from "../../pages/Financeiro";
 import { i18n } from "../../translate/i18n";
 
-
 export default function CheckoutPage(props) {
-  const steps = [i18n.t("checkoutPage.steps.data"), i18n.t("checkoutPage.steps.customize"), i18n.t("checkoutPage.steps.review")];
-  const { formId, formField } = checkoutFormModel;
-  
-  
-  
+  const { Invoice } = props;
+
+  const steps = [
+    i18n.t("checkoutPage.steps.plan"),
+    i18n.t("checkoutPage.steps.pixReview"),
+  ];
+
+  const { formId } = checkoutFormModel;
+
   const classes = useStyles();
-  const [activeStep, setActiveStep] = useState(1);
+  const [activeStep, setCheckoutStep] = useState(0);
   const [datePayment, setDatePayment] = useState(null);
-  const [invoiceId, setinvoiceId] = useState(props.Invoice.id);
-  const currentValidationSchema = validationSchema[activeStep];
+  const [invoiceId] = useState(Invoice?.id);
+  const currentValidationSchema =
+    validationSchema[activeStep] || Yup.object();
   const isLastStep = activeStep === steps.length - 1;
-  const { user } = useContext(AuthContext);
 
-function _renderStepContent(step, setFieldValue, setActiveStep, values ) {
-
-  switch (step) {
-    case 0:
-      return <AddressForm formField={formField} values={values} setFieldValue={setFieldValue}  />;
-    case 1:
-      return <PaymentForm
-      formField={formField} 
-      setFieldValue={setFieldValue} 
-      setActiveStep={setActiveStep} 
-      activeStep={step} 
-      invoiceId={invoiceId}
-      values={values}
-      />;
-    case 2:
-      return <ReviewOrder />;
-    default:
-      return <div>Not Found</div>;
+  function _renderStepContent(step, setFieldValue, values) {
+    switch (step) {
+      case 0:
+        return (
+          <PaymentForm
+            setFieldValue={setFieldValue}
+            setActiveStep={setCheckoutStep}
+            activeStep={step}
+            invoiceId={invoiceId}
+            values={values}
+            invoice={Invoice}
+          />
+        );
+      case 1:
+        return <ReviewOrder invoice={Invoice} />;
+      default:
+        return null;
+    }
   }
-}
-
 
   async function _submitForm(values, actions) {
     try {
       const plan = JSON.parse(values.plan);
       const newValues = {
-        firstName: values.firstName,
-        lastName: values.lastName,
-        address2: values.address2,
-        city: values.city,
-        state: values.state,
-        zipcode: values.zipcode,
-        country: values.country,
-        useAddressForPaymentDetails: values.useAddressForPaymentDetails,
-        nameOnCard: values.nameOnCard,
-        cardNumber: values.cardNumber,
-        cvv: values.cvv,
         plan: values.plan,
         price: plan.price,
-        users: plan.users,
-        connections: plan.connections,
-        invoiceId: invoiceId
-      }
+        users: String(plan.users),
+        connections: String(plan.connections),
+        invoiceId,
+      };
 
       const { data } = await api.post("/subscription", newValues);
-      setDatePayment(data)
+      setDatePayment(data);
       actions.setSubmitting(false);
-      setActiveStep(activeStep + 1);
+      setCheckoutStep(steps.length);
       toast.success(i18n.t("checkoutPage.success"));
     } catch (err) {
       toastError(err);
+      actions.setSubmitting(false);
     }
   }
 
@@ -101,20 +89,29 @@ function _renderStepContent(step, setFieldValue, setActiveStep, values ) {
     if (isLastStep) {
       _submitForm(values, actions);
     } else {
-      setActiveStep(activeStep + 1);
+      setCheckoutStep(activeStep + 1);
       actions.setTouched({});
       actions.setSubmitting(false);
     }
   }
 
   function _handleBack() {
-    setActiveStep(activeStep - 1);
+    setCheckoutStep((s) => Math.max(0, s - 1));
   }
 
   return (
     <React.Fragment>
-      <Typography component="h1" variant="h4" align="center">
-        {i18n.t("checkoutPage.closeToEnd")}
+      <Typography component="h2" variant="h5" align="center" gutterBottom>
+        {i18n.t("checkoutPage.pixFlowTitle")}
+      </Typography>
+      <Typography
+        component="p"
+        variant="body2"
+        color="textSecondary"
+        align="center"
+        paragraph
+      >
+        {i18n.t("checkoutPage.pixFlowSubtitle")}
       </Typography>
       <Stepper activeStep={activeStep} className={classes.stepper}>
         {steps.map((label) => (
@@ -125,28 +122,29 @@ function _renderStepContent(step, setFieldValue, setActiveStep, values ) {
       </Stepper>
       <React.Fragment>
         {activeStep === steps.length ? (
-          <CheckoutSuccess pix={datePayment} />
+          <CheckoutSuccess pix={datePayment} invoice={Invoice} />
         ) : (
           <Formik
-            initialValues={{
-              ...user, 
-              ...formInitialValues
-            }}
+            initialValues={{ ...formInitialValues }}
             validationSchema={currentValidationSchema}
             onSubmit={_handleSubmit}
           >
             {({ isSubmitting, setFieldValue, values }) => (
               <Form id={formId}>
-                {_renderStepContent(activeStep, setFieldValue, setActiveStep, values)}
+                {_renderStepContent(activeStep, setFieldValue, values)}
 
                 <div className={classes.buttons}>
-                  {activeStep !== 1 && (
-                    <Button onClick={_handleBack} className={classes.button}>
+                  {activeStep > 0 && (
+                    <Button
+                      type="button"
+                      onClick={_handleBack}
+                      className={classes.button}
+                    >
                       {i18n.t("checkoutPage.BACK")}
                     </Button>
                   )}
                   <div className={classes.wrapper}>
-                    {activeStep !== 1 && (
+                    {activeStep > 0 && (
                       <Button
                         disabled={isSubmitting}
                         type="submit"
@@ -154,7 +152,9 @@ function _renderStepContent(step, setFieldValue, setActiveStep, values ) {
                         color="primary"
                         className={classes.button}
                       >
-                        {isLastStep ? i18n.t("checkoutPage.PAY") : i18n.t("checkoutPage.NEXT")}
+                        {isLastStep
+                          ? i18n.t("checkoutPage.PAY_PIX")
+                          : i18n.t("checkoutPage.NEXT")}
                       </Button>
                     )}
                     {isSubmitting && (

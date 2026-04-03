@@ -1,5 +1,6 @@
 import express from "express";
 import isAuth from "../middleware/isAuth";
+import requireCompanyNotDelinquent from "../middleware/requireCompanyNotDelinquent";
 import multer from "multer";
 import uploadConfig from "../config/uploadExt";
 
@@ -9,9 +10,19 @@ const upload = multer(uploadConfig);
 
 const flowBuilder = express.Router();
 
-flowBuilder.post("/flowbuilder", isAuth, FlowBuilderController.createFlow);
+flowBuilder.post(
+  "/flowbuilder",
+  isAuth,
+  requireCompanyNotDelinquent,
+  FlowBuilderController.createFlow
+);
 
-flowBuilder.put("/flowbuilder", isAuth, FlowBuilderController.updateFlow);
+flowBuilder.put(
+  "/flowbuilder",
+  isAuth,
+  requireCompanyNotDelinquent,
+  FlowBuilderController.updateFlow
+);
 
 flowBuilder.delete(
   "/flowbuilder/:idFlow",
@@ -26,12 +37,14 @@ flowBuilder.get("/flowbuilder/:idFlow", isAuth, FlowBuilderController.flowOne);
 flowBuilder.post(
   "/flowbuilder/flow",
   isAuth,
+  requireCompanyNotDelinquent,
   FlowBuilderController.FlowDataUpdate
 );
 
 flowBuilder.post(
   "/flowbuilder/duplicate",
   isAuth,
+  requireCompanyNotDelinquent,
   FlowBuilderController.FlowDuplicate
 );
 
@@ -44,6 +57,7 @@ flowBuilder.get(
 flowBuilder.post(
   "/flowbuilder/img",
   isAuth,
+  requireCompanyNotDelinquent,
   upload.array("medias"),
   FlowBuilderController.FlowUploadImg
 );
@@ -51,6 +65,7 @@ flowBuilder.post(
 flowBuilder.post(
   "/flowbuilder/audio",
   isAuth,
+  requireCompanyNotDelinquent,
   upload.array("medias"),
   FlowBuilderController.FlowUploadAudio
 );
@@ -58,6 +73,7 @@ flowBuilder.post(
 flowBuilder.post(
   "/flowbuilder/content",
   isAuth,
+  requireCompanyNotDelinquent,
   upload.array('medias'),
   FlowBuilderController.FlowUploadAll
 );

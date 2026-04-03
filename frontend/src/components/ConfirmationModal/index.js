@@ -30,8 +30,8 @@ const ConfirmationModal = ({ title, children, open, onClose, onConfirm, confirmT
 				<Button
 					variant="contained"
 					onClick={() => {
-						onClose(false);
 						onConfirm();
+						onClose(false);
 					}}
 					color="secondary"
 					style={confirmText ? { backgroundColor: "#000", color: "#fff" } : undefined}

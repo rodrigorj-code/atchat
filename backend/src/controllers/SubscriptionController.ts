@@ -1,5 +1,4 @@
 import { Request, Response } from "express";
-import express from "express";
 import * as Yup from "yup";
 import Gerencianet from "gn-api-sdk-typescript";
 import AppError from "../errors/AppError";
@@ -8,10 +7,62 @@ import options from "../config/Gn";
 import Company from "../models/Company";
 import Invoices from "../models/Invoices";
 import { getIO } from "../libs/socket";
-import {logger} from "../utils/logger";
+import { logger } from "../utils/logger";
 
-const app = express();
+/**
+ * URL do webhook PIX configurada na Efí/Gerencianet.
+ * - Sem WEBHOOK_SUBSCRIPTION_SECRET: `{BACKEND_URL}/subscription/webhook`
+ * - Com segredo: mesma URL com `?token=<segredo>` (deve coincidir com a env no servidor)
+ */
+function buildSubscriptionWebhookUrl(): string {
+  const base = (process.env.BACKEND_URL || "").replace(/\/$/, "");
+  const path = "/subscription/webhook";
+  if (!base) {
+    logger.warn(
+      "[subscription] BACKEND_URL ausente — configure para registrar webhook PIX corretamente"
+    );
+    return path;
+  }
+  const secret = process.env.WEBHOOK_SUBSCRIPTION_SECRET;
+  if (secret) {
+    return `${base}${path}?token=${encodeURIComponent(secret)}`;
+  }
+  return `${base}${path}`;
+}
 
+function formatPixAmount(value: number): string {
+  return Number(value).toLocaleString("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).replace(",", ".");
+}
+
+function extractPaidAmountFromCharge(detahe: Record<string, unknown>): number {
+  const valor = detahe?.valor as Record<string, unknown> | string | undefined;
+  if (valor && typeof valor === "object" && "original" in valor) {
+    const o = (valor as { original?: unknown }).original;
+    return parseFloat(String(o ?? "0").replace(",", "."));
+  }
+  if (typeof valor === "string") {
+    return parseFloat(valor.replace(",", "."));
+  }
+  return NaN;
+}
+
+function amountsMatchInvoice(expected: number, paid: number): boolean {
+  if (Number.isNaN(paid)) return false;
+  return Math.round(expected * 100) === Math.round(paid * 100);
+}
+
+function verifyWebhookSecret(req: Request): boolean {
+  const secret = process.env.WEBHOOK_SUBSCRIPTION_SECRET;
+  if (!secret) {
+    return true;
+  }
+  const queryToken = req.query.token as string | undefined;
+  const bearer = req.headers.authorization?.replace(/^Bearer\s+/i, "")?.trim();
+  return queryToken === secret || bearer === secret;
+}
 
 export const index = async (req: Request, res: Response): Promise<Response> => {
   const gerencianet = Gerencianet(options);
@@ -21,40 +72,42 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
 export const createSubscription = async (
   req: Request,
   res: Response
-  ): Promise<Response> => {
-    const gerencianet = Gerencianet(options);
-    const { companyId } = req.user;
+): Promise<Response> => {
+  const gerencianet = Gerencianet(options);
+  const { companyId } = req.user;
 
   const schema = Yup.object().shape({
-    price: Yup.string().required(),
+    invoiceId: Yup.number().required(),
     users: Yup.string().required(),
     connections: Yup.string().required()
   });
 
   if (!(await schema.isValid(req.body))) {
-    throw new AppError("Validation fails 1", 400);
+    throw new AppError("ERR_SUBSCRIPTION_VALIDATION", 400);
   }
 
-  const {
-    firstName,
-    price,
-    users,
-    connections,
-    address2,
-    city,
-    state,
-    zipcode,
-    country,
-    plan,
-    invoiceId
-  } = req.body;
+  const { invoiceId } = req.body;
+
+  const invoice = await Invoices.findByPk(invoiceId);
+
+  if (!invoice) {
+    throw new AppError("ERR_INVOICE_NOT_FOUND", 404);
+  }
+
+  if (invoice.companyId !== companyId) {
+    throw new AppError("ERR_FORBIDDEN_INVOICE", 403);
+  }
+
+  if (String(invoice.status).toLowerCase() === "paid") {
+    throw new AppError("ERR_INVOICE_ALREADY_PAID", 400);
+  }
 
   const body = {
     calendario: {
       expiracao: 3600
     },
     valor: {
-      original: price.toLocaleString("pt-br", { minimumFractionDigits: 2 }).replace(",", ".")
+      original: formatPixAmount(Number(invoice.value))
     },
     chave: process.env.GERENCIANET_PIX_KEY,
     solicitacaoPagador: `#Fatura:${invoiceId}`
@@ -67,8 +120,8 @@ export const createSubscription = async (
       id: pix.loc.id
     });
 
-    let bodyWebhook = {
-      webhookUrl: `${process.env.BACKEND_URL}/subscription/webhook?ignorar=`
+    const bodyWebhook = {
+      webhookUrl: buildSubscriptionWebhookUrl()
     };
 
     const params = {
@@ -79,27 +132,25 @@ export const createSubscription = async (
 
     return res.json({
       ...pix,
-      qrcode,
-
+      qrcode
     });
   } catch (error) {
     logger.error(error);
-    throw new AppError("Validation fails 2", 400);
+    throw new AppError("ERR_SUBSCRIPTION_PIX_CREATE", 400);
   }
 };
 
-export const  createWebhook = async (
+export const createWebhook = async (
   req: Request,
   res: Response
 ): Promise<Response> => {
-
   const schema = Yup.object().shape({
     chave: Yup.string().required(),
     url: Yup.string().required()
   });
 
   if (!(await schema.isValid(req.body))) {
-    throw new AppError("Validation fails 3", 400);
+    throw new AppError("ERR_SUBSCRIPTION_WEBHOOK_CONFIG_VALIDATION", 400);
   }
 
   const { chave, url } = req.body;
@@ -124,7 +175,11 @@ export const  createWebhook = async (
 export const webhook = async (
   req: Request,
   res: Response
-  ): Promise<Response> => {
+): Promise<Response> => {
+  if (!verifyWebhookSecret(req)) {
+    logger.warn("[webhook] subscription: token inválido ou ausente");
+    return res.status(401).json({ error: "ERR_WEBHOOK_UNAUTHORIZED" });
+  }
 
   const { evento } = req.body;
 
@@ -139,42 +194,71 @@ export const webhook = async (
         txid: pix.txid
       });
 
-      if (detahe.status === "CONCLUIDA"){
-        const { solicitacaoPagador } = detahe;
-        const invoiceID = solicitacaoPagador.replace("#Fatura:", "");
-        const invoices = await Invoices.findByPk(invoiceID);
-        const companyId =invoices.companyId;
-        const company = await Company.findByPk(companyId);
-
-        const expiresAt = new Date(company.dueDate);
-        expiresAt.setDate(expiresAt.getDate() + 30);
-        const date = expiresAt.toISOString().split("T")[0];
-
-        if (company) {
-          await company.update({
-            dueDate: date
-          });
-         const invoi = await invoices.update({
-            id: invoiceID,
-            status: 'paid'
-          });
-          await company.reload();
-          const io = getIO();
-          const companyUpdate = await Company.findOne({
-            where: {
-              id: companyId
-            }
-          });
-
-          io.to(`company-${companyId}-mainchannel`).emit(`company-${companyId}-payment`, {
-            action: detahe.status,
-            company: companyUpdate
-          });
-        }
-
+      if (detahe.status !== "CONCLUIDA") {
+        continue;
       }
-    }
 
+      const { solicitacaoPagador } = detahe;
+      if (!solicitacaoPagador || typeof solicitacaoPagador !== "string") {
+        logger.warn("[webhook] solicitacaoPagador ausente", { txid: pix.txid });
+        continue;
+      }
+
+      const invoiceID = solicitacaoPagador.replace("#Fatura:", "").trim();
+      const invoices = await Invoices.findByPk(invoiceID);
+
+      if (!invoices) {
+        logger.warn("[webhook] fatura não encontrada", { invoiceID, txid: pix.txid });
+        continue;
+      }
+
+      const paid = extractPaidAmountFromCharge(detahe as Record<string, unknown>);
+      const expected = Number(invoices.value);
+
+      if (!amountsMatchInvoice(expected, paid)) {
+        logger.warn("[webhook] valor pago diverge da fatura — não marcando como pago", {
+          txid: pix.txid,
+          invoiceId: invoices.id,
+          expected,
+          paid
+        });
+        continue;
+      }
+
+      const companyId = invoices.companyId;
+      const company = await Company.findByPk(companyId);
+
+      if (!company) {
+        logger.warn("[webhook] empresa não encontrada", { companyId, txid: pix.txid });
+        continue;
+      }
+
+      const expiresAt = new Date(company.dueDate);
+      expiresAt.setDate(expiresAt.getDate() + 30);
+      const date = expiresAt.toISOString().split("T")[0];
+
+      await company.update({
+        dueDate: date
+      });
+
+      await invoices.update({
+        status: "paid"
+      });
+
+      await company.reload();
+
+      const io = getIO();
+      const companyUpdate = await Company.findOne({
+        where: {
+          id: companyId
+        }
+      });
+
+      io.to(`company-${companyId}-mainchannel`).emit(`company-${companyId}-payment`, {
+        action: detahe.status,
+        company: companyUpdate
+      });
+    }
   }
 
   return res.json({ ok: true });

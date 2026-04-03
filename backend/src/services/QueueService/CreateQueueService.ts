@@ -1,4 +1,5 @@
 import * as Yup from "yup";
+import { Op, Sequelize } from "sequelize";
 import AppError from "../../errors/AppError";
 import Queue from "../../models/Queue";
 import Company from "../../models/Company";
@@ -41,21 +42,7 @@ const CreateQueueService = async (queueData: QueueData): Promise<Queue> => {
   const queueSchema = Yup.object().shape({
     name: Yup.string()
       .min(2, "ERR_QUEUE_INVALID_NAME")
-      .required("ERR_QUEUE_INVALID_NAME")
-      .test(
-        "Check-unique-name",
-        "ERR_QUEUE_NAME_ALREADY_EXISTS",
-        async value => {
-          if (value) {
-            const queueWithSameName = await Queue.findOne({
-              where: { name: value, companyId }
-            });
-
-            return !queueWithSameName;
-          }
-          return false;
-        }
-      ),
+      .required("ERR_QUEUE_INVALID_NAME"),
     color: Yup.string()
       .required("ERR_QUEUE_INVALID_COLOR")
       .test("Check-color", "ERR_QUEUE_INVALID_COLOR", async value => {
@@ -86,7 +73,29 @@ const CreateQueueService = async (queueData: QueueData): Promise<Queue> => {
     throw new AppError(err.message);
   }
 
-  const queue = await Queue.create(queueData);
+  const trimmed = name.trim();
+
+  const duplicateName = await Queue.findOne({
+    where: {
+      companyId,
+      [Op.and]: Sequelize.where(
+        Sequelize.fn("LOWER", Sequelize.col("Queue.name")),
+        trimmed.toLowerCase()
+      )
+    }
+  });
+
+  if (duplicateName) {
+    throw new AppError(
+      "Já existe um setor com este nome nesta empresa.",
+      400
+    );
+  }
+
+  const queue = await Queue.create({
+    ...queueData,
+    name: trimmed
+  });
 
   return queue;
 };

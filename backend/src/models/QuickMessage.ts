@@ -26,6 +26,9 @@ class QuickMessage extends Model<QuickMessage> {
   @Column
   message: string;
 
+  @Column({ allowNull: true })
+  category: string | null;
+
   @ForeignKey(() => Company)
   @Column
   companyId: number;

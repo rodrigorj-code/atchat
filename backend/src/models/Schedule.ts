@@ -14,6 +14,7 @@ import Company from "./Company";
 import Contact from "./Contact";
 import Ticket from "./Ticket";
 import User from "./User";
+import Whatsapp from "./Whatsapp";
 
 @Table
 class Schedule extends Model<Schedule> {
@@ -47,6 +48,19 @@ class Schedule extends Model<Schedule> {
   @Column
   companyId: number;
 
+  @ForeignKey(() => Whatsapp)
+  @Column({ allowNull: true })
+  preferredWhatsappId: number | null;
+
+  @Column({ type: DataType.TEXT, allowNull: true })
+  lastError: string | null;
+
+  @Column({ allowNull: true })
+  lastAttemptAt: Date | null;
+
+  @Column({ defaultValue: 0 })
+  attemptCount: number;
+
   @Column(DataType.STRING)
   status: string;
 
@@ -55,6 +69,12 @@ class Schedule extends Model<Schedule> {
 
   @UpdatedAt
   updatedAt: Date;
+
+  @Column
+  mediaPath: string;
+
+  @Column
+  mediaName: string;
 
   @BelongsTo(() => Contact, "contactId")
   contact: Contact;
@@ -68,11 +88,9 @@ class Schedule extends Model<Schedule> {
   @BelongsTo(() => Company)
   company: Company;
 
-  @Column
-  mediaPath: string;
-
-  @Column
-  mediaName: string;
+  @BelongsTo(() => Whatsapp)
+  preferredWhatsapp: Whatsapp;
 }
+
 
 export default Schedule;

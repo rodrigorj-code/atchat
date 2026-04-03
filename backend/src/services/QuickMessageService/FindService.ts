@@ -11,8 +11,20 @@ const FindService = async ({ companyId, userId }: Params): Promise<QuickMessage[
   const notes: QuickMessage[] = await QuickMessage.findAll({
     where: {
       companyId,
-      userId,
+      userId
     },
+    attributes: [
+      "id",
+      "shortcode",
+      "message",
+      "category",
+      "companyId",
+      "userId",
+      "createdAt",
+      "updatedAt",
+      "mediaPath",
+      "mediaName"
+    ],
     include: [{ model: Company, as: "company", attributes: ["id", "name"] }],
     order: [["shortcode", "ASC"]]
   });

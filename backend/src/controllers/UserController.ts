@@ -24,13 +24,12 @@ type ListQueryParams = {
 
 export const index = async (req: Request, res: Response): Promise<Response> => {
   const { searchParam, pageNumber } = req.query as IndexQuery;
-  const { companyId, profile } = req.user;
+  const { companyId } = req.user;
 
   const { users, count, hasMore } = await ListUsersService({
     searchParam,
     pageNumber,
-    companyId,
-    profile
+    companyId
   });
 
   return res.json({ users, count, hasMore });
@@ -91,8 +90,9 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
 
 export const show = async (req: Request, res: Response): Promise<Response> => {
   const { userId } = req.params;
+  const { companyId } = req.user;
 
-  const user = await ShowUserService(userId);
+  const user = await ShowUserService(userId, companyId);
 
   return res.status(200).json(user);
 };

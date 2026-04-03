@@ -1,4 +1,4 @@
-import React, { useEffect, useReducer, useState, useContext } from "react";
+import React, { useEffect, useReducer, useState, useContext, useCallback } from "react";
 
 import {
   Button,
@@ -63,7 +63,8 @@ const reducer = (state, action) => {
     const queueIndex = state.findIndex((u) => u.id === queue.id);
 
     if (queueIndex !== -1) {
-      state[queueIndex] = queue;
+      const prev = state[queueIndex];
+      state[queueIndex] = { ...prev, ...queue };
       return [...state];
     } else {
       return [queue, ...state];
@@ -97,35 +98,41 @@ const Setores = () => {
 
   const socketManager = useContext(SocketContext);
 
-  useEffect(() => {
-    (async () => {
-      setLoading(true);
-      try {
-        const { data } = await api.get("/queue");
-        dispatch({ type: "LOAD_QUEUES", payload: Array.isArray(data) ? data : [] });
-      } catch (err) {
-        toastError(err);
-      } finally {
-        setLoading(false);
-      }
-    })();
+  const fetchQueues = useCallback(async () => {
+    setLoading(true);
+    try {
+      const { data } = await api.get("/queue");
+      const list = Array.isArray(data) ? data : [];
+      dispatch({ type: "RESET" });
+      dispatch({ type: "LOAD_QUEUES", payload: list });
+    } catch (err) {
+      toastError(err);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchQueues();
+  }, [fetchQueues]);
 
   useEffect(() => {
     const companyId = localStorage.getItem("companyId");
     const socket = socketManager.getSocket(companyId);
 
-    socket.on(`company-${companyId}-queue`, (data) => {
+    const onQueue = (data) => {
       if (data.action === "update" || data.action === "create") {
         dispatch({ type: "UPDATE_QUEUES", payload: data.queue });
       }
       if (data.action === "delete") {
         dispatch({ type: "DELETE_QUEUE", payload: data.queueId });
       }
-    });
+    };
+
+    socket.on(`company-${companyId}-queue`, onQueue);
 
     return () => {
-      socket.disconnect();
+      socket.off(`company-${companyId}-queue`, onQueue);
     };
   }, [socketManager]);
 
@@ -187,6 +194,7 @@ const Setores = () => {
         open={queueModalOpen}
         onClose={handleCloseQueueModal}
         queueId={selectedQueue?.id}
+        reload={fetchQueues}
       />
 
       <SetorMembersModal

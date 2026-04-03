@@ -4,8 +4,11 @@ import React, { useEffect, useRef } from "react";
 import { makeStyles } from "@material-ui/core/styles";
 import { green } from "@material-ui/core/colors";
 import Dialog from "@material-ui/core/Dialog";
+import DialogTitle from "@material-ui/core/DialogTitle";
 import DialogContent from "@material-ui/core/DialogContent";
+import Typography from "@material-ui/core/Typography";
 import CheckoutPage from "../CheckoutPage/";
+import { i18n } from "../../translate/i18n";
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -38,7 +41,7 @@ const useStyles = makeStyles((theme) => ({
 }));
 
 
-const ContactModal = ({ open, onClose, Invoice, contactId, initialValues, onSave }) => {
+const ContactModal = ({ open, onClose, Invoice }) => {
   const classes = useStyles();
   const isMounted = useRef(true);
 
@@ -56,11 +59,18 @@ const ContactModal = ({ open, onClose, Invoice, contactId, initialValues, onSave
 
   return (
     <div className={classes.root}>
-      <Dialog open={open} onClose={handleClose} maxWidth="md" scroll="paper">
+      <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth scroll="paper">
+        <DialogTitle id="financeiro-checkout-pix-title">
+          {i18n.t("checkoutPage.modalTitle")}
+        </DialogTitle>
         <DialogContent dividers>
-          <CheckoutPage
-            Invoice={Invoice}
-          />
+          {Invoice && Invoice.id ? (
+            <CheckoutPage Invoice={Invoice} />
+          ) : (
+            <Typography color="textSecondary" component="p">
+              {i18n.t("checkoutPage.noInvoice")}
+            </Typography>
+          )}
         </DialogContent>
       </Dialog>
     </div>

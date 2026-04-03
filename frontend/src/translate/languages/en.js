@@ -254,80 +254,91 @@ const messages = {
 				action: "Action",
 				PAY: "PAY",
 				PAID: "PAID",
+				searchPlaceholder: "Search by ID or description…",
+				empty: "No invoices found.",
+				emptyHint: "System-generated invoices will appear here.",
+				statusLabels: {
+					paid: "Paid",
+					overdue: "Overdue",
+					open: "Open",
+				},
+			},
+			finance: {
+				banner: {
+					message:
+						"Your company has an overdue payment. Please settle it to keep the service in good standing.",
+					action: "Open Billing",
+				},
+				page: {
+					delinquentAlert:
+						"We have detected a billing issue. The PIX charge always uses the invoice amount below.",
+				},
+				login: {
+					expiringSoon:
+						"Your subscription expires in {{days}} day(s). Consider renewing under Billing.",
+					delinquentWarning:
+						"Warning: there is a pending payment. Open Billing to pay via PIX.",
+				},
 			},
 			checkoutPage: {
+				modalTitle: "PIX payment",
+				noInvoice: "To pay with PIX, open Billing and click Pay on the desired invoice.",
+				pixFlowTitle: "Invoice payment — PIX",
+				pixFlowSubtitle:
+					"The amount charged is always the selected invoice. The backend generates the PIX charge.",
 				steps: {
 					data: "Data",
 					customize: "Customize",
 					review: "Review",
+					plan: "Plan",
+					pixReview: "Review PIX",
 				},
-				success: "Subscription completed successfully! Awaiting payment confirmation",
+				success: "PIX charge created. Scan the QR code or copy the code to pay.",
 				closeToEnd: "Almost there!",
 				BACK: "BACK",
 				PAY: "PAY",
+				PAY_PIX: "GENERATE PIX",
 				NEXT: "NEXT",
+				pix: {
+					invoiceHeading: "Invoice to pay",
+					amountCharged: "Amount (PIX)",
+					dueDate: "Due date",
+					amountFromInvoice:
+						"This amount is the invoice total. It will be sent to the gateway.",
+					totalLabel: "PIX total",
+					waitingHint: "Awaiting payment. Charge expires in about {{minutes}} min.",
+					expiredHint:
+						"This PIX charge may have expired. Close and go to Billing to generate a new one.",
+					paidToast: "Payment confirmed! New date: {{date}}",
+					instructions:
+						"Open your bank app, pay with PIX copy-and-paste or QR code, then wait for automatic confirmation.",
+					copyPix: "Copy PIX code",
+					copied: "Copied",
+					missingQr: "Could not display QR code. Try again.",
+					invoiceRef: "Invoice #{{id}} — {{detail}}",
+					redirecting: "Redirecting…",
+				},
 				review: {
 					title: "Subscription Summary",
+					titlePix: "Confirm PIX payment",
+					confirmPixHint:
+						"Check the invoice amount and your plan. Continuing will create an immediate PIX charge.",
+					pixSectionTitle: "Charge (invoice)",
+					planSectionTitle: "Plan reference",
+					planReferenceOnly:
+						"Plan limits are informational. The actual charge is the invoice amount above.",
+					invoiceId: "Invoice",
+					chargesFromInvoice: "PIX amount:",
+					dueLabel: "Due",
 					details: "Plan Details",
 					users: "Users",
-					whatsapp: "WhatsApp",
-					charges: "Billing: Monthly",
+					whatsapp: "WhatsApp connections",
+					charges: "Billing: monthly (reference)",
 					total: "Total",
 				},
 				form: {
-					firstName: {
-						label: "Full Name*",
-						required: "Full name is required",
-					},
-					lastName: {
-						label: "Last Name*",
-						required: "Last name is required",
-					},
-					address1: {
-						label: "Address*",
-						required: "Address is required",
-					},
-					city: {
-						label: "City*",
-						required: "City is required",
-					},
-					state: {
-						label: "State*",
-						required: "State is required",
-					},
-					zipcode: {
-						label: "ZIP Code*",
-						required: "ZIP code is required",
-						invalid: "Invalid ZIP code format",
-					},
-					country: {
-						label: "Country*",
-						required: "Country is required",
-					},
-					useAddressForPaymentDetails: {
-						label: "Use this address for payment details",
-					},
-					invoiceId: {
-						label: "Use this invoice ID",
-					},
-					nameOnCard: {
-						label: "Name on Card*",
-						required: "Name on card is required",
-					},
-					cardNumber: {
-						label: "Card Number*",
-						required: "Card number is required",
-						invalid: "Invalid card number (ex: 4111111111111)",
-					},
-					expiryDate: {
-						label: "Expiration Date*",
-						required: "Expiration date is required",
-						invalid: "Invalid expiration date"
-					},
-					cvv: {
-						label: "CVV*",
-						required: "CVV is required",
-						invalid: "Invalid CVV (ex: 123)",
+					planField: {
+						label: "Selected plan (reference)",
 					},
 				},
 				pricing: {
@@ -509,9 +520,23 @@ const messages = {
 				},
 				table: {
 					name: "Name",
+					number: "Number",
 					whatsapp: "WhatsApp",
 					email: "Email",
+					tags: "Tags",
+					lastInteraction: "Last interaction",
+					createdAt: "Created",
 					actions: "Actions",
+				},
+				filters: {
+					tag: "Tag",
+					allTags: "All",
+					dateFrom: "Updated from",
+					dateTo: "Updated until",
+				},
+				empty: {
+					title: "No contacts found",
+					subtitle: "Adjust search or filters, or add a new contact.",
 				},
 			},
 			contactImportModal: {
@@ -641,15 +666,28 @@ const messages = {
 					add: "Add Contact",
 					edit: "Edit Contact",
 				},
+				summary: {
+					title: "Summary",
+					tickets: "Tickets",
+					lastInteraction: "Last interaction",
+					lastMessage: "Last message",
+				},
 				form: {
 					mainInfo: "Contact Information",
 					extraInfo: "Additional Information",
 					name: "Name",
 					number: "WhatsApp Number",
 					email: "Email",
+					notes: "Notes",
+					tags: "Tags",
+					addTag: "Add tag",
 					extraName: "Field Name",
 					extraValue: "Value",
 					whatsapp: "Source Connection: ",
+				},
+				tags: {
+					added: "Tag added",
+					removed: "Tag removed",
 				},
 				formErrors: {
 					name: {
@@ -658,6 +696,7 @@ const messages = {
 						long: "Name is too long",
 					},
 					phone: {
+						required: "Number is required",
 						short: "Number is too short",
 						long: "Number is too long",
 					},
@@ -678,6 +717,8 @@ const messages = {
 					add: "Add Queue",
 					edit: "Edit Queue",
 				},
+				preview: "Preview",
+				previewPlaceholder: "Queue name",
 				form: {
 					name: "Name",
 					nameShort: "Short name",
@@ -718,10 +759,15 @@ const messages = {
 					email: "Email",
 					password: "Password",
 					profile: "Profile",
+					profileSupervisor: "Supervisor",
+					passwordOptionalEdit: "Leave blank to keep the current password.",
 					whatsapp: "Default Connection",
 					allTicket: "Queueless Ticket [Invisible]",
 					allTicketEnabled: "Enabled",
 					allTicketDesabled: "Disabled",
+				},
+				hints: {
+					passwordCreate: "Use a password with at least 5 characters.",
 				},
 				formErrors: {
 					name: {
@@ -730,6 +776,7 @@ const messages = {
 						long: "Name is too long",
 					},
 					password: {
+						required: "Password is required",
 						short: "Password is too short",
 						long: "Password is too long",
 					},
@@ -758,6 +805,10 @@ const messages = {
 					contact: "Contact",
 					sendAt: "Schedule Date",
 					sentAt: "Send Date",
+					preferredWhatsapp: "Preferred connection (optional)",
+					preferredWhatsappHint:
+						"Leave blank to send via any active company connection.",
+					automaticConnection: "Automatic (any active connection)",
 				},
 				buttons: {
 					okAdd: "Add",
@@ -768,12 +819,19 @@ const messages = {
 			},
 			tagModal: {
 				title: {
-					add: "New Tag",
-					edit: "Edit Tag",
+					add: "New tag",
+					edit: "Edit tag",
 				},
+				preview: "Preview",
+				previewPlaceholder: "Tag name",
 				form: {
 					name: "Name",
-					color: "Color",
+					color: "Color (hex)",
+				},
+				formErrors: {
+					nameRequired: "Name is required",
+					nameShort: "Name is too short (min. 2 characters)",
+					nameLong: "Name is too long",
 				},
 				buttons: {
 					okAdd: "Add",
@@ -917,7 +975,7 @@ const messages = {
 					users: "Users",
 					settings: "Settings",
 					helps: "Help",
-					messagesAPI: "API",
+					messagesAPI: "WhatsApp API",
 					schedules: "Schedules",
 					campaigns: "Campaigns",
 					flows: "Flows",
@@ -991,43 +1049,101 @@ const messages = {
 				},
 			},
 			messagesAPI: {
-				title: "API",
-				labels: {
-					doc: "Documentation for sending messages",
-					method: "Sending Methods",
-					textMessage: "Text Message",
-					mediaMessage: "Media Message",
-					instructions: "Instructions",
-					observations: "Important notes",
-					before1: "Before sending messages, you need to register the token linked to the connection that will send the messages.",
-					before2: "To register, access the 'Connections' menu, click the edit button of the connection and enter the token in the appropriate field.",
-					numberDescription: "The sending number should not have masks or special characters and must be composed of:",
-					countryCode: "Country Code",
-					number: "Number",
-					textMessage2: "1. Text Messages",
-					textMessageInstructions: "Below is the list of information needed to send text messages:",
-					method2: "Method",
-					e: "and",
-					tests: "Send Test",
-					mediaMessage2: "2. Media Messages",
+				title: "WhatsApp sending API",
+				subtitle:
+					"Send messages from external systems over HTTP using the token of the selected WhatsApp connection.",
+				copySuccess: "URL copied to clipboard.",
+				sections: {
+					overview: "Overview",
+					token: "How to get the token",
+					endpoint: "Endpoint and authentication",
+					requestBodies: "Request formats",
+					responses: "HTTP responses",
+					testText: "Test text message",
+					testMedia: "Test media message",
+				},
+				overviewP1:
+					"This page documents the WhatsApp outbound message API. Each token belongs to a single connection (line / number) in your company.",
+				overviewP2:
+					"The token is not created here: open Connections, edit the desired connection, and generate or copy the token. That secret identifies which connection will send messages.",
+				tokenSteps:
+					"Open Connections, pick the connection that should send messages, edit it, and generate the token. Store it securely — anyone with the token can send messages through that connection.",
+				openConnections: "Go to Connections",
+				endpointUrlLabel: "Endpoint URL",
+				endpointUrlHelp:
+					"Use this exact URL in integrations (server, Postman, or scripts).",
+				methodLabel: "HTTP method",
+				authTitle: "Required header",
+				authLine: "Authorization: Bearer <token>",
+				authHelp:
+					"Replace <token> with the value generated in Connections for the chosen connection.",
+				contentTypeJson: "Content-Type: application/json (text only)",
+				contentTypeMultipart:
+					"Content-Type: multipart/form-data (file upload)",
+				jsonBodyTitle: "JSON body (text)",
+				jsonBodyExample:
+					'{ "number": "5511999999999", "body": "Your message here" }',
+				multipartBodyTitle: "Multipart (media)",
+				multipartFields:
+					"Fields: number (text), medias (file). Optional body may be used as caption depending on the backend.",
+				numberFormatTitle: "Number format",
+				numberFormatText:
+					"Digits only, with country code and area code, no spaces or symbols. Example: 5511999999999.",
+				responsesIntro: "Common responses from this API:",
+				responses: {
+					r200: "200 — Request processed successfully (body may include a confirmation message).",
+					r401:
+						"401 — Invalid or missing token (ERR_INVALID_API_TOKEN).",
+					r403:
+						"403 — Plan does not allow external API (ERR_EXTERNAL_API_NOT_ALLOWED).",
+					r429: "429 — Rate limit exceeded (ERR_RATE_LIMIT_EXCEEDED).",
+					r400:
+						"400 — Validation or send error (e.g. ERR_MESSAGE_SEND_FAILED with optional message).",
 				},
 				textMessage: {
-					number: "Number",
-					body: "Message",
-					token: "Registered Token",
+					number: "Recipient number",
+					body: "Message text",
+					token: "Connection token (Bearer)",
+					tokenPlaceholder: "Paste the token from Connections",
+					tokenHelper:
+						"Each token maps to one WhatsApp connection. Do not share it publicly.",
+					numberPlaceholder: "5511999999999",
+					numberHelper:
+						"Digits only, with country and area code, no mask.",
 				},
 				mediaMessage: {
-					number: "Number",
+					number: "Recipient number",
 					body: "File name",
 					media: "File",
-					token: "Registered Token",
+					token: "Connection token (Bearer)",
+					tokenPlaceholder: "Paste the token from Connections",
+					tokenHelper:
+						"The same token as for text, for the connection that will send the file.",
+					numberPlaceholder: "5511999999999",
+					numberHelper:
+						"Digits only, with country and area code, no mask.",
+					chooseFile: "Choose file",
+					noFile: "No file selected",
+					fileRequired: "Select a file to send.",
+				},
+				test: {
+					endpointReadonly: "Endpoint (read-only)",
+					textIntro:
+						"Fill in the connection token, number, and message. The request is sent as JSON to the same endpoint documented above.",
+					mediaIntro:
+						"Use the same endpoint with multipart: number, file in medias, and token in the header.",
+					noResultYet: "No test run yet. The result will appear here.",
+					resultOk: "Success — HTTP {{status}}",
+					resultErr: "Request failed",
+					resultErrStatus: "Failed — HTTP {{status}}",
 				},
 				toasts: {
-					unauthorized: "This company doesn't have permission to access this page! We are redirecting you.",
+					unauthorized:
+						"This company is not allowed to access this page. Redirecting…",
 					success: "Message sent successfully!",
 				},
 				buttons: {
-					send: "Send",
+					send: "Send test",
 				},
 			},
 			notifications: {
@@ -1036,26 +1152,46 @@ const messages = {
 			},
 			quickMessages: {
 				title: "Quick Responses",
-				searchPlaceholder: "Search...",
+				searchPlaceholder: "Search by shortcut or message text…",
 				noAttachment: "No attachment",
+				empty: {
+					title: "No quick responses found",
+					subtitle: "Adjust your search or create a shortcut for use with / in the chat.",
+				},
 				confirmationModal: {
 					deleteTitle: "Delete",
-					deleteMessage: "This action is irreversible! Do you want to proceed?",
+					deleteMessage:
+						"The chat list will refresh. This action cannot be undone.",
+				},
+				validation: {
+					shortcodeRequired: "Enter a shortcut",
+					shortcodeMin: "At least 2 characters",
+					shortcodeMax: "At most 80 characters",
+					messageRequired: "Enter a message",
+					messageMax: "Message is too long",
+					categoryMax: "At most 120 characters",
 				},
 				buttons: {
 					add: "Add",
 					attach: "Attach File",
 					cancel: "Cancel",
 					edit: "Edit",
+					delete: "Delete",
 				},
 				toasts: {
-					success: "Shortcut added successfully!",
-					deleted: "Shortcut removed successfully!",
+					success: "Quick response saved!",
+					deleted: "Quick response deleted.",
+					deletedMedia: "Attachment removed.",
 				},
 				dialog: {
 					title: "Quick Message",
 					shortcode: "Shortcut",
+					shortcodeHint: "e.g. hi (use in chat: /hi)",
+					shortcodeHelper: "Lowercased; avoid spaces inside the shortcut.",
+					category: "Group / label (optional)",
 					message: "Response",
+					previewLabel: "Preview",
+					previewEmpty: "(nothing typed)",
 					save: "Save",
 					cancel: "Cancel",
 					geral: "Allow edit",
@@ -1065,9 +1201,14 @@ const messages = {
 				},
 				table: {
 					shortcode: "Shortcut",
+					category: "Group",
+					messagePreview: "Message preview",
 					message: "Message",
 					actions: "Actions",
 					mediaName: "File Name",
+					attachment: "Attachment",
+					createdAt: "Created",
+					updatedAt: "Updated",
 					status: "Status",
 				},
 			},
@@ -1202,6 +1343,10 @@ const messages = {
 					whatsapp: "Connection",
 					contactList: "Contact List",
 					status: "Status",
+					progress: "Progress",
+					progressLine: "{{pct}}% done ({{sent}}/{{total}})",
+					failedLine: "Failed: {{failed}}",
+					retryFailed: "Retry failed",
 					scheduledAt: "Schedule",
 					completedAt: "Completed",
 					confirmation: "Confirmation",
@@ -1216,6 +1361,44 @@ const messages = {
 					new: "New Campaign",
 					update: "Edit Campaign",
 					readonly: "View Only",
+					contactStats: {
+						title: "Campaign audience",
+						loading: "Counting contacts…",
+						tagOnlyHint:
+							"The list will be built on save based on the selected tag.",
+						line: "Total: {{total}} · Valid (WhatsApp): {{valid}} · Invalid: {{invalid}}",
+					},
+					preview: {
+						title: "Preview (sample)",
+						mockLine:
+							"Sample: Name: João · Number: 5511999999999 · variables {nome}, {numero}, {email}",
+						empty: "(no text in this message)",
+					},
+					confirmSend: {
+						title: "Confirm send",
+						messageWithCount:
+							"You are about to send a campaign to {{count}} valid contacts.",
+						tagOnly:
+							"The list will be generated on save. Continue?",
+						generic: "Save this campaign?",
+						confirm: "Confirm send",
+					},
+					confirmRestart: {
+						title: "Restart sends",
+						message:
+							"The campaign will resume. Already sent contacts will not be sent again. Continue?",
+						confirm: "Confirm",
+					},
+					confirmRetryFailed: {
+						title: "Retry failed sends",
+						message:
+							"Only failed contacts will be retried. Already delivered contacts will not be affected.",
+						confirm: "Retry",
+					},
+					opsSummary: {
+						title: "Send status",
+						line: "Valid (target): {{total}} · Sent: {{sent}} · Pending: {{pending}} · Failed: {{failed}}",
+					},
 					form: {
 						name: "Name",
 						nameShort: "Short name",
@@ -1255,6 +1438,7 @@ const messages = {
 					success: "Operation completed successfully",
 					cancel: "Campaign canceled",
 					restart: "Campaign restarted",
+					retryFailed: "Failed sends queued for retry",
 					deleted: "Record deleted",
 				},
 			},
@@ -1323,13 +1507,17 @@ const messages = {
 			},
 			queues: {
 				title: "Queues & Chatbot",
+				searchPlaceholder: "Search queues...",
 				table: {
 					id: "ID",
-					name: "Name",
+					name: "Queue",
 					color: "Color",
+					tickets: "Tickets",
+					users: "Users",
 					greeting: "Greeting message",
 					actions: "Actions",
-					orderQueue: "Queue order (bot)",
+					orderQueue: "Order (bot)",
+					createdAt: "Created",
 				},
 				buttons: {
 					add: "Add queue",
@@ -1339,7 +1527,13 @@ const messages = {
 				},
 				confirmationModal: {
 					deleteTitle: "Delete",
-					deleteMessage: "Are you sure? This action cannot be undone! Services in this queue will continue to exist but won't have any queue assigned.",
+					deleteMessage: "Are you sure? This action cannot be undone if the system allows deletion.",
+					deleteWarningInUse:
+						"This queue is linked to {{tickets}} ticket(s) and {{users}} user(s). If deletion fails, remove links (connections, bot options and users from the queue).",
+				},
+				empty: {
+					title: "No queues found",
+					subtitle: "Adjust your search or add a new queue.",
 				},
 			},
 			queueSelect: {
@@ -1347,22 +1541,45 @@ const messages = {
 			},
 			users: {
 				title: "Users",
+				searchPlaceholder: "Search by name or email…",
 				table: {
 					id: "ID",
 					name: "Name",
 					email: "Email",
 					profile: "Profile",
+					queues: "Queues",
+					online: "Status",
+					tickets: "Tickets",
+					createdAt: "Registered",
 					actions: "Actions",
+				},
+				profileLabels: {
+					admin: "Administrator",
+					user: "User",
+					supervisor: "Supervisor",
+				},
+				online: {
+					yes: "Online",
+					no: "Offline",
+				},
+				empty: {
+					title: "No users found",
+					subtitle: "Adjust your search or add a new user.",
 				},
 				buttons: {
 					add: "Add user",
+					edit: "Edit",
+					delete: "Delete",
 				},
 				toasts: {
 					deleted: "User deleted successfully.",
 				},
 				confirmationModal: {
 					deleteTitle: "Delete",
-					deleteMessage: "All user data will be lost. Open services for this user will be moved to the queue.",
+					deleteMessage:
+						"This removes the user and queue links. Deletion is blocked if there are assigned tickets — transfer them first.",
+					deleteWarningTickets:
+						"This user has {{count}} assigned ticket(s). Deletion will be blocked until tickets are transferred.",
 				},
 			},
 			todolist: {
@@ -1395,6 +1612,14 @@ const messages = {
 			},
 			schedules: {
 				title: "Schedules",
+				statusLabels: {
+					PENDENTE: "Pending",
+					AGENDADA: "Queued",
+					ENVIADA: "Sent",
+					ERRO: "Error",
+					AGUARDANDO_CONEXAO: "Waiting for connection",
+				},
+				preferredShort: "Preferred",
 				confirmationModal: {
 					deleteTitle: "Are you sure you want to delete this Schedule?",
 					deleteMessage: "This action cannot be undone.",
@@ -1434,25 +1659,34 @@ const messages = {
 			},
 			tags: {
 				title: "Tags",
+				searchPlaceholder: "Search tags...",
 				confirmationModal: {
-					deleteTitle: "Are you sure you want to delete this Tag?",
+					deleteTitle: "Delete this tag?",
 					deleteMessage: "This action cannot be undone.",
+					deleteWarningInUse:
+						"This tag is linked to {{count}} ticket(s). Campaigns may also reference it. If deletion fails, remove links first.",
 					deleteAllMessage: "Are you sure you want to delete all Tags?",
 					deleteAllTitle: "Delete All",
 				},
 				table: {
-					name: "Name",
+					name: "Tag",
 					color: "Color",
-					tickets: "Tagged Records",
+					usage: "Usage",
+					tickets: "Usage (tickets)",
+					createdAt: "Created",
 					actions: "Actions",
 				},
 				buttons: {
-					add: "New Tag",
+					add: "New tag",
 					deleteAll: "Delete All",
 				},
 				toasts: {
 					deletedAll: "All Tags deleted successfully!",
 					deleted: "Tag deleted successfully.",
+				},
+				empty: {
+					title: "No tags found",
+					subtitle: "Create a tag or adjust your search.",
 				},
 			},
 			settings: {
@@ -1726,6 +1960,34 @@ const messages = {
 				ERR_FETCH_WAPP_MSG: "Error fetching WhatsApp message, it might be too old.",
 				ERR_QUEUE_COLOR_ALREADY_EXISTS: "This color is already in use, choose another.",
 				ERR_WAPP_GREETING_REQUIRED: "Greeting message is required when there is more than one queue.",
+				ERR_CAMPAIGN_NOT_FOUND: "Campaign not found.",
+				ERR_CAMPAIGN_INVALID_STATUS:
+					"This action is not allowed for the current campaign status.",
+				ERR_CAMPAIGN_EMPTY_LIST: "Select a contact list or a tag.",
+				ERR_CAMPAIGN_NO_VALID_CONTACTS:
+					"There are no valid contacts to send in this list.",
+				ERR_CAMPAIGN_TAG_REQUIRED: "A tag is required for the estimate.",
+				ERR_CAMPAIGN_NO_FAILED_TO_RETRY:
+					"There are no failed sends to retry for this campaign.",
+				ERR_INVALID_API_TOKEN:
+					"Invalid or missing API token. Check the Authorization: Bearer header.",
+				ERR_EXTERNAL_API_NOT_ALLOWED:
+					"Your company plan does not allow the external API. Upgrade the plan or contact support.",
+				ERR_RATE_LIMIT_EXCEEDED:
+					"Per-minute request limit exceeded. Wait and try again.",
+				ERR_MESSAGE_SEND_FAILED:
+					"The message could not be sent.",
+				ERR_INVOICE_NOT_FOUND: "Invoice not found.",
+				ERR_FORBIDDEN_INVOICE: "This invoice does not belong to your company.",
+				ERR_INVOICE_ALREADY_PAID: "This invoice is already paid.",
+				ERR_SUBSCRIPTION_VALIDATION: "Invalid data to generate PIX. Try again.",
+				ERR_SUBSCRIPTION_PIX_CREATE:
+					"Could not create PIX charge. Try again or contact support.",
+				ERR_SUBSCRIPTION_WEBHOOK_CONFIG_VALIDATION: "Invalid webhook configuration data.",
+				ERR_WEBHOOK_UNAUTHORIZED: "Webhook not authorized (invalid token).",
+				ERR_COMPANY_DELINQUENT:
+					"Payment overdue: this action is paused until you settle in Billing (PIX).",
+				ERR_NO_COMPANY_FOUND: "Company not found.",
 			},
 		}
 	},

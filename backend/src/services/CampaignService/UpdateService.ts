@@ -23,17 +23,16 @@ interface Data {
 const UpdateService = async (data: Data, companyId: number): Promise<Campaign> => {
   const { id } = data;
 
-  const record = await Campaign.findByPk(id);
+  const record = await Campaign.findOne({
+    where: { id, companyId }
+  });
 
   if (!record) {
-    throw new AppError("ERR_NO_CAMPAIGN_FOUND", 404);
+    throw new AppError("ERR_CAMPAIGN_NOT_FOUND", 404);
   }
 
   if (["INATIVA", "PROGRAMADA", "CANCELADA"].indexOf(data.status) === -1) {
-    throw new AppError(
-      "Só é permitido alterar campanha Inativa e Programada",
-      400
-    );
+    throw new AppError("ERR_CAMPAIGN_INVALID_STATUS", 400);
   }
 
   if (
@@ -74,7 +73,7 @@ const UpdateService = async (data: Data, companyId: number): Promise<Campaign> =
     }
   }
 
-  await record.update(data);
+  await record.update({ ...data, companyId });
 
   await record.reload({
     include: [

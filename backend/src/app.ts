@@ -44,7 +44,10 @@ app.use(async (err: Error, req: Request, res: Response, _: NextFunction) => {
 
   if (err instanceof AppError) {
     logger.warn(err);
-    return res.status(err.statusCode).json({ error: err.message });
+    return res.status(err.statusCode).json({
+      error: err.message,
+      ...(err.clientMessage ? { message: err.clientMessage } : {})
+    });
   }
 
   logger.error(err);

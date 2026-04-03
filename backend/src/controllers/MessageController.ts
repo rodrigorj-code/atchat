@@ -224,13 +224,26 @@ export const send = async (req: Request, res: Response): Promise<Response> => {
 
     return res.send({ mensagem: "Mensagem enviada" });
   } catch (err: any) {
-    if (Object.keys(err).length === 0) {
+    if (err instanceof AppError) {
+      throw err;
+    }
+    const emptyObj =
+      err &&
+      typeof err === "object" &&
+      !Array.isArray(err) &&
+      Object.keys(err).length === 0;
+    if (emptyObj) {
       throw new AppError(
+        "ERR_MESSAGE_SEND_FAILED",
+        400,
         "Não foi possível enviar a mensagem, tente novamente em alguns instantes"
       );
-    } else {
-      throw new AppError(err.message);
     }
+    const detail =
+      err?.message && typeof err.message === "string"
+        ? err.message
+        : undefined;
+    throw new AppError("ERR_MESSAGE_SEND_FAILED", 400, detail);
   }
 };
 

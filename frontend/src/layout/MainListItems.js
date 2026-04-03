@@ -658,7 +658,10 @@ const MainListItems = (props) => {
                     <ListItemIcon className={classes.listItemIcon}>
                       <CodeRoundedIcon />
                     </ListItemIcon>
-                    <ListItemText primary="API" className={classes.listItemText} />
+                    <ListItemText
+                      primary={i18n.t("mainDrawer.listItems.messagesAPI")}
+                      className={classes.listItemText}
+                    />
                   </ListItem>
                 )}
 

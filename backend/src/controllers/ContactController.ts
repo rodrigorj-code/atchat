@@ -8,6 +8,10 @@ import ShowContactService from "../services/ContactServices/ShowContactService";
 import UpdateContactService from "../services/ContactServices/UpdateContactService";
 import DeleteContactService from "../services/ContactServices/DeleteContactService";
 import GetContactService from "../services/ContactServices/GetContactService";
+import ContactSummaryService from "../services/ContactServices/ContactSummaryService";
+import AddTagToContactService from "../services/ContactServices/AddTagToContactService";
+import RemoveTagFromContactService from "../services/ContactServices/RemoveTagFromContactService";
+import Contact from "../models/Contact";
 
 import CheckContactNumber from "../services/WbotServices/CheckNumber";
 import CheckIsValidContact from "../services/WbotServices/CheckIsValidContact";
@@ -23,6 +27,9 @@ import ToggleDisableBotContactService from "../services/ContactServices/ToggleDi
 type IndexQuery = {
   searchParam: string;
   pageNumber: string;
+  tagId?: string;
+  dateFrom?: string;
+  dateTo?: string;
 };
 
 type IndexGetContactQuery = {
@@ -38,17 +45,22 @@ interface ContactData {
   name: string;
   number: string;
   email?: string;
+  notes?: string | null;
   extraInfo?: ExtraInfo[];
 }
 
 export const index = async (req: Request, res: Response): Promise<Response> => {
-  const { searchParam, pageNumber } = req.query as IndexQuery;
+  const { searchParam, pageNumber, tagId, dateFrom, dateTo } =
+    req.query as IndexQuery;
   const { companyId } = req.user;
 
   const { contacts, count, hasMore } = await ListContactsService({
     searchParam,
     pageNumber,
-    companyId
+    companyId,
+    tagId,
+    dateFrom,
+    dateTo
   });
 
   return res.json({ contacts, count, hasMore });
@@ -128,40 +140,116 @@ export const show = async (req: Request, res: Response): Promise<Response> => {
   return res.status(200).json(contact);
 };
 
+export const summary = async (
+  req: Request,
+  res: Response
+): Promise<Response> => {
+  const { contactId } = req.params;
+  const { companyId } = req.user;
+
+  const data = await ContactSummaryService(Number(contactId), companyId);
+
+  return res.status(200).json(data);
+};
+
+export const addTag = async (
+  req: Request,
+  res: Response
+): Promise<Response> => {
+  const { contactId } = req.params;
+  const { tagId } = req.body as { tagId?: number };
+  const { companyId } = req.user;
+
+  if (tagId === undefined || tagId === null) {
+    throw new AppError("tagId é obrigatório", 400);
+  }
+
+  await AddTagToContactService({
+    contactId: Number(contactId),
+    tagId: Number(tagId),
+    companyId
+  });
+
+  return res.status(201).json({ ok: true });
+};
+
+export const removeTag = async (
+  req: Request,
+  res: Response
+): Promise<Response> => {
+  const { contactId, tagId } = req.params;
+  const { companyId } = req.user;
+
+  await RemoveTagFromContactService({
+    contactId: Number(contactId),
+    tagId: Number(tagId),
+    companyId
+  });
+
+  return res.status(200).json({ ok: true });
+};
+
 export const update = async (
   req: Request,
   res: Response
 ): Promise<Response> => {
   const contactData: ContactData = req.body;
   const { companyId } = req.user;
+  const { contactId } = req.params;
 
-  contactData.number = contactData.number.replace(/\D/g, '');
+  const normalizedIncoming = contactData.number
+    ? contactData.number.replace(/\D/g, "")
+    : "";
 
   const schema = Yup.object().shape({
     name: Yup.string(),
     number: Yup.string().matches(
       /^\d+$/,
       "Invalid number format. Only numbers is allowed."
-    )
+    ),
+    notes: Yup.string().nullable()
   });
 
+  const existing = await Contact.findOne({
+    where: { id: contactId, companyId },
+    attributes: ["id", "number", "companyId"]
+  });
+
+  if (!existing) {
+    throw new AppError("ERR_NO_CONTACT_FOUND", 404);
+  }
+
+  const payloadForValidation = {
+    ...contactData,
+    number: normalizedIncoming || existing.number.replace(/\D/g, "")
+  };
+
   try {
-    await schema.validate(contactData);
+    await schema.validate(payloadForValidation);
   } catch (err: any) {
     throw new AppError(err.message);
   }
 
-  contactData.number = contactData.number.replace(/\D/g, "");
+  const normalizedExisting = existing.number.replace(/\D/g, "");
+  const normalizedNew = (normalizedIncoming || normalizedExisting).replace(
+    /\D/g,
+    ""
+  );
 
-  await CheckIsValidContact(contactData.number, companyId);
-  const validNumber = await CheckContactNumber(contactData.number, companyId);
-  const number = validNumber.jid.replace(/\D/g, "");
-  contactData.number = number;
+  let finalNumber = normalizedNew;
 
-  const { contactId } = req.params;
+  if (normalizedNew !== normalizedExisting) {
+    await CheckIsValidContact(normalizedNew, companyId);
+    const validNumber = await CheckContactNumber(normalizedNew, companyId);
+    finalNumber = validNumber.jid.replace(/\D/g, "");
+  }
 
   const contact = await UpdateContactService({
-    contactData,
+    contactData: {
+      ...contactData,
+      number: finalNumber,
+      notes: contactData.notes
+    },
     contactId,
     companyId
   });

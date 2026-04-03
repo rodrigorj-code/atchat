@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext, useRef } from "react";
+import React, { useState, useEffect, useContext, useRef, useCallback } from "react";
 import withWidth, { isWidthUp } from "@material-ui/core/withWidth";
 import "emoji-mart/css/emoji-mart.css";
 import { Picker } from "emoji-mart";
@@ -36,6 +36,7 @@ import { useLocalStorage } from "../../hooks/useLocalStorage";
 import toastError from "../../errors/toastError";
 
 import useQuickMessages from "../../hooks/useQuickMessages";
+import { SocketContext } from "../../context/Socket/SocketContext";
 
 const Mp3Recorder = new MicRecorder({ bitRate: 128 });
 
@@ -354,46 +355,68 @@ const CustomInput = (props) => {
   const { user } = useContext(AuthContext);
 
   const { list: listQuickMessages } = useQuickMessages();
+  const socketManager = useContext(SocketContext);
+
+  const loadQuickMessageOptions = useCallback(async () => {
+    const companyId = localStorage.getItem("companyId");
+    if (!companyId || !user?.id) return;
+    const messages = await listQuickMessages({ companyId, userId: user.id });
+    const options = (Array.isArray(messages) ? messages : []).map((m) => {
+      let truncatedMessage = m.message;
+      if (isString(truncatedMessage) && truncatedMessage.length > 48) {
+        truncatedMessage = m.message.substring(0, 48) + "...";
+      }
+      const cat = m.category ? ` · ${m.category}` : "";
+      return {
+        value: m.message,
+        label: `/${m.shortcode} - ${truncatedMessage}${cat}`,
+        shortcode: m.shortcode,
+        mediaPath: m.mediaPath,
+      };
+    });
+    setQuickMessages(options);
+  }, [listQuickMessages, user?.id]);
 
   useEffect(() => {
-    async function fetchData() {
-      const companyId = localStorage.getItem("companyId");
-      const messages = await listQuickMessages({ companyId, userId: user.id });
-      const options = (Array.isArray(messages) ? messages : []).map((m) => {
-        let truncatedMessage = m.message;
-        if (isString(truncatedMessage) && truncatedMessage.length > 35) {
-          truncatedMessage = m.message.substring(0, 35) + "...";
-        }
-        return {
-          value: m.message,
-          label: `/${m.shortcode} - ${truncatedMessage}`,
-          mediaPath: m.mediaPath,
-        };
-      });
-      setQuickMessages(options);
-    }
-    fetchData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    loadQuickMessageOptions();
+  }, [loadQuickMessageOptions]);
+
+  useEffect(() => {
+    const companyId = localStorage.getItem("companyId");
+    if (!companyId || !user?.id) return;
+    const socket = socketManager.getSocket(companyId);
+    const onQm = () => {
+      loadQuickMessageOptions();
+    };
+    socket.on(`company-${companyId}-quickmessage`, onQm);
+    return () => {
+      socket.off(`company-${companyId}-quickmessage`, onQm);
+    };
+  }, [socketManager, user?.id, loadQuickMessageOptions]);
 
   useEffect(() => {
     if (
       isString(inputMessage) &&
       !isEmpty(inputMessage) &&
-      inputMessage.length > 1
+      inputMessage.startsWith("/")
     ) {
-      const firstWord = inputMessage.charAt(0);
-      setPopupOpen(firstWord.indexOf("/") > -1);
-
-      const filteredOptions = (quickMessages || []).filter(
-        (m) => m.label && m.label.indexOf(inputMessage) > -1
-      );
+      setPopupOpen(true);
+      const needle = inputMessage.toLowerCase();
+      const scNeedle = needle.replace(/^\//, "");
+      const filteredOptions = (quickMessages || [])
+        .filter((m) => {
+          if (!m.label) return false;
+          const lbl = m.label.toLowerCase();
+          const sc = (m.shortcode && String(m.shortcode).toLowerCase()) || "";
+          return lbl.includes(needle) || (sc && sc.includes(scNeedle));
+        })
+        .slice(0, 50);
       setOptions(filteredOptions);
     } else {
       setPopupOpen(false);
+      setOptions([]);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [inputMessage]);
+  }, [inputMessage, quickMessages]);
 
   const onKeyPress = (e) => {
     if (loading || e.shiftKey) return;

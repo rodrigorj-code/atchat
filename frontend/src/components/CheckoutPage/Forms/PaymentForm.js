@@ -7,6 +7,7 @@ import CardHeader from '@material-ui/core/CardHeader';
 import Grid from '@material-ui/core/Grid';
 import StarIcon from '@material-ui/icons/StarBorder';
 import Typography from '@material-ui/core/Typography';
+import Paper from '@material-ui/core/Paper';
 import { makeStyles } from '@material-ui/core/styles';
 
 import IconButton from '@material-ui/core/IconButton';
@@ -16,6 +17,7 @@ import AddIcon from '@material-ui/icons/Add';
 import usePlans from "../../../hooks/usePlans";
 import useCompanies from "../../../hooks/useCompanies";
 import { i18n } from '../../../translate/i18n';
+import moment from 'moment';
 
 const useStyles = makeStyles((theme) => ({
   '@global': {
@@ -70,6 +72,7 @@ export default function Pricing(props) {
     setFieldValue,
     setActiveStep,
     activeStep,
+    invoice,
   } = props;
 
   const handleChangeAdd = (event, newValue) => {
@@ -169,9 +172,41 @@ export default function Pricing(props) {
   };
 
 
-  const tiers = storagePlans
+  const tiers = storagePlans;
+
+  const invoiceAmount =
+    invoice != null
+      ? Number(invoice.value).toLocaleString("pt-BR", {
+          style: "currency",
+          currency: "BRL",
+        })
+      : "";
+
   return (
     <React.Fragment>
+      {invoice && (
+        <Paper
+          variant="outlined"
+          style={{ padding: 16, marginBottom: 24, width: "100%" }}
+        >
+          <Typography variant="subtitle1" color="primary" gutterBottom>
+            {i18n.t("checkoutPage.pix.invoiceHeading")}
+          </Typography>
+          <Typography variant="body2" color="textSecondary" gutterBottom>
+            #{invoice.id} — {invoice.detail}
+          </Typography>
+          <Typography variant="h6" style={{ fontWeight: 700 }}>
+            {i18n.t("checkoutPage.pix.amountCharged")}: {invoiceAmount}
+          </Typography>
+          <Typography variant="caption" color="textSecondary" display="block">
+            {i18n.t("checkoutPage.pix.dueDate")}:{" "}
+            {moment(invoice.dueDate).format("DD/MM/YYYY")}
+          </Typography>
+          <Typography variant="body2" style={{ marginTop: 12 }}>
+            {i18n.t("checkoutPage.pix.amountFromInvoice")}
+          </Typography>
+        </Paper>
+      )}
       <Grid container spacing={3}>
         {tiers.map((tier) => (
           // Enterprise card is full width at sm breakpoint

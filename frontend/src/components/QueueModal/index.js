@@ -13,6 +13,9 @@ import DialogActions from "@material-ui/core/DialogActions";
 import DialogContent from "@material-ui/core/DialogContent";
 import DialogTitle from "@material-ui/core/DialogTitle";
 import CircularProgress from "@material-ui/core/CircularProgress";
+import Chip from "@material-ui/core/Chip";
+import Box from "@material-ui/core/Box";
+import Typography from "@material-ui/core/Typography";
 
 import { i18n } from "../../translate/i18n";
 
@@ -65,7 +68,26 @@ const useStyles = makeStyles((theme) => ({
     width: 20,
     height: 20,
   },
+  previewBox: {
+    padding: theme.spacing(2),
+    marginBottom: theme.spacing(2),
+    borderRadius: theme.shape.borderRadius,
+    backgroundColor: theme.palette.background.default,
+    border: `1px solid ${theme.palette.divider}`,
+  },
 }));
+
+const chipTextColor = (hex) => {
+  if (!hex || typeof hex !== "string") return "#fff";
+  const h = hex.replace("#", "").slice(0, 6);
+  if (h.length !== 6) return "#fff";
+  const r = parseInt(h.substr(0, 2), 16);
+  const g = parseInt(h.substr(2, 2), 16);
+  const b = parseInt(h.substr(4, 2), 16);
+  if (Number.isNaN(r + g + b)) return "#fff";
+  const yiq = (r * 299 + g * 587 + b * 114) / 1000;
+  return yiq >= 186 ? "#111" : "#fff";
+};
 
 const QueueSchema = Yup.object().shape({
   name: Yup.string()
@@ -79,12 +101,14 @@ const QueueSchema = Yup.object().shape({
   greetingMessage: Yup.string(),
 });
 
-const QueueModal = ({ open, onClose, queueId }) => {
+const DEFAULT_QUEUE_COLOR = "#2196F3";
+
+const QueueModal = ({ open, onClose, queueId, reload }) => {
   const classes = useStyles();
 
   const initialState = {
     name: "",
-    color: "",
+    color: DEFAULT_QUEUE_COLOR,
     greetingMessage: "",
     outOfHoursMessage: "",
     orderQueue: "",
@@ -230,6 +254,9 @@ const QueueModal = ({ open, onClose, queueId }) => {
         });
       }
       toast.success(i18n.t("queueModal.toasts.success"));
+      if (typeof reload === "function") {
+        reload();
+      }
       handleClose();
     } catch (err) {
       toastError(err);
@@ -286,6 +313,31 @@ const QueueModal = ({ open, onClose, queueId }) => {
               {({ touched, errors, isSubmitting, values }) => (
                 <Form>
                   <DialogContent dividers>
+                    <Box className={classes.previewBox}>
+                      <Typography
+                        variant="caption"
+                        color="textSecondary"
+                        display="block"
+                        gutterBottom
+                      >
+                        {i18n.t("queueModal.preview")}
+                      </Typography>
+                      <Box mt={1}>
+                        <Chip
+                          label={
+                            values.name ||
+                            i18n.t("queueModal.previewPlaceholder")
+                          }
+                          size="medium"
+                          style={{
+                            backgroundColor: values.color || DEFAULT_QUEUE_COLOR,
+                            color: chipTextColor(values.color || DEFAULT_QUEUE_COLOR),
+                            fontWeight: 600,
+                            maxWidth: "100%",
+                          }}
+                        />
+                      </Box>
+                    </Box>
                     <Field
                       as={TextField}
                       label={i18n.t("queueModal.form.name")}

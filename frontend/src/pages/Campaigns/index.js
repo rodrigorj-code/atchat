@@ -24,6 +24,7 @@ import DescriptionIcon from "@material-ui/icons/Description";
 import TimerOffIcon from "@material-ui/icons/TimerOff";
 import PlayCircleOutlineIcon from "@material-ui/icons/PlayCircleOutline";
 import PauseCircleOutlineIcon from "@material-ui/icons/PauseCircleOutline";
+import ReplayIcon from "@material-ui/icons/Replay";
 
 import MainContainer from "../../components/MainContainer";
 import MainHeader from "../../components/MainHeader";
@@ -35,10 +36,18 @@ import TableRowSkeleton from "../../components/TableRowSkeleton";
 import CampaignModal from "../../components/CampaignModal";
 import ConfirmationModal from "../../components/ConfirmationModal";
 import toastError from "../../errors/toastError";
-import { Grid } from "@material-ui/core";
+import { Grid, Box, LinearProgress } from "@material-ui/core";
 import { isArray } from "lodash";
 import { useDate } from "../../hooks/useDate";
 import { SocketContext } from "../../context/Socket/SocketContext";
+
+const STATUS_STYLES = {
+  INATIVA: { backgroundColor: "#9e9e9e", color: "#fff" },
+  PROGRAMADA: { backgroundColor: "#1976d2", color: "#fff" },
+  EM_ANDAMENTO: { backgroundColor: "#fbc02d", color: "#000" },
+  FINALIZADA: { backgroundColor: "#388e3c", color: "#fff" },
+  CANCELADA: { backgroundColor: "#d32f2f", color: "#fff" },
+};
 
 const reducer = (state, action) => {
   if (action.type === "LOAD_CAMPAIGNS") {
@@ -109,10 +118,33 @@ const Campaigns = () => {
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
   const [searchParam, setSearchParam] = useState("");
   const [campaigns, dispatch] = useReducer(reducer, []);
+  const [progressById, setProgressById] = useState({});
+  const [restartModalOpen, setRestartModalOpen] = useState(false);
+  const [restartTarget, setRestartTarget] = useState(null);
+  const [retryFailedModalOpen, setRetryFailedModalOpen] = useState(false);
+  const [retryFailedTarget, setRetryFailedTarget] = useState(null);
 
   const { datetimeToClient } = useDate();
 
   const socketManager = useContext(SocketContext);
+
+  const fetchProgressForList = async (list) => {
+    if (!list || !list.length) return;
+    const ids = list.map((c) => c.id);
+    try {
+      const { data } = await api.post("/campaigns/progress-batch", { ids });
+      const progress = data.progress || {};
+      setProgressById((prev) => {
+        const next = { ...prev };
+        Object.keys(progress).forEach((k) => {
+          next[+k] = progress[k];
+        });
+        return next;
+      });
+    } catch (err) {
+      toastError(err);
+    }
+  };
 
   useEffect(() => {
     dispatch({ type: "RESET" });
@@ -135,6 +167,20 @@ const Campaigns = () => {
     socket.on(`company-${companyId}-campaign`, (data) => {
       if (data.action === "update" || data.action === "create") {
         dispatch({ type: "UPDATE_CAMPAIGNS", payload: data.record });
+        if (data.record && data.record.id) {
+          api
+            .post("/campaigns/progress-batch", { ids: [data.record.id] })
+            .then(({ data: batch }) => {
+              const p = batch.progress && batch.progress[String(data.record.id)];
+              if (p) {
+                setProgressById((prev) => ({
+                  ...prev,
+                  [data.record.id]: p,
+                }));
+              }
+            })
+            .catch(() => {});
+        }
       }
       if (data.action === "delete") {
         dispatch({ type: "DELETE_CAMPAIGN", payload: +data.id });
@@ -144,6 +190,29 @@ const Campaigns = () => {
       socket.disconnect();
     };
   }, [socketManager]);
+
+  const campaignFingerprint = campaigns
+    .map((c) => `${c.id}:${c.status}`)
+    .join("|");
+
+  useEffect(() => {
+    if (campaigns.length) {
+      fetchProgressForList(campaigns);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [campaignFingerprint]);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const active = campaigns.filter((c) =>
+        ["EM_ANDAMENTO", "PROGRAMADA"].includes(c.status)
+      );
+      if (active.length) {
+        fetchProgressForList(active);
+      }
+    }, 12000);
+    return () => clearInterval(timer);
+  }, [campaigns]);
 
   const fetchCampaigns = async () => {
     try {
@@ -218,6 +287,28 @@ const Campaigns = () => {
     }
   };
 
+  const renderStatusBadge = (status) => {
+    const label = formatStatus(status);
+    const style = STATUS_STYLES[status] || {
+      backgroundColor: "#757575",
+      color: "#fff",
+    };
+    return (
+      <Box
+        component="span"
+        display="inline-block"
+        px={1}
+        py={0.5}
+        borderRadius={4}
+        fontSize="0.75rem"
+        fontWeight={600}
+        style={style}
+      >
+        {label}
+      </Box>
+    );
+  };
+
   const cancelCampaign = async (campaign) => {
     try {
       await api.post(`/campaigns/${campaign.id}/cancel`);
@@ -225,20 +316,37 @@ const Campaigns = () => {
       setPageNumber(1);
       fetchCampaigns();
     } catch (err) {
-      toast.error(err.message);
+      toastError(err);
     }
   };
 
-  const restartCampaign = async (campaign) => {
+  const runRestartCampaign = async (campaign) => {
     try {
       await api.post(`/campaigns/${campaign.id}/restart`);
       toast.success(i18n.t("campaigns.toasts.restart"));
       setPageNumber(1);
       fetchCampaigns();
     } catch (err) {
-      toast.error(err.message);
+      toastError(err);
     }
   };
+
+  const runRetryFailed = async (campaign) => {
+    try {
+      await api.post(`/campaigns/${campaign.id}/retry-failed`);
+      toast.success(i18n.t("campaigns.toasts.retryFailed"));
+      await fetchProgressForList([campaign]);
+      setPageNumber(1);
+      fetchCampaigns();
+    } catch (err) {
+      toastError(err);
+    }
+  };
+
+  const canShowRetryFailed = (campaign, prog) =>
+    prog &&
+    prog.failed > 0 &&
+    ["EM_ANDAMENTO", "FINALIZADA", "CANCELADA"].includes(campaign.status);
 
   return (
     <MainContainer>
@@ -254,6 +362,44 @@ const Campaigns = () => {
         onConfirm={() => handleDeleteCampaign(deletingCampaign.id)}
       >
         {i18n.t("campaigns.confirmationModal.deleteMessage")}
+      </ConfirmationModal>
+      <ConfirmationModal
+        title={i18n.t("campaigns.dialog.confirmRetryFailed.title")}
+        open={retryFailedModalOpen}
+        onClose={() => {
+          setRetryFailedModalOpen(false);
+          setRetryFailedTarget(null);
+        }}
+        onConfirm={() => {
+          const c = retryFailedTarget;
+          setRetryFailedModalOpen(false);
+          setRetryFailedTarget(null);
+          if (c) {
+            runRetryFailed(c);
+          }
+        }}
+        confirmText={i18n.t("campaigns.dialog.confirmRetryFailed.confirm")}
+      >
+        {i18n.t("campaigns.dialog.confirmRetryFailed.message")}
+      </ConfirmationModal>
+      <ConfirmationModal
+        title={i18n.t("campaigns.dialog.confirmRestart.title")}
+        open={restartModalOpen}
+        onClose={() => {
+          setRestartModalOpen(false);
+          setRestartTarget(null);
+        }}
+        onConfirm={() => {
+          const c = restartTarget;
+          setRestartModalOpen(false);
+          setRestartTarget(null);
+          if (c) {
+            runRestartCampaign(c);
+          }
+        }}
+        confirmText={i18n.t("campaigns.dialog.confirmRestart.confirm")}
+      >
+        {i18n.t("campaigns.dialog.confirmRestart.message")}
       </ConfirmationModal>
       <CampaignModal
         resetPagination={() => {
@@ -317,6 +463,9 @@ const Campaigns = () => {
                 {i18n.t("campaigns.table.status")}
               </TableCell>
               <TableCell align="center">
+                {i18n.t("campaigns.table.progress")}
+              </TableCell>
+              <TableCell align="center">
                 {i18n.t("campaigns.table.contactList")}
               </TableCell>
               <TableCell align="center">
@@ -335,11 +484,51 @@ const Campaigns = () => {
           </TableHead>
           <TableBody>
             <>
-              {campaigns.map((campaign) => (
+              {campaigns.map((campaign) => {
+                const prog = progressById[campaign.id];
+                const pct =
+                  prog && prog.total > 0
+                    ? Math.min(
+                        100,
+                        Math.round((prog.sent / prog.total) * 100)
+                      )
+                    : 0;
+                return (
                 <TableRow key={campaign.id}>
                   <TableCell align="center">{campaign.name}</TableCell>
                   <TableCell align="center">
-                    {formatStatus(campaign.status)}
+                    {renderStatusBadge(campaign.status)}
+                  </TableCell>
+                  <TableCell align="center" style={{ minWidth: 140 }}>
+                    {prog && prog.total > 0 ? (
+                      <Box>
+                        <LinearProgress
+                          variant="determinate"
+                          value={pct}
+                          style={{ height: 8, borderRadius: 4 }}
+                        />
+                        <Box mt={0.5} fontSize="0.7rem">
+                          {i18n.t("campaigns.table.progressLine", {
+                            pct,
+                            sent: prog.sent,
+                            total: prog.total,
+                          })}
+                        </Box>
+                        {prog.failed > 0 && (
+                          <Box
+                            mt={0.5}
+                            fontSize="0.65rem"
+                            style={{ color: "#c62828" }}
+                          >
+                            {i18n.t("campaigns.table.failedLine", {
+                              failed: prog.failed,
+                            })}
+                          </Box>
+                        )}
+                      </Box>
+                    ) : (
+                      "—"
+                    )}
                   </TableCell>
                   <TableCell align="center">
                     {campaign.contactListId
@@ -373,11 +562,26 @@ const Campaigns = () => {
                     )}
                     {campaign.status === "CANCELADA" && (
                       <IconButton
-                        onClick={() => restartCampaign(campaign)}
+                        onClick={() => {
+                          setRestartTarget(campaign);
+                          setRestartModalOpen(true);
+                        }}
                         title={i18n.t("campaigns.table.stopCampaign")}
                         size="small"
                       >
                         <PlayCircleOutlineIcon />
+                      </IconButton>
+                    )}
+                    {canShowRetryFailed(campaign, prog) && (
+                      <IconButton
+                        onClick={() => {
+                          setRetryFailedTarget(campaign);
+                          setRetryFailedModalOpen(true);
+                        }}
+                        title={i18n.t("campaigns.table.retryFailed")}
+                        size="small"
+                      >
+                        <ReplayIcon />
                       </IconButton>
                     )}
                     <IconButton
@@ -406,8 +610,9 @@ const Campaigns = () => {
                     </IconButton>
                   </TableCell>
                 </TableRow>
-              ))}
-              {loading && <TableRowSkeleton columns={8} />}
+              );
+              })}
+              {loading && <TableRowSkeleton columns={9} />}
             </>
           </TableBody>
         </Table>

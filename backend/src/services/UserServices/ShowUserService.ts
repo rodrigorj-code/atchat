@@ -3,7 +3,10 @@ import AppError from "../../errors/AppError";
 import Queue from "../../models/Queue";
 import Company from "../../models/Company";
 
-const ShowUserService = async (id: string | number): Promise<User> => {
+const ShowUserService = async (
+  id: string | number,
+  companyId?: number
+): Promise<User> => {
   const user = await User.findByPk(id, {
     attributes: [
       "name",
@@ -14,15 +17,21 @@ const ShowUserService = async (id: string | number): Promise<User> => {
       "super",
       "tokenVersion",
       "whatsappId",
-	    "allTicket"
+      "allTicket",
+      "online",
+      "createdAt"
     ],
     include: [
       { model: Queue, as: "queues", attributes: ["id", "name", "color"] },
-      { model: Company, as: "company", attributes: ["id", "name"] }
+      { model: Company, as: "company", attributes: ["id", "name", "dueDate"] }
     ]
   });
 
   if (!user) {
+    throw new AppError("ERR_NO_USER_FOUND", 404);
+  }
+
+  if (companyId !== undefined && user.companyId !== companyId) {
     throw new AppError("ERR_NO_USER_FOUND", 404);
   }
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 
 import * as Yup from "yup";
 import { Formik, FieldArray, Form, Field } from "formik";
@@ -16,13 +16,14 @@ import Typography from "@material-ui/core/Typography";
 import IconButton from "@material-ui/core/IconButton";
 import DeleteOutlineIcon from "@material-ui/icons/DeleteOutline";
 import CircularProgress from "@material-ui/core/CircularProgress";
+import Chip from "@material-ui/core/Chip";
+import Box from "@material-ui/core/Box";
+import Autocomplete from "@material-ui/lab/Autocomplete";
 
 import { i18n } from "../../translate/i18n";
 
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
-
-import InputMask from 'react-input-mask';
 
 const useStyles = makeStyles(theme => ({
 	root: {
@@ -52,28 +53,16 @@ const useStyles = makeStyles(theme => ({
 		marginTop: -12,
 		marginLeft: -12,
 	},
+	tagsRow: {
+		display: "flex",
+		flexWrap: "wrap",
+		gap: theme.spacing(0.5),
+		marginTop: theme.spacing(1),
+		marginBottom: theme.spacing(1),
+	},
 }));
 
-const MaskedTextField = ({ field, form, ...props }) => {
-	return (
-	  <InputMask {...field} {...props}>
-		{(inputProps) => <TextField {...inputProps} />}
-	  </InputMask>
-	);
-};
-
-const ContactSchema = Yup.object().shape({
-	name: Yup.string()
-		.min(2, i18n.t("contactModal.formErrors.name.short"))
-		.max(50, i18n.t("contactModal.formErrors.name.long"))
-		.required(i18n.t("contactModal.formErrors.name.required")),
-	number: Yup.string().min(8, 
-		i18n.t("contactModal.formErrors.phone.short")).max(50, 
-		i18n.t("contactModal.formErrors.phone.long")),
-	email: Yup.string().email(i18n.t("contactModal.formErrors.email.invalid")),
-});
-
-const ContactModal = ({ open, onClose, contactId, initialValues, onSave }) => {
+const ContactModal = ({ open, onClose, contactId, initialValues, onSave, onContactSaved }) => {
 	const classes = useStyles();
 	const isMounted = useRef(true);
 
@@ -81,9 +70,38 @@ const ContactModal = ({ open, onClose, contactId, initialValues, onSave }) => {
 		name: "",
 		number: "",
 		email: "",
+		notes: "",
+		extraInfo: [],
 	};
 
 	const [contact, setContact] = useState(initialState);
+	const [localTags, setLocalTags] = useState([]);
+	const [allTags, setAllTags] = useState([]);
+	const [summary, setSummary] = useState(null);
+	const [summaryLoading, setSummaryLoading] = useState(false);
+
+	const validationSchema = useMemo(
+		() =>
+			Yup.object().shape({
+				name: Yup.string()
+					.min(2, i18n.t("contactModal.formErrors.name.short"))
+					.max(50, i18n.t("contactModal.formErrors.name.long"))
+					.required(i18n.t("contactModal.formErrors.name.required")),
+				number: contactId
+					? Yup.string()
+							.min(8, i18n.t("contactModal.formErrors.phone.short"))
+							.max(50, i18n.t("contactModal.formErrors.phone.long"))
+					: Yup.string()
+							.min(8, i18n.t("contactModal.formErrors.phone.short"))
+							.max(50, i18n.t("contactModal.formErrors.phone.long"))
+							.required(i18n.t("contactModal.formErrors.phone.required")),
+				email: Yup.string().email(
+					i18n.t("contactModal.formErrors.email.invalid")
+				),
+				notes: Yup.string().nullable().max(5000),
+			}),
+		[contactId]
+	);
 
 	useEffect(() => {
 		return () => {
@@ -93,22 +111,27 @@ const ContactModal = ({ open, onClose, contactId, initialValues, onSave }) => {
 
 	useEffect(() => {
 		const fetchContact = async () => {
-			if (initialValues) {
-				setContact(prevState => {
-					return { ...prevState, ...initialValues };
-				});
-			}
+			if (!open) return;
 
-			if (!contactId) return;
+			if (!contactId) {
+				setContact({
+					...initialState,
+					...(initialValues || {}),
+				});
+				setLocalTags([]);
+				setSummary(null);
+				return;
+			}
 
 			try {
 				const { data } = await api.get(`/contacts/${contactId}`);
 				if (isMounted.current) {
-					console.log(data)
 					setContact({
 						...data,
 						number: data.number,
+						notes: data.notes ?? "",
 					});
+					setLocalTags(Array.isArray(data.tags) ? data.tags : []);
 				}
 			} catch (err) {
 				toastError(err);
@@ -118,15 +141,58 @@ const ContactModal = ({ open, onClose, contactId, initialValues, onSave }) => {
 		fetchContact();
 	}, [contactId, open, initialValues]);
 
+	useEffect(() => {
+		if (!open || !contactId) {
+			setSummary(null);
+			return;
+		}
+		let cancelled = false;
+		(async () => {
+			setSummaryLoading(true);
+			try {
+				const { data } = await api.get(`/contacts/${contactId}/summary`);
+				if (!cancelled && isMounted.current) setSummary(data);
+			} catch (err) {
+				toastError(err);
+			} finally {
+				if (!cancelled && isMounted.current) setSummaryLoading(false);
+			}
+		})();
+		return () => {
+			cancelled = true;
+		};
+	}, [open, contactId]);
+
+	useEffect(() => {
+		if (!open || !contactId) return;
+		let cancelled = false;
+		(async () => {
+			try {
+				const { data } = await api.get("/tags/list");
+				if (!cancelled && isMounted.current) setAllTags(Array.isArray(data) ? data : []);
+			} catch (err) {
+				toastError(err);
+			}
+		})();
+		return () => {
+			cancelled = true;
+		};
+	}, [open, contactId]);
+
 	const handleClose = () => {
 		onClose();
 		setContact(initialState);
+		setLocalTags([]);
+		setSummary(null);
 	};
 
 	const handleSaveContact = async values => {
 		try {
 			if (contactId) {
-				await api.put(`/contacts/${contactId}`, values);
+				const { data } = await api.put(`/contacts/${contactId}`, values);
+				if (onContactSaved) {
+					onContactSaved({ ...data, tags: localTags });
+				}
 				handleClose();
 			} else {
 				const { data } = await api.post("/contacts", values);
@@ -136,10 +202,39 @@ const ContactModal = ({ open, onClose, contactId, initialValues, onSave }) => {
 				handleClose();
 			}
 			toast.success(i18n.t("contactModal.success"));
-		} catch (e) {	
+		} catch (e) {
 			toastError(e);
 		}
 	};
+
+	const handleRemoveTag = async tag => {
+		if (!contactId) return;
+		try {
+			await api.delete(`/contacts/${contactId}/tags/${tag.id}`);
+			setLocalTags(prev => prev.filter(t => t.id !== tag.id));
+			toast.success(i18n.t("contactModal.tags.removed"));
+		} catch (e) {
+			toastError(e);
+		}
+	};
+
+	const handleAddTag = async tag => {
+		if (!contactId || !tag) return;
+		if (localTags.some(t => t.id === tag.id)) return;
+		try {
+			await api.post(`/contacts/${contactId}/tags`, { tagId: tag.id });
+			setLocalTags(prev =>
+				[...prev, tag].sort((a, b) => a.name.localeCompare(b.name))
+			);
+			toast.success(i18n.t("contactModal.tags.added"));
+		} catch (e) {
+			toastError(e);
+		}
+	};
+
+	const tagOptions = allTags.filter(
+		at => !localTags.some(lt => lt.id === at.id)
+	);
 
 	return (
 		<div className={classes.root}>
@@ -152,7 +247,7 @@ const ContactModal = ({ open, onClose, contactId, initialValues, onSave }) => {
 				<Formik
 					initialValues={contact}
 					enableReinitialize={true}
-					validationSchema={ContactSchema}
+					validationSchema={validationSchema}
 					onSubmit={(values, actions) => {
 						setTimeout(() => {
 							handleSaveContact(values);
@@ -163,6 +258,34 @@ const ContactModal = ({ open, onClose, contactId, initialValues, onSave }) => {
 					{({ values, errors, touched, isSubmitting }) => (
 						<Form>
 							<DialogContent dividers>
+								{contactId && (
+									<Box marginBottom={2}>
+										<Typography variant="subtitle1" gutterBottom>
+											{i18n.t("contactModal.summary.title")}
+										</Typography>
+										{summaryLoading ? (
+											<CircularProgress size={22} />
+										) : summary ? (
+											<>
+												<Typography variant="body2" color="textSecondary">
+													{i18n.t("contactModal.summary.tickets")}:{" "}
+													<strong>{summary.totalTickets}</strong>
+												</Typography>
+												<Typography variant="body2" color="textSecondary">
+													{i18n.t("contactModal.summary.lastInteraction")}:{" "}
+													{summary.lastInteraction
+														? new Date(summary.lastInteraction).toLocaleString()
+														: "—"}
+												</Typography>
+												<Typography variant="body2" color="textSecondary" noWrap>
+													{i18n.t("contactModal.summary.lastMessage")}:{" "}
+													{summary.lastMessage || "—"}
+												</Typography>
+											</>
+										) : null}
+									</Box>
+								)}
+
 								<Typography variant="subtitle1" gutterBottom>
 									{i18n.t("contactModal.form.mainInfo")}
 								</Typography>
@@ -186,6 +309,10 @@ const ContactModal = ({ open, onClose, contactId, initialValues, onSave }) => {
 									placeholder=""
 									variant="outlined"
 									margin="dense"
+									disabled={Boolean(contactId)}
+									InputProps={{
+										readOnly: Boolean(contactId),
+									}}
 								/>
 
 								<div>
@@ -201,11 +328,66 @@ const ContactModal = ({ open, onClose, contactId, initialValues, onSave }) => {
 										variant="outlined"
 									/>
 								</div>
+
+								<Field
+									as={TextField}
+									label={i18n.t("contactModal.form.notes")}
+									name="notes"
+									error={touched.notes && Boolean(errors.notes)}
+									helperText={touched.notes && errors.notes}
+									fullWidth
+									margin="dense"
+									variant="outlined"
+									multiline
+									minRows={3}
+								/>
+
+								{contactId && (
+									<>
+										<Typography
+											style={{ marginBottom: 8, marginTop: 12 }}
+											variant="subtitle1"
+										>
+											{i18n.t("contactModal.form.tags")}
+										</Typography>
+										<div className={classes.tagsRow}>
+											{localTags.map(tag => (
+												<Chip
+													key={tag.id}
+													label={tag.name}
+													size="small"
+													style={{
+														backgroundColor: tag.color || "#eee",
+													}}
+													onDelete={() => handleRemoveTag(tag)}
+												/>
+											))}
+										</div>
+										<Autocomplete
+											options={tagOptions}
+											getOptionLabel={option => option.name || ""}
+											onChange={(_, value) => {
+												if (value) handleAddTag(value);
+											}}
+											renderInput={params => (
+												<TextField
+													{...params}
+													variant="outlined"
+													margin="dense"
+													label={i18n.t("contactModal.form.addTag")}
+													fullWidth
+												/>
+											)}
+										/>
+									</>
+								)}
+
 								<Typography
 									style={{ marginBottom: 8, marginTop: 12 }}
 									variant="subtitle1"
 								>
-									{i18n.t("contactModal.form.whatsapp")} {contact?.whatsapp ? contact?.whatsapp.name : ""}
+									{i18n.t("contactModal.form.whatsapp")}{" "}
+									{contact?.whatsapp ? contact?.whatsapp.name : ""}
 								</Typography>
 								<Typography
 									style={{ marginBottom: 8, marginTop: 12 }}

@@ -11,7 +11,8 @@ import {
   Default,
   HasMany,
   ForeignKey,
-  BelongsTo
+  BelongsTo,
+  DataType
 } from "sequelize-typescript";
 import ContactCustomField from "./ContactCustomField";
 import Ticket from "./Ticket";
@@ -50,6 +51,10 @@ class Contact extends Model<Contact> {
   @Default(false)
   @Column
   disableBot: boolean;
+
+  @AllowNull(true)
+  @Column(DataType.TEXT)
+  notes: string;
 
   @CreatedAt
   createdAt: Date;

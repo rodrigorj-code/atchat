@@ -19,11 +19,11 @@ import { i18n } from "../../translate/i18n";
 
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
-import { FormControl, Grid, IconButton } from "@material-ui/core";
+import { FormControl, Grid, IconButton, MenuItem, Typography } from "@material-ui/core";
 import Autocomplete from "@material-ui/lab/Autocomplete";
 import moment from "moment"
 import { AuthContext } from "../../context/Auth/AuthContext";
-import { isArray, capitalize } from "lodash";
+import { isArray } from "lodash";
 import DeleteOutline from "@material-ui/icons/DeleteOutline";
 import AttachFile from "@material-ui/icons/AttachFile";
 import { head } from "lodash";
@@ -77,7 +77,8 @@ const ScheduleModal = ({ open, onClose, scheduleId, contactId, cleanContact, rel
 		body: "",
 		contactId: "",
 		sendAt: moment().add(1, 'hour').format('YYYY-MM-DDTHH:mm'),
-		sentAt: ""
+		sentAt: "",
+		preferredWhatsappId: ""
 	};
 
 	const initialContact = {
@@ -92,6 +93,20 @@ const ScheduleModal = ({ open, onClose, scheduleId, contactId, cleanContact, rel
 	const attachmentFile = useRef(null);
 	const [confirmationOpen, setConfirmationOpen] = useState(false);
 	const messageInputRef = useRef();
+	const [whatsAppOptions, setWhatsAppOptions] = useState([]);
+
+	useEffect(() => {
+		if (!open) return;
+		(async () => {
+			try {
+				const { data } = await api.get("/whatsapp/?session=0");
+				const list = Array.isArray(data) ? data : (data?.records || data?.whatsapps || []);
+				setWhatsAppOptions((list || []).filter((w) => w.status === "CONNECTED"));
+			} catch (err) {
+				toastError(err);
+			}
+		})();
+	}, [open]);
 
 	useEffect(() => {
 		if (contactId && contacts.length) {
@@ -122,7 +137,13 @@ const ScheduleModal = ({ open, onClose, scheduleId, contactId, cleanContact, rel
 
 					const { data } = await api.get(`/schedules/${scheduleId}`);
 					setSchedule(prevState => {
-						return { ...prevState, ...data, sendAt: moment(data.sendAt).format('YYYY-MM-DDTHH:mm') };
+						return {
+							...prevState,
+							...data,
+							sendAt: moment(data.sendAt).format('YYYY-MM-DDTHH:mm'),
+							preferredWhatsappId:
+								data.preferredWhatsappId != null ? String(data.preferredWhatsappId) : ""
+						};
 					});
 					setCurrentContact(data.contact);
 				})()
@@ -146,7 +167,14 @@ const ScheduleModal = ({ open, onClose, scheduleId, contactId, cleanContact, rel
 	};
 
 	const handleSaveSchedule = async values => {
-		const scheduleData = { ...values, userId: user.id };
+		const scheduleData = {
+			...values,
+			userId: user.id,
+			preferredWhatsappId:
+				values.preferredWhatsappId === "" || values.preferredWhatsappId == null
+					? null
+					: Number(values.preferredWhatsappId)
+		};
 		try {
 			if (scheduleId) {
 				await api.put(`/schedules/${scheduleId}`, scheduleData);
@@ -209,8 +237,6 @@ const ScheduleModal = ({ open, onClose, scheduleId, contactId, cleanContact, rel
 			}));
 			toast.success(i18n.t("scheduleModal.toasts.deleted"));
 			if (typeof reload == "function") {
-				console.log(reload);
-				console.log("1");
 				reload();
 			}
 		}
@@ -234,8 +260,15 @@ const ScheduleModal = ({ open, onClose, scheduleId, contactId, cleanContact, rel
 				scroll="paper"
 			>
 				<DialogTitle id="form-dialog-title">
-					{schedule.status === 'ERRO' ? 'Erro de Envio' : `Mensagem ${capitalize(schedule.status)}`}
+					{i18n.t(`schedules.statusLabels.${schedule.status || "PENDENTE"}`)}
 				</DialogTitle>
+				{(schedule.lastError && (schedule.status === "ERRO" || schedule.status === "AGUARDANDO_CONEXAO")) && (
+					<div style={{ padding: "0 24px 8px" }}>
+						<Typography variant="body2" color="textSecondary">
+							{schedule.lastError}
+						</Typography>
+					</div>
+				)}
 				<div style={{ display: "none" }}>
 					<input
 						type="file"
@@ -317,6 +350,28 @@ const ScheduleModal = ({ open, onClose, scheduleId, contactId, cleanContact, rel
 										variant="outlined"
 										fullWidth
 									/>
+								</div>
+								<br />
+								<div className={classes.multFieldLine}>
+									<Field
+										as={TextField}
+										select
+										name="preferredWhatsappId"
+										label={i18n.t("scheduleModal.form.preferredWhatsapp")}
+										helperText={i18n.t("scheduleModal.form.preferredWhatsappHint")}
+										variant="outlined"
+										fullWidth
+										disabled={isSubmitting}
+									>
+										<MenuItem value="">
+											<em>{i18n.t("scheduleModal.form.automaticConnection")}</em>
+										</MenuItem>
+										{whatsAppOptions.map((w) => (
+											<MenuItem key={w.id} value={String(w.id)}>
+												{w.name}
+											</MenuItem>
+										))}
+									</Field>
 								</div>
 								{(schedule.mediaPath || attachment) && (
 									<Grid xs={12} item>

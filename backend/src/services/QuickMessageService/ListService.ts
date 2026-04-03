@@ -1,11 +1,11 @@
-import { Sequelize, Op, Filterable } from "sequelize";
+import { Sequelize, Op } from "sequelize";
 import QuickMessage from "../../models/QuickMessage";
 
 interface Request {
   searchParam?: string;
   pageNumber?: string;
   companyId: number | string;
-  userId?: number | string;
+  userId: number | string;
 }
 
 interface Response {
@@ -20,36 +20,45 @@ const ListService = async ({
   companyId,
   userId
 }: Request): Promise<Response> => {
-  const sanitizedSearchParam = searchParam.toLocaleLowerCase().trim();
+  const term = (searchParam ?? "").toLowerCase().trim();
 
-  let whereCondition: Filterable["where"] = {
-    // [Op.or]: [
-    //   {
-    shortcode: Sequelize.where(
-      Sequelize.fn("LOWER", Sequelize.col("shortcode")),
-      "LIKE",
-      `%${sanitizedSearchParam}%`
-    )
-    //   },
-    //   {
-    //     message: Sequelize.where(
-    //       Sequelize.fn("LOWER", Sequelize.col("message")),
-    //       "LIKE",
-    //       `%${sanitizedSearchParam}%`
-    //     )
-    //   }
-    // ]
+  const whereCondition: any = {
+    companyId,
+    userId
   };
-  whereCondition = {
-  ...whereCondition,
-  companyId,
-  userId: userId
+
+  if (term.length > 0) {
+    whereCondition[Op.or] = [
+      Sequelize.where(
+        Sequelize.fn("LOWER", Sequelize.col("shortcode")),
+        "LIKE",
+        `%${term}%`
+      ),
+      Sequelize.where(
+        Sequelize.fn("LOWER", Sequelize.col("message")),
+        "LIKE",
+        `%${term}%`
+      )
+    ];
   }
+
   const limit = 20;
   const offset = limit * (+pageNumber - 1);
 
   const { count, rows: records } = await QuickMessage.findAndCountAll({
     where: whereCondition,
+    attributes: [
+      "id",
+      "shortcode",
+      "message",
+      "category",
+      "companyId",
+      "userId",
+      "createdAt",
+      "updatedAt",
+      "mediaPath",
+      "mediaName"
+    ],
     limit,
     offset,
     order: [["shortcode", "ASC"]]

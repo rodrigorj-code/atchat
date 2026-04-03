@@ -16,7 +16,10 @@ import {
   Switch,
   useTheme,
   useMediaQuery,
+  Button,
 } from "@material-ui/core";
+import Alert from "@material-ui/lab/Alert";
+import { Link } from "react-router-dom";
 
 import MenuIcon from "@material-ui/icons/Menu";
 import AccountCircle from "@material-ui/icons/AccountCircle";
@@ -543,6 +546,37 @@ const LoggedInLayout = ({ children, themeToggle }) => {
       </AppBar>
       <main className={classes.content}>
         <div className={classes.appBarSpacer} />
+
+        {user?.finance?.delinquent && (
+          <Alert
+            severity="warning"
+            variant="outlined"
+            style={{ margin: "0 16px 16px", alignItems: "center" }}
+          >
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                alignItems: "center",
+                gap: 12,
+                width: "100%",
+              }}
+            >
+              <span style={{ flex: 1, minWidth: 200 }}>
+                {i18n.t("finance.banner.message")}
+              </span>
+              <Button
+                component={Link}
+                to="/financeiro"
+                variant="contained"
+                color="primary"
+                size="small"
+              >
+                {i18n.t("finance.banner.action")}
+              </Button>
+            </div>
+          </Alert>
+        )}
 
         {children ? children : null}
       </main>

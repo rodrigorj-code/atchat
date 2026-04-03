@@ -20,23 +20,17 @@ import AppError from "../errors/AppError";
 type IndexQuery = {
   searchParam: string;
   pageNumber: string;
-  userId: string | number;
 };
 
 type StoreData = {
   shortcode: string;
   message: string;
-  userId: number | number;
-};
-
-type FindParams = {
-  companyId: string;
-  userId: string;
+  category?: string | null;
 };
 
 export const index = async (req: Request, res: Response): Promise<Response> => {
-  const { searchParam, pageNumber, userId } = req.query as IndexQuery;
-  const { companyId } = req.user;
+  const { searchParam, pageNumber } = req.query as IndexQuery;
+  const { companyId, id: userId } = req.user;
 
   const { records, count, hasMore } = await ListService({
     searchParam,
@@ -54,7 +48,8 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
 
   const schema = Yup.object().shape({
     shortcode: Yup.string().required(),
-    message: Yup.string().required()
+    message: Yup.string().required(),
+    category: Yup.string().nullable()
   });
 
   try {
@@ -80,8 +75,9 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
 
 export const show = async (req: Request, res: Response): Promise<Response> => {
   const { id } = req.params;
+  const { companyId, id: userId } = req.user;
 
-  const record = await ShowService(id);
+  const record = await ShowService(id, { companyId, userId });
 
   return res.status(200).json(record);
 };
@@ -90,12 +86,13 @@ export const update = async (
   req: Request,
   res: Response
 ): Promise<Response> => {
-  const data = req.body as StoreData;
-  const { companyId } = req.user;
+  const data = req.body as Partial<StoreData> & { isMedia?: boolean };
+  const { companyId, id: userId } = req.user;
 
   const schema = Yup.object().shape({
-    shortcode: Yup.string().required(),
-    message: Yup.string().required()
+    shortcode: Yup.string().nullable(),
+    message: Yup.string().nullable(),
+    category: Yup.string().nullable()
   });
 
   try {
@@ -107,9 +104,12 @@ export const update = async (
   const { id } = req.params;
 
   const record = await UpdateService({
-    ...data,
-    userId: req.user.id,
-    id,
+    shortcode: data.shortcode,
+    message: data.message,
+    category: data.category,
+    userId,
+    companyId,
+    id
   });
 
   const io = getIO();
@@ -126,9 +126,9 @@ export const remove = async (
   res: Response
 ): Promise<Response> => {
   const { id } = req.params;
-  const { companyId } = req.user;
+  const { companyId, id: userId } = req.user;
 
-  await DeleteService(id);
+  await DeleteService(id, { companyId, userId });
 
   const io = getIO();
   io.to(`company-${companyId}-mainchannel`).emit(`company-${companyId}-quickmessage`, {
@@ -136,15 +136,18 @@ export const remove = async (
     id
   });
 
-  return res.status(200).json({ message: "Contact deleted" });
+  return res.status(200).json({ message: "Quick message deleted" });
 };
 
 export const findList = async (
   req: Request,
   res: Response
 ): Promise<Response> => {
-  const params = req.query as FindParams;
-  const records: QuickMessage[] = await FindService(params);
+  const { companyId, id: userId } = req.user;
+  const records: QuickMessage[] = await FindService({
+    companyId: String(companyId),
+    userId: String(userId)
+  });
 
   return res.status(200).json(records);
 };
@@ -156,18 +159,29 @@ export const mediaUpload = async (
   const { id } = req.params;
   const files = req.files as Express.Multer.File[];
   const file = head(files);
+  const { companyId, id: userId } = req.user;
 
   try {
-    const quickmessage = await QuickMessage.findByPk(id);
-    
-    quickmessage.update ({
+    if (!file) {
+      throw new AppError("Nenhum arquivo enviado.", 400);
+    }
+
+    const quickmessage = await QuickMessage.findOne({
+      where: { id, companyId, userId }
+    });
+
+    if (!quickmessage) {
+      throw new AppError("ERR_NO_QUICKMESSAGE_FOUND", 404);
+    }
+
+    await quickmessage.update({
       mediaPath: file.filename,
       mediaName: file.originalname
     });
 
     return res.send({ mensagem: "Arquivo Anexado" });
-    } catch (err: any) {
-      throw new AppError(err.message);
+  } catch (err: any) {
+    throw new AppError(err.message);
   }
 };
 
@@ -176,22 +190,33 @@ export const deleteMedia = async (
   res: Response
 ): Promise<Response> => {
   const { id } = req.params;
-  const { companyId } = req.user
+  const { companyId, id: userId } = req.user;
 
   try {
-    const quickmessage = await QuickMessage.findByPk(id);
-    const filePath = path.resolve("public","quickMessage",quickmessage.mediaName);
-    const fileExists = fs.existsSync(filePath);
-    if (fileExists) {
-      fs.unlinkSync(filePath);
+    const quickmessage = await QuickMessage.findOne({
+      where: { id, companyId, userId }
+    });
+
+    if (!quickmessage) {
+      throw new AppError("ERR_NO_QUICKMESSAGE_FOUND", 404);
     }
-    quickmessage.update ({
+
+    const storedFile = quickmessage.getDataValue("mediaPath");
+    if (storedFile) {
+      const filePath = path.resolve("public", "quickMessage", storedFile);
+      const fileExists = fs.existsSync(filePath);
+      if (fileExists) {
+        fs.unlinkSync(filePath);
+      }
+    }
+
+    await quickmessage.update({
       mediaPath: null,
       mediaName: null
     });
 
     return res.send({ mensagem: "Arquivo Excluído" });
-    } catch (err: any) {
-      throw new AppError(err.message);
+  } catch (err: any) {
+    throw new AppError(err.message);
   }
 };

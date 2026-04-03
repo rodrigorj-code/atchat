@@ -1,17 +1,31 @@
-import React, { useEffect, useReducer, useState, useContext } from "react";
+import React, {
+	useEffect,
+	useReducer,
+	useState,
+	useContext,
+	useCallback,
+	useMemo,
+} from "react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 import {
-  Button,
-  IconButton,
-  makeStyles,
-  Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
-  Typography,
+	Button,
+	IconButton,
+	makeStyles,
+	Paper,
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableRow,
+	Typography,
+	TextField,
+	InputAdornment,
+	Box,
+	Chip,
 } from "@material-ui/core";
+import SearchIcon from "@material-ui/icons/Search";
 
 import MainContainer from "../../components/MainContainer";
 import MainHeader from "../../components/MainHeader";
@@ -26,263 +40,348 @@ import QueueModal from "../../components/QueueModal";
 import { toast } from "react-toastify";
 import ConfirmationModal from "../../components/ConfirmationModal";
 import { SocketContext } from "../../context/Socket/SocketContext";
+import { AuthContext } from "../../context/Auth/AuthContext";
+
+const chipTextColor = (hex) => {
+	if (!hex || typeof hex !== "string") return "#fff";
+	const h = hex.replace("#", "").slice(0, 6);
+	if (h.length !== 6) return "#fff";
+	const r = parseInt(h.substr(0, 2), 16);
+	const g = parseInt(h.substr(2, 2), 16);
+	const b = parseInt(h.substr(4, 2), 16);
+	if (Number.isNaN(r + g + b)) return "#fff";
+	const yiq = (r * 299 + g * 587 + b * 114) / 1000;
+	return yiq >= 186 ? "#111" : "#fff";
+};
 
 const useStyles = makeStyles((theme) => ({
-  mainPaper: {
-    flex: 1,
-    padding: theme.spacing(1),
-    overflowY: "scroll",
-    ...theme.scrollbarStyles,
-  },
-  customTableCell: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  },
+	mainPaper: {
+		flex: 1,
+		padding: theme.spacing(2),
+		overflowY: "auto",
+		...theme.scrollbarStyles,
+	},
+	swatch: {
+		width: 28,
+		height: 28,
+		borderRadius: 4,
+		border: `1px solid ${theme.palette.divider}`,
+		margin: "0 auto",
+	},
 }));
 
 const reducer = (state, action) => {
-  if (action.type === "LOAD_QUEUES") {
-    const queues = action.payload;
-    const newQueues = [];
+	if (action.type === "LOAD_QUEUES") {
+		const queues = action.payload;
+		const newQueues = [];
 
-    queues.forEach((queue) => {
-      const queueIndex = state.findIndex((q) => q.id === queue.id);
-      if (queueIndex !== -1) {
-        state[queueIndex] = queue;
-      } else {
-        newQueues.push(queue);
-      }
-    });
+		queues.forEach((queue) => {
+			const queueIndex = state.findIndex((q) => q.id === queue.id);
+			if (queueIndex !== -1) {
+				state[queueIndex] = queue;
+			} else {
+				newQueues.push(queue);
+			}
+		});
 
-    return [...state, ...newQueues];
-  }
+		return [...state, ...newQueues];
+	}
 
-  if (action.type === "UPDATE_QUEUES") {
-    const queue = action.payload;
-    const queueIndex = state.findIndex((u) => u.id === queue.id);
+	if (action.type === "UPDATE_QUEUES") {
+		const queue = action.payload;
+		const queueIndex = state.findIndex((u) => u.id === queue.id);
 
-    if (queueIndex !== -1) {
-      state[queueIndex] = queue;
-      return [...state];
-    } else {
-      return [queue, ...state];
-    }
-  }
+		if (queueIndex !== -1) {
+			const prev = state[queueIndex];
+			state[queueIndex] = { ...prev, ...queue };
+			return [...state];
+		} else {
+			return [queue, ...state];
+		}
+	}
 
-  if (action.type === "DELETE_QUEUE") {
-    const queueId = action.payload;
-    const queueIndex = state.findIndex((q) => q.id === queueId);
-    if (queueIndex !== -1) {
-      state.splice(queueIndex, 1);
-    }
-    return [...state];
-  }
+	if (action.type === "DELETE_QUEUE") {
+		const queueId = action.payload;
+		const queueIndex = state.findIndex((q) => q.id === queueId);
+		if (queueIndex !== -1) {
+			state.splice(queueIndex, 1);
+		}
+		return [...state];
+	}
 
-  if (action.type === "RESET") {
-    return [];
-  }
+	if (action.type === "RESET") {
+		return [];
+	}
 };
 
 const Queues = () => {
-  const classes = useStyles();
+	const classes = useStyles();
+	const { user } = useContext(AuthContext);
 
-  const [queues, dispatch] = useReducer(reducer, []);
-  const [loading, setLoading] = useState(false);
+	const [queues, dispatch] = useReducer(reducer, []);
+	const [loading, setLoading] = useState(false);
+	const [searchParam, setSearchParam] = useState("");
 
-  const [queueModalOpen, setQueueModalOpen] = useState(false);
-  const [selectedQueue, setSelectedQueue] = useState(null);
-  const [confirmModalOpen, setConfirmModalOpen] = useState(false);
+	const [queueModalOpen, setQueueModalOpen] = useState(false);
+	const [selectedQueue, setSelectedQueue] = useState(null);
+	const [confirmModalOpen, setConfirmModalOpen] = useState(false);
 
-  const socketManager = useContext(SocketContext);
+	const socketManager = useContext(SocketContext);
 
-  useEffect(() => {
-    (async () => {
-      setLoading(true);
-      try {
-        const { data } = await api.get("/queue");
-        dispatch({ type: "LOAD_QUEUES", payload: data });
+	const fetchQueues = useCallback(async () => {
+		setLoading(true);
+		try {
+			const { data } = await api.get("/queue");
+			const list = Array.isArray(data) ? data : [];
+			dispatch({ type: "RESET" });
+			dispatch({ type: "LOAD_QUEUES", payload: list });
+		} catch (err) {
+			toastError(err);
+		} finally {
+			setLoading(false);
+		}
+	}, []);
 
-        setLoading(false);
-      } catch (err) {
-        toastError(err);
-        setLoading(false);
-      }
-    })();
-  }, []);
+	useEffect(() => {
+		fetchQueues();
+	}, [fetchQueues]);
 
-  useEffect(() => {
-    const companyId = localStorage.getItem("companyId");
-    const socket = socketManager.getSocket(companyId);
+	useEffect(() => {
+		const companyId = user?.companyId || localStorage.getItem("companyId");
+		const socket = socketManager.getSocket(companyId);
 
-    socket.on(`company-${companyId}-queue`, (data) => {
-      if (data.action === "update" || data.action === "create") {
-        dispatch({ type: "UPDATE_QUEUES", payload: data.queue });
-      }
+		const onQueue = (data) => {
+			if (data.action === "update" || data.action === "create") {
+				dispatch({ type: "UPDATE_QUEUES", payload: data.queue });
+			}
+			if (data.action === "delete") {
+				dispatch({ type: "DELETE_QUEUE", payload: data.queueId });
+			}
+		};
 
-      if (data.action === "delete") {
-        dispatch({ type: "DELETE_QUEUE", payload: data.queueId });
-      }
-    });
+		socket.on(`company-${companyId}-queue`, onQueue);
 
-    return () => {
-      socket.disconnect();
-    };
-  }, [socketManager]);
+		return () => {
+			socket.off(`company-${companyId}-queue`, onQueue);
+		};
+	}, [socketManager, user]);
 
-  const handleOpenQueueModal = () => {
-    setQueueModalOpen(true);
-    setSelectedQueue(null);
-  };
+	const filteredQueues = useMemo(() => {
+		const sp = searchParam.trim().toLowerCase();
+		if (!sp) return queues;
+		return queues.filter(
+			(q) =>
+				(q.name && q.name.toLowerCase().includes(sp)) ||
+				String(q.id).includes(sp)
+		);
+	}, [queues, searchParam]);
 
-  const handleCloseQueueModal = () => {
-    setQueueModalOpen(false);
-    setSelectedQueue(null);
-  };
+	const handleOpenQueueModal = () => {
+		setQueueModalOpen(true);
+		setSelectedQueue(null);
+	};
 
-  const handleEditQueue = (queue) => {
-    setSelectedQueue(queue);
-    setQueueModalOpen(true);
-  };
+	const handleCloseQueueModal = () => {
+		setQueueModalOpen(false);
+		setSelectedQueue(null);
+	};
 
-  const handleCloseConfirmationModal = () => {
-    setConfirmModalOpen(false);
-    setSelectedQueue(null);
-  };
+	const handleEditQueue = (queue) => {
+		setSelectedQueue(queue);
+		setQueueModalOpen(true);
+	};
 
-  const handleDeleteQueue = async (queueId) => {
-    try {
-      await api.delete(`/queue/${queueId}`);
-      toast.success(i18n.t("queues.toasts.success"));
-    } catch (err) {
-      toastError(err);
-    }
-    setSelectedQueue(null);
-  };
+	const handleCloseConfirmationModal = () => {
+		setConfirmModalOpen(false);
+		setSelectedQueue(null);
+	};
 
-  return (
-    <MainContainer>
-      <ConfirmationModal
-        title={
-          selectedQueue &&
-          `${i18n.t("queues.confirmationModal.deleteTitle")} ${
-            selectedQueue.name
-          }?`
-        }
-        open={confirmModalOpen}
-        onClose={handleCloseConfirmationModal}
-        onConfirm={() => handleDeleteQueue(selectedQueue.id)}
-      >
-        {i18n.t("queues.confirmationModal.deleteMessage")}
-      </ConfirmationModal>
-      <QueueModal
-        open={queueModalOpen}
-        onClose={handleCloseQueueModal}
-        queueId={selectedQueue?.id}
-      />
-      <MainHeader>
-        <Title>{i18n.t("queues.title")}</Title>
-        <MainHeaderButtonsWrapper>
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={handleOpenQueueModal}
-          >
-            {i18n.t("queues.buttons.add")}
-          </Button>
-        </MainHeaderButtonsWrapper>
-      </MainHeader>
-      <Paper className={classes.mainPaper} variant="outlined">
-        <Table size="small">
-          <TableHead>
-            <TableRow>
-			   <TableCell align="center">
-                {i18n.t("queues.table.id")}
-              </TableCell>
-              <TableCell align="center">
-                {i18n.t("queues.table.name")}
-              </TableCell>
-              <TableCell align="center">
-                {i18n.t("queues.table.color")}
-              </TableCell>
-              <TableCell align="center">
-                {i18n.t("queues.table.orderQueue")}
-              </TableCell>
-              <TableCell align="center">
-                {i18n.t("queues.table.greeting")}
-              </TableCell>
-              <TableCell align="center">
-                {i18n.t("queues.table.actions")}
-              </TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            <>
-              {queues.map((queue) => (
-                <TableRow key={queue.id}>
-				<TableCell align="center">{queue.id}</TableCell>
-                  <TableCell align="center">{queue.name}</TableCell>
-                  <TableCell align="center">
-                    <div className={classes.customTableCell}>
-                      <span
-                        style={{
-                          backgroundColor: queue.color,
-                          width: 60,
-                          height: 20,
-                          alignSelf: "center",
-                        }}
-                      />
-                    </div>
-                  </TableCell>
-                  <TableCell align="center">
-                    <div className={classes.customTableCell}>
-                      <Typography
-                        style={{ width: 300, align: "center" }}
-                        noWrap
-                        variant="body2"
-                      >
-                        {queue.orderQueue}
-                      </Typography>
-                    </div>
-                  </TableCell>
-                  <TableCell align="center">
-                    <div className={classes.customTableCell}>
-                      <Typography
-                        style={{ width: 300, align: "center" }}
-                        noWrap
-                        variant="body2"
-                      >
-                        {queue.greetingMessage}
-                      </Typography>
-                    </div>
-                  </TableCell>
-                  <TableCell align="center">
-                    <IconButton
-                      size="small"
-                      onClick={() => handleEditQueue(queue)}
-                    >
-                      <Edit />
-                    </IconButton>
+	const handleDeleteQueue = async (queueId) => {
+		try {
+			await api.delete(`/queue/${queueId}`);
+			toast.success(i18n.t("queues.toasts.success"));
+			dispatch({ type: "DELETE_QUEUE", payload: queueId });
+		} catch (err) {
+			toastError(err);
+		}
+		setConfirmModalOpen(false);
+		setSelectedQueue(null);
+	};
 
-                    <IconButton
-                      size="small"
-                      onClick={() => {
-                        setSelectedQueue(queue);
-                        setConfirmModalOpen(true);
-                      }}
-                    >
-                      <DeleteOutline />
-                    </IconButton>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {loading && <TableRowSkeleton columns={4} />}
-            </>
-          </TableBody>
-        </Table>
-      </Paper>
-    </MainContainer>
-  );
+	const formatCreated = (d) => {
+		if (!d) return "—";
+		try {
+			return format(new Date(d), "dd/MM/yyyy HH:mm", { locale: ptBR });
+		} catch {
+			return "—";
+		}
+	};
+
+	const usageTickets = (q) => q.ticketsCount ?? 0;
+	const usageUsers = (q) => q.usersCount ?? 0;
+
+	return (
+		<MainContainer>
+			<ConfirmationModal
+				title={
+					selectedQueue &&
+					`${i18n.t("queues.confirmationModal.deleteTitle")} ${
+						selectedQueue.name
+					}?`
+				}
+				open={confirmModalOpen}
+				onClose={handleCloseConfirmationModal}
+				onConfirm={() => handleDeleteQueue(selectedQueue.id)}
+			>
+				{selectedQueue &&
+				(usageTickets(selectedQueue) > 0 ||
+					usageUsers(selectedQueue) > 0) ? (
+					<>
+						<Typography variant="body2" paragraph>
+							{i18n.t("queues.confirmationModal.deleteWarningInUse", {
+								tickets: usageTickets(selectedQueue),
+								users: usageUsers(selectedQueue),
+							})}
+						</Typography>
+						<Typography variant="body2" color="textSecondary">
+							{i18n.t("queues.confirmationModal.deleteMessage")}
+						</Typography>
+					</>
+				) : (
+					i18n.t("queues.confirmationModal.deleteMessage")
+				)}
+			</ConfirmationModal>
+			<QueueModal
+				open={queueModalOpen}
+				onClose={handleCloseQueueModal}
+				queueId={selectedQueue?.id}
+				reload={fetchQueues}
+			/>
+			<MainHeader>
+				<Title>{i18n.t("queues.title")}</Title>
+				<MainHeaderButtonsWrapper>
+					<TextField
+						placeholder={i18n.t("queues.searchPlaceholder")}
+						type="search"
+						value={searchParam}
+						onChange={(e) => setSearchParam(e.target.value)}
+						InputProps={{
+							startAdornment: (
+								<InputAdornment position="start">
+									<SearchIcon style={{ color: "gray" }} />
+								</InputAdornment>
+							),
+						}}
+					/>
+					<Button
+						variant="contained"
+						color="primary"
+						onClick={handleOpenQueueModal}
+					>
+						{i18n.t("queues.buttons.add")}
+					</Button>
+				</MainHeaderButtonsWrapper>
+			</MainHeader>
+			<Paper className={classes.mainPaper} variant="outlined">
+				{!loading && filteredQueues.length === 0 ? (
+					<Box py={8} textAlign="center">
+						<Typography variant="h6" color="textSecondary" gutterBottom>
+							{i18n.t("queues.empty.title")}
+						</Typography>
+						<Typography variant="body2" color="textSecondary">
+							{i18n.t("queues.empty.subtitle")}
+						</Typography>
+					</Box>
+				) : (
+					<Table size="small">
+						<TableHead>
+							<TableRow>
+								<TableCell>{i18n.t("queues.table.name")}</TableCell>
+								<TableCell align="center">
+									{i18n.t("queues.table.color")}
+								</TableCell>
+								<TableCell align="center">
+									{i18n.t("queues.table.tickets")}
+								</TableCell>
+								<TableCell align="center">
+									{i18n.t("queues.table.users")}
+								</TableCell>
+								<TableCell align="center">
+									{i18n.t("queues.table.orderQueue")}
+								</TableCell>
+								<TableCell align="center">
+									{i18n.t("queues.table.createdAt")}
+								</TableCell>
+								<TableCell align="center">
+									{i18n.t("queues.table.actions")}
+								</TableCell>
+							</TableRow>
+						</TableHead>
+						<TableBody>
+							<>
+								{filteredQueues.map((queue) => (
+									<TableRow key={queue.id} hover>
+										<TableCell>
+											<Chip
+												label={queue.name}
+												size="small"
+												style={{
+													backgroundColor: queue.color || "#ccc",
+													color: chipTextColor(queue.color),
+													fontWeight: 600,
+													border: "none",
+												}}
+											/>
+										</TableCell>
+										<TableCell align="center">
+											<Box
+												className={classes.swatch}
+												style={{
+													backgroundColor: queue.color || "#ccc",
+												}}
+												title={queue.color}
+											/>
+										</TableCell>
+										<TableCell align="center">
+											{usageTickets(queue)}
+										</TableCell>
+										<TableCell align="center">
+											{usageUsers(queue)}
+										</TableCell>
+										<TableCell align="center">
+											{queue.orderQueue ?? "—"}
+										</TableCell>
+										<TableCell align="center">
+											{formatCreated(queue.createdAt)}
+										</TableCell>
+										<TableCell align="center">
+											<IconButton
+												size="small"
+												onClick={() => handleEditQueue(queue)}
+											>
+												<Edit />
+											</IconButton>
+
+											<IconButton
+												size="small"
+												onClick={() => {
+													setSelectedQueue(queue);
+													setConfirmModalOpen(true);
+												}}
+											>
+												<DeleteOutline />
+											</IconButton>
+										</TableCell>
+									</TableRow>
+								))}
+								{loading && <TableRowSkeleton columns={7} />}
+							</>
+						</TableBody>
+					</Table>
+				)}
+			</Paper>
+		</MainContainer>
+	);
 };
 
 export default Queues;

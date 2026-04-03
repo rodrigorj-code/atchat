@@ -1,5 +1,6 @@
 import express from "express";
 import isAuth from "../middleware/isAuth";
+import requireCompanyNotDelinquent from "../middleware/requireCompanyNotDelinquent";
 
 import * as WhatsAppController from "../controllers/WhatsAppController";
 
@@ -7,7 +8,12 @@ const whatsappRoutes = express.Router();
 
 whatsappRoutes.get("/whatsapp/", isAuth, WhatsAppController.index);
 
-whatsappRoutes.post("/whatsapp/", isAuth, WhatsAppController.store);
+whatsappRoutes.post(
+  "/whatsapp/",
+  isAuth,
+  requireCompanyNotDelinquent,
+  WhatsAppController.store
+);
 
 whatsappRoutes.get("/whatsapp/:whatsappId", isAuth, WhatsAppController.show);
 

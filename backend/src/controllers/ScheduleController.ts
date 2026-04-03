@@ -40,7 +40,8 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     body,
     sendAt,
     contactId,
-    userId
+    userId,
+    preferredWhatsappId
   } = req.body;
   const { companyId } = req.user;
 
@@ -49,7 +50,11 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     sendAt,
     contactId,
     companyId,
-    userId
+    userId,
+    preferredWhatsappId:
+      preferredWhatsappId === "" || preferredWhatsappId === undefined
+        ? null
+        : Number(preferredWhatsappId)
   });
 
   const io = getIO();
@@ -79,8 +84,16 @@ export const update = async (
   }
 
   const { scheduleId } = req.params;
-  const scheduleData = req.body;
+  const scheduleData: any = { ...req.body };
   const { companyId } = req.user;
+
+  if (scheduleData.preferredWhatsappId !== undefined) {
+    scheduleData.preferredWhatsappId =
+      scheduleData.preferredWhatsappId === "" ||
+      scheduleData.preferredWhatsappId === null
+        ? null
+        : Number(scheduleData.preferredWhatsappId);
+  }
 
   const schedule = await UpdateService({ scheduleData, id: scheduleId, companyId });
 
@@ -118,9 +131,18 @@ export const mediaUpload = async (
   const { id } = req.params;
   const files = req.files as Express.Multer.File[];
   const file = head(files);
+  const { companyId } = req.user;
 
   try {
-    const schedule = await Schedule.findByPk(id);
+    const schedule = await Schedule.findOne({
+      where: { id, companyId }
+    });
+    if (!schedule) {
+      throw new AppError("ERR_NO_SCHEDULE_FOUND", 404);
+    }
+    if (!file) {
+      throw new AppError("Nenhum arquivo enviado", 400);
+    }
     schedule.mediaPath = file.filename;
     schedule.mediaName = file.originalname;
 
@@ -136,9 +158,15 @@ export const deleteMedia = async (
   res: Response
 ): Promise<Response> => {
   const { id } = req.params;
+  const { companyId } = req.user;
 
   try {
-    const schedule = await Schedule.findByPk(id);
+    const schedule = await Schedule.findOne({
+      where: { id, companyId }
+    });
+    if (!schedule) {
+      throw new AppError("ERR_NO_SCHEDULE_FOUND", 404);
+    }
     const filePath = path.resolve("public", schedule.mediaPath);
     const fileExists = fs.existsSync(filePath);
     if (fileExists) {

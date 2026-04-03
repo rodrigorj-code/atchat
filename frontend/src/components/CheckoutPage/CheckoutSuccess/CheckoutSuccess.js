@@ -1,74 +1,164 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useMemo, useRef } from "react";
 import { useHistory } from "react-router-dom";
-import QRCode from 'react-qr-code';
-import { SuccessContent, Total } from './style';
-import { CopyToClipboard } from 'react-copy-to-clipboard';
-import { FaCopy, FaCheckCircle } from 'react-icons/fa';
+import QRCode from "react-qr-code";
+import { Typography, Box, CircularProgress } from "@material-ui/core";
+import { SuccessContent, Total } from "./style";
+import { CopyToClipboard } from "react-copy-to-clipboard";
+import { FaCopy, FaCheckCircle } from "react-icons/fa";
 import { SocketContext } from "../../../context/Socket/SocketContext";
 import { useDate } from "../../../hooks/useDate";
 import { toast } from "react-toastify";
+import { i18n } from "../../../translate/i18n";
+
+const PIX_EXPIRY_SEC = 3600;
+
+function formatPixTotal(pix) {
+  if (!pix?.valor) return "—";
+  const v = pix.valor;
+  const raw =
+    typeof v === "object" && v.original != null
+      ? v.original
+      : typeof v === "string" || typeof v === "number"
+      ? v
+      : null;
+  if (raw == null) return "—";
+  const num = parseFloat(String(raw).replace(",", "."));
+  if (!Number.isFinite(num)) return "—";
+  return num.toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  });
+}
 
 function CheckoutSuccess(props) {
-
-  const { pix } = props;
-  const [pixString,] = useState(pix.qrcode.qrcode);
+  const { pix, invoice } = props;
+  const [pixString] = useState(() => pix?.qrcode?.qrcode || "");
   const [copied, setCopied] = useState(false);
+  const [paymentState, setPaymentState] = useState("waiting");
+  const [secondsLeft, setSecondsLeft] = useState(PIX_EXPIRY_SEC);
   const history = useHistory();
-
   const { dateToClient } = useDate();
-
   const socketManager = useContext(SocketContext);
+  const paymentHandledRef = useRef(false);
+
+  const totalLabel = useMemo(() => formatPixTotal(pix), [pix]);
+
+  useEffect(() => {
+    if (paymentState !== "waiting") return undefined;
+    const t = setInterval(() => {
+      setSecondsLeft((s) => {
+        if (s <= 1) {
+          clearInterval(t);
+          setPaymentState("expired");
+          return 0;
+        }
+        return s - 1;
+      });
+    }, 1000);
+    return () => clearInterval(t);
+  }, [paymentState]);
 
   useEffect(() => {
     const companyId = localStorage.getItem("companyId");
     const socket = socketManager.getSocket(companyId);
-    
-    socket.on(`company-${companyId}-payment`, (data) => {
 
-      if (data.action === "CONCLUIDA") {
-        toast.success(`Sua licença foi renovada até ${dateToClient(data.company.dueDate)}!`);
-        setTimeout(() => {
-          history.push("/");
-        }, 4000);
-      }
-    });
-  }, [history, socketManager]);
+    const handler = (data) => {
+      if (data.action !== "CONCLUIDA" || paymentHandledRef.current) return;
+      paymentHandledRef.current = true;
+      setPaymentState("paid");
+      toast.success(
+        i18n.t("checkoutPage.pix.paidToast", {
+          date: dateToClient(data.company?.dueDate),
+        })
+      );
+      setTimeout(() => {
+        history.push("/");
+      }, 4000);
+    };
+
+    socket.on(`company-${companyId}-payment`, handler);
+    return () => {
+      socket.off(`company-${companyId}-payment`, handler);
+    };
+  }, [history, socketManager, dateToClient]);
 
   const handleCopyQR = () => {
     setTimeout(() => {
       setCopied(false);
-    }, 1 * 1000);
+    }, 1500);
     setCopied(true);
   };
+
+  if (!pix?.qrcode?.qrcode) {
+    return (
+      <Box py={2}>
+        <Typography color="error">
+          {i18n.t("checkoutPage.pix.missingQr")}
+        </Typography>
+      </Box>
+    );
+  }
 
   return (
     <React.Fragment>
       <Total>
-        <span>TOTAL</span>
-        <strong>R${pix.valor.original.toLocaleString('pt-br', { minimumFractionDigits: 2 })}</strong>
+        <span>{i18n.t("checkoutPage.pix.totalLabel")}</span>
+        <strong>{totalLabel}</strong>
       </Total>
-      <SuccessContent>
-        <QRCode value={pixString} />
-        <CopyToClipboard text={pixString} onCopy={handleCopyQR}>
-          <button className="copy-button" type="button">
-            {copied ? (
-              <>
-                <span>Copiado</span>
-                <FaCheckCircle size={18} />
-              </>
-            ) : (
-              <>
-                <span>Copiar código QR</span>
-                <FaCopy size={18} />
-              </>
-            )}
-          </button>
-        </CopyToClipboard>
-        <span>
-          Para finalizar, basta realizar o pagamento escaneando ou colando o
-          código Pix acima :)
-        </span>
-      </SuccessContent>
+
+      {invoice && (
+        <Typography variant="body2" color="textSecondary" align="center" paragraph>
+          {i18n.t("checkoutPage.pix.invoiceRef", {
+            id: invoice.id,
+            detail: invoice.detail || "",
+          })}
+        </Typography>
+      )}
+
+      {paymentState === "waiting" && (
+        <Typography variant="body2" align="center" color="textSecondary" paragraph>
+          {i18n.t("checkoutPage.pix.waitingHint", {
+            minutes: Math.ceil(secondsLeft / 60),
+          })}
+        </Typography>
+      )}
+
+      {paymentState === "expired" && (
+        <Typography variant="body1" align="center" color="error" paragraph>
+          {i18n.t("checkoutPage.pix.expiredHint")}
+        </Typography>
+      )}
+
+      {paymentState === "paid" && (
+        <Box display="flex" justifyContent="center" alignItems="center" py={2}>
+          <CircularProgress size={28} style={{ marginRight: 12 }} />
+          <Typography>{i18n.t("checkoutPage.pix.redirecting")}</Typography>
+        </Box>
+      )}
+
+      {paymentState === "waiting" && (
+        <SuccessContent>
+          <QRCode value={pixString} size={200} />
+          <CopyToClipboard text={pixString} onCopy={handleCopyQR}>
+            <button className="copy-button" type="button">
+              {copied ? (
+                <>
+                  <span>{i18n.t("checkoutPage.pix.copied")}</span>
+                  <FaCheckCircle size={18} />
+                </>
+              ) : (
+                <>
+                  <span>{i18n.t("checkoutPage.pix.copyPix")}</span>
+                  <FaCopy size={18} />
+                </>
+              )}
+            </button>
+          </CopyToClipboard>
+          <span style={{ textAlign: "center", marginTop: 8 }}>
+            {i18n.t("checkoutPage.pix.instructions")}
+          </span>
+        </SuccessContent>
+      )}
     </React.Fragment>
   );
 }

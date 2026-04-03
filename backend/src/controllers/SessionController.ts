@@ -7,6 +7,7 @@ import { SendRefreshToken } from "../helpers/SendRefreshToken";
 import { RefreshTokenService } from "../services/AuthServices/RefreshTokenService";
 import FindUserFromToken from "../services/AuthServices/FindUserFromToken";
 import User from "../models/User";
+import { SerializeUser } from "../helpers/SerializeUser";
 
 export const store = async (req: Request, res: Response): Promise<Response> => {
   const { email, password } = req.body;
@@ -52,7 +53,9 @@ export const update = async (
 
   SendRefreshToken(res, refreshToken);
 
-  return res.json({ token: newToken, user });
+  const serializedUser = await SerializeUser(user);
+
+  return res.json({ token: newToken, user: serializedUser });
 };
 
 export const me = async (req: Request, res: Response): Promise<Response> => {

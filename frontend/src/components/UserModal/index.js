@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect, useContext, useMemo } from "react";
 
 import * as Yup from "yup";
 import { Formik, Form, Field } from "formik";
@@ -17,6 +17,7 @@ import Select from "@material-ui/core/Select";
 import InputLabel from "@material-ui/core/InputLabel";
 import MenuItem from "@material-ui/core/MenuItem";
 import FormControl from "@material-ui/core/FormControl";
+import Typography from "@material-ui/core/Typography";
 
 import { i18n } from "../../translate/i18n";
 
@@ -34,6 +35,11 @@ const useStyles = makeStyles(theme => ({
 	},
 	multFieldLine: {
 		display: "flex",
+		flexWrap: "wrap",
+		"& > *": {
+			flex: "1 1 200px",
+			minWidth: 0,
+		},
 		"& > *:not(:last-child)": {
 			marginRight: theme.spacing(1),
 		},
@@ -52,21 +58,35 @@ const useStyles = makeStyles(theme => ({
 		marginLeft: -12,
 	},
 	formControl: {
-		margin: theme.spacing(1),
+		margin: theme.spacing(1, 0),
 		minWidth: 120,
+		width: "100%",
+	},
+	maxWidth: {
+		width: "100%",
+	},
+	divider: {
+		display: "flex",
+		alignItems: "center",
+		marginTop: theme.spacing(2),
+		marginBottom: theme.spacing(1),
+		"&::before, &::after": {
+			content: '""',
+			flex: 1,
+			borderBottom: `1px solid ${theme.palette.divider}`,
+		},
+	},
+	dividerText: {
+		paddingLeft: theme.spacing(2),
+		paddingRight: theme.spacing(2),
+		fontSize: "0.75rem",
+		color: theme.palette.text.secondary,
+		textTransform: "uppercase",
+		letterSpacing: "0.08em",
 	},
 }));
 
-const UserSchema = Yup.object().shape({
-	name: Yup.string()
-		.min(2, i18n.t("userModal.formErrors.name.short"))
-		.max(50, i18n.t("userModal.formErrors.name.long"))
-		.required(i18n.t("userModal.formErrors.name.required")),
-	password: Yup.string().min(5, i18n.t("userModal.formErrors.password.short")).max(50, i18n.t("userModal.formErrors.password.long")),
-	email: Yup.string().email(i18n.t("userModal.formErrors.email.invalid")).required(i18n.t("userModal.formErrors.email.required")),
-});
-
-const UserModal = ({ open, onClose, userId }) => {
+const UserModal = ({ open, onClose, userId, reload }) => {
 	const classes = useStyles();
 
 	const initialState = {
@@ -74,7 +94,7 @@ const UserModal = ({ open, onClose, userId }) => {
 		email: "",
 		password: "",
 		profile: "user",
-		allTicket: "desabled"
+		allTicket: "desabled",
 	};
 
 	const { user: loggedInUser } = useContext(AuthContext);
@@ -84,17 +104,45 @@ const UserModal = ({ open, onClose, userId }) => {
 	const [whatsappId, setWhatsappId] = useState(false);
 	const { loading, whatsApps } = useWhatsApps();
 
+	const validationSchema = useMemo(
+		() =>
+			Yup.object().shape({
+				name: Yup.string()
+					.min(2, i18n.t("userModal.formErrors.name.short"))
+					.max(50, i18n.t("userModal.formErrors.name.long"))
+					.required(i18n.t("userModal.formErrors.name.required")),
+				email: Yup.string()
+					.email(i18n.t("userModal.formErrors.email.invalid"))
+					.required(i18n.t("userModal.formErrors.email.required")),
+				profile: Yup.string()
+					.oneOf(["admin", "user", "supervisor"])
+					.required(),
+				allTicket: Yup.string().oneOf(["enabled", "desabled"]).required(),
+				password: userId
+					? Yup.string()
+							.transform(v => (v === "" || v === undefined ? undefined : v))
+							.min(5, i18n.t("userModal.formErrors.password.short"))
+							.max(50, i18n.t("userModal.formErrors.password.long"))
+							.notRequired()
+					: Yup.string()
+							.min(5, i18n.t("userModal.formErrors.password.short"))
+							.max(50, i18n.t("userModal.formErrors.password.long"))
+							.required(i18n.t("userModal.formErrors.password.required")),
+			}),
+		[userId]
+	);
+
 	useEffect(() => {
 		const fetchUser = async () => {
 			if (!userId) return;
 			try {
 				const { data } = await api.get(`/users/${userId}`);
 				setUser(prevState => {
-					return { ...prevState, ...data };
+					return { ...prevState, ...data, password: "" };
 				});
 				const userQueueIds = data.queues?.map(queue => queue.id);
-				setSelectedQueueIds(userQueueIds);
-				setWhatsappId(data.whatsappId ? data.whatsappId : '');
+				setSelectedQueueIds(userQueueIds || []);
+				setWhatsappId(data.whatsappId ? data.whatsappId : "");
 			} catch (err) {
 				toastError(err);
 			}
@@ -106,10 +154,20 @@ const UserModal = ({ open, onClose, userId }) => {
 	const handleClose = () => {
 		onClose();
 		setUser(initialState);
+		setSelectedQueueIds([]);
+		setWhatsappId(false);
 	};
 
 	const handleSaveUser = async values => {
-		const userData = { ...values, whatsappId, queueIds: selectedQueueIds, allTicket: values.allTicket };
+		const userData = {
+			...values,
+			whatsappId,
+			queueIds: selectedQueueIds,
+			allTicket: values.allTicket,
+		};
+		if (userId && (!userData.password || userData.password === "")) {
+			delete userData.password;
+		}
 		try {
 			if (userId) {
 				await api.put(`/users/${userId}`, userData);
@@ -117,10 +175,13 @@ const UserModal = ({ open, onClose, userId }) => {
 				await api.post("/users", userData);
 			}
 			toast.success(i18n.t("userModal.success"));
+			if (typeof reload === "function") {
+				reload();
+			}
+			handleClose();
 		} catch (err) {
 			toastError(err);
 		}
-		handleClose();
 	};
 
 	return (
@@ -128,7 +189,7 @@ const UserModal = ({ open, onClose, userId }) => {
 			<Dialog
 				open={open}
 				onClose={handleClose}
-				maxWidth="xs"
+				maxWidth="sm"
 				fullWidth
 				scroll="paper"
 			>
@@ -140,7 +201,7 @@ const UserModal = ({ open, onClose, userId }) => {
 				<Formik
 					initialValues={user}
 					enableReinitialize={true}
-					validationSchema={UserSchema}
+					validationSchema={validationSchema}
 					onSubmit={(values, actions) => {
 						setTimeout(() => {
 							handleSaveUser(values);
@@ -168,8 +229,14 @@ const UserModal = ({ open, onClose, userId }) => {
 										label={i18n.t("userModal.form.password")}
 										type="password"
 										name="password"
+										autoComplete={userId ? "new-password" : "new-password"}
 										error={touched.password && Boolean(errors.password)}
-										helperText={touched.password && errors.password}
+										helperText={
+											(touched.password && errors.password) ||
+											(userId
+												? i18n.t("userModal.form.passwordOptionalEdit")
+												: undefined)
+										}
 										variant="outlined"
 										margin="dense"
 										fullWidth
@@ -190,6 +257,7 @@ const UserModal = ({ open, onClose, userId }) => {
 										variant="outlined"
 										className={classes.formControl}
 										margin="dense"
+										fullWidth
 									>
 										<Can
 											role={loggedInUser.profile}
@@ -210,6 +278,9 @@ const UserModal = ({ open, onClose, userId }) => {
 													>
 														<MenuItem value="admin">Admin</MenuItem>
 														<MenuItem value="user">User</MenuItem>
+														<MenuItem value="supervisor">
+															{i18n.t("userModal.form.profileSupervisor")}
+														</MenuItem>
 													</Field>
 												</>
 											)}
@@ -222,7 +293,7 @@ const UserModal = ({ open, onClose, userId }) => {
 									yes={() => (
 										<QueueSelect
 											selectedQueueIds={selectedQueueIds}
-											onChange={values => setSelectedQueueIds(values)}
+											onChange={vals => setSelectedQueueIds(vals)}
 										/>
 									)}
 								/>
@@ -230,68 +301,81 @@ const UserModal = ({ open, onClose, userId }) => {
 									role={loggedInUser.profile}
 									perform="user-modal:editProfile"
 									yes={() => (
-										<FormControl variant="outlined" margin="dense" className={classes.maxWidth} fullWidth>
+										<FormControl
+											variant="outlined"
+											margin="dense"
+											className={classes.maxWidth}
+											fullWidth
+										>
 											<InputLabel>
 												{i18n.t("userModal.form.whatsapp")}
 											</InputLabel>
 											<Field
 												as={Select}
 												value={whatsappId}
-												onChange={(e) => setWhatsappId(e.target.value)}
+												onChange={e => setWhatsappId(e.target.value)}
 												label={i18n.t("userModal.form.whatsapp")}
-
 											>
-												<MenuItem value={''}>&nbsp;</MenuItem>
-												{whatsApps.map((whatsapp) => (
-													<MenuItem key={whatsapp.id} value={whatsapp.id}>{whatsapp.name}</MenuItem>
+												<MenuItem value={""}>&nbsp;</MenuItem>
+												{whatsApps.map(whatsapp => (
+													<MenuItem key={whatsapp.id} value={whatsapp.id}>
+														{whatsapp.name}
+													</MenuItem>
 												))}
 											</Field>
 										</FormControl>
 									)}
 								/>
-								
-								
-								
+
 								<div className={classes.divider}>
 									<span className={classes.dividerText}>
 										{i18n.t("userModal.labels.liberations")}
 									</span>
 								</div>
-								
+
 								<Can
 									role={loggedInUser.profile}
 									perform="user-modal:editProfile"
-									yes={() => (!loading &&
-										<div className={classes.textField}>
-											<FormControl
-												variant="outlined"
-												className={classes.maxWidth}
-												margin="dense"
-												fullWidth
-											>
-												<>
-													<InputLabel id="profile-selection-input-label">
-														{i18n.t("userModal.form.allTicket")}
-													</InputLabel>
+									yes={() =>
+										!loading && (
+											<div>
+												<FormControl
+													variant="outlined"
+													className={classes.maxWidth}
+													margin="dense"
+													fullWidth
+												>
+													<>
+														<InputLabel id="allTicket-selection-label">
+															{i18n.t("userModal.form.allTicket")}
+														</InputLabel>
 
-													<Field
-														as={Select}
-														label={i18n.t("allTicket.form.viewTags")}
-														name="allTicket"
-														labelId="allTicket-selection-label"
-														id="allTicket-selection"
-														required
-													>
-														<MenuItem value="enabled">{i18n.t("userModal.form.allTicketEnabled")}</MenuItem>
-														<MenuItem value="desabled">{i18n.t("userModal.form.allTicketDesabled")}</MenuItem>
-													</Field>
-												</>
-											</FormControl>
-										</div>
-
-									)}
+														<Field
+															as={Select}
+															label={i18n.t("allTicket.form.viewTags")}
+															name="allTicket"
+															labelId="allTicket-selection-label"
+															id="allTicket-selection"
+															required
+														>
+															<MenuItem value="enabled">
+																{i18n.t("userModal.form.allTicketEnabled")}
+															</MenuItem>
+															<MenuItem value="desabled">
+																{i18n.t("userModal.form.allTicketDesabled")}
+															</MenuItem>
+														</Field>
+													</>
+												</FormControl>
+											</div>
+										)
+									}
 								/>
-								
+								{!userId && (
+									<Typography variant="caption" color="textSecondary">
+										{i18n.t("userModal.hints.passwordCreate")}
+									</Typography>
+								)}
 							</DialogContent>
 							<DialogActions>
 								<Button

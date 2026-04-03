@@ -3,6 +3,7 @@ import * as Yup from "yup";
 import AppError from "../../errors/AppError";
 import Schedule from "../../models/Schedule";
 import ShowService from "./ShowService";
+import Whatsapp from "../../models/Whatsapp";
 
 interface ScheduleData {
   id?: number;
@@ -13,6 +14,7 @@ interface ScheduleData {
   companyId?: number;
   ticketId?: number;
   userId?: number;
+  preferredWhatsappId?: number | null;
 }
 
 interface Request {
@@ -28,10 +30,6 @@ const UpdateUserService = async ({
 }: Request): Promise<Schedule | undefined> => {
   const schedule = await ShowService(id, companyId);
 
-  if (schedule?.companyId !== companyId) {
-    throw new AppError("Não é possível alterar registros de outra empresa");
-  }
-
   const schema = Yup.object().shape({
     body: Yup.string().min(5)
   });
@@ -43,12 +41,22 @@ const UpdateUserService = async ({
     contactId,
     ticketId,
     userId,
+    preferredWhatsappId
   } = scheduleData;
 
   try {
     await schema.validate({ body });
   } catch (err: any) {
     throw new AppError(err.message);
+  }
+
+  if (preferredWhatsappId !== undefined && preferredWhatsappId !== null) {
+    const w = await Whatsapp.findOne({
+      where: { id: preferredWhatsappId, companyId }
+    });
+    if (!w) {
+      throw new AppError("Conexão WhatsApp inválida para esta empresa", 400);
+    }
   }
 
   await schedule.update({
@@ -58,10 +66,12 @@ const UpdateUserService = async ({
     contactId,
     ticketId,
     userId,
+    ...(preferredWhatsappId !== undefined
+      ? { preferredWhatsappId: preferredWhatsappId || null }
+      : {})
   });
 
-  await schedule.reload();
-  return schedule;
+  return ShowService(id, companyId);
 };
 
 export default UpdateUserService;

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useContext } from "react";
 
 import * as Yup from "yup";
-import { Formik, Form, Field } from "formik";
+import { Formik, Form, Field, useFormikContext } from "formik";
 import { toast } from "react-toastify";
 import { head } from "lodash";
 
@@ -17,6 +17,7 @@ import DialogTitle from "@material-ui/core/DialogTitle";
 import CircularProgress from "@material-ui/core/CircularProgress";
 import AttachFileIcon from "@material-ui/icons/AttachFile";
 import DeleteOutlineIcon from "@material-ui/icons/DeleteOutline";
+import Typography from "@material-ui/core/Typography";
 
 import { i18n } from "../../translate/i18n";
 import moment from "moment";
@@ -36,11 +37,154 @@ import {
 import { AuthContext } from "../../context/Auth/AuthContext";
 import ConfirmationModal from "../ConfirmationModal";
 
+const PREVIEW_VARS = {
+  nome: "João",
+  numero: "5511999999999",
+  email: "joao@email.com",
+};
+
+function buildPreviewMessage(text) {
+  if (!text) return "";
+  let s = String(text);
+  s = s.replace(/{nome}/g, PREVIEW_VARS.nome);
+  s = s.replace(/{numero}/g, PREVIEW_VARS.numero);
+  s = s.replace(/{email}/g, PREVIEW_VARS.email);
+  return s;
+}
+
+function hasNumericTag(tagListId) {
+  if (tagListId === "" || tagListId === "Nenhuma" || tagListId == null) {
+    return false;
+  }
+  const n = Number(tagListId);
+  return Number.isFinite(n) && n > 0;
+}
+
+function hasContactList(contactListId) {
+  if (contactListId === "" || contactListId == null) return false;
+  const n = Number(contactListId);
+  return Number.isFinite(n) && n > 0;
+}
+
+function CampaignFormEffects({ campaignId, open, setContactStats }) {
+  const { values } = useFormikContext();
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      setContactStats((prev) => ({ ...prev, loading: true }));
+
+      const listId = values.contactListId;
+      const tagSel = hasNumericTag(values.tagListId);
+
+      try {
+        if (tagSel && hasContactList(listId)) {
+          const { data } = await api.get("/campaigns/tag-estimate", {
+            params: {
+              tagId: values.tagListId,
+              contactListId: listId,
+            },
+          });
+          if (!cancelled) {
+            setContactStats({
+              total: data.total,
+              valid: data.valid,
+              invalid: data.invalid,
+              loading: false,
+            });
+          }
+          return;
+        }
+
+        if (tagSel && !hasContactList(listId)) {
+          const { data } = await api.get("/campaigns/tag-estimate", {
+            params: { tagId: values.tagListId },
+          });
+          if (!cancelled) {
+            setContactStats({
+              total: data.total,
+              valid: data.valid,
+              invalid: data.invalid,
+              loading: false,
+            });
+          }
+          return;
+        }
+
+        if (hasContactList(listId)) {
+          const { data } = await api.get("/campaigns/contact-list-count", {
+            params: { contactListId: listId },
+          });
+          if (!cancelled) {
+            setContactStats({
+              total: data.total,
+              valid: data.valid,
+              invalid: data.invalid,
+              loading: false,
+            });
+          }
+          return;
+        }
+
+        if (campaignId) {
+          const { data } = await api.get(
+            `/campaigns/${campaignId}/contacts-count`
+          );
+          if (!cancelled) {
+            setContactStats({
+              total: data.total,
+              valid: data.valid,
+              invalid: data.invalid,
+              loading: false,
+            });
+          }
+          return;
+        }
+
+        if (!cancelled) {
+          setContactStats({
+            total: 0,
+            valid: 0,
+            invalid: 0,
+            loading: false,
+          });
+        }
+      } catch (err) {
+        if (!cancelled) {
+          toastError(err);
+          setContactStats({
+            total: 0,
+            valid: 0,
+            invalid: 0,
+            loading: false,
+          });
+        }
+      }
+    }
+
+    if (open) {
+      load();
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    values.contactListId,
+    values.tagListId,
+    campaignId,
+    open,
+    setContactStats,
+  ]);
+
+  return null;
+}
+
 const useStyles = makeStyles((theme) => ({
   root: {
     display: "flex",
     flexWrap: "wrap",
-    backgroundColor: "#fff"
+    backgroundColor: "#fff",
   },
 
   tabmsg: {
@@ -69,6 +213,16 @@ const useStyles = makeStyles((theme) => ({
     left: "50%",
     marginTop: -12,
     marginLeft: -12,
+  },
+
+  previewBox: {
+    marginTop: theme.spacing(1),
+    padding: theme.spacing(1.5),
+    backgroundColor: theme.palette.grey[100],
+    borderRadius: theme.shape.borderRadius,
+    border: `1px solid ${theme.palette.divider}`,
+    whiteSpace: "pre-wrap",
+    wordBreak: "break-word",
   },
 }));
 
@@ -100,7 +254,7 @@ const CampaignModal = ({
     message3: "",
     message4: "",
     message5: "",
-    status: "INATIVA", // INATIVA, PROGRAMADA, EM_ANDAMENTO, CANCELADA, FINALIZADA,
+    status: "INATIVA",
     scheduledAt: "",
     whatsappId: "",
     contactListId: "",
@@ -117,6 +271,16 @@ const CampaignModal = ({
   const [campaignEditable, setCampaignEditable] = useState(true);
   const attachmentFile = useRef(null);
   const [tagLists, setTagLists] = useState([]);
+  const [contactStats, setContactStats] = useState({
+    total: 0,
+    valid: 0,
+    invalid: 0,
+    loading: false,
+  });
+  const [submitConfirmOpen, setSubmitConfirmOpen] = useState(false);
+  const [restartConfirmOpen, setRestartConfirmOpen] = useState(false);
+  const pendingSubmitRef = useRef(null);
+  const [opsSummary, setOpsSummary] = useState(null);
 
   useEffect(() => {
     return () => {
@@ -128,7 +292,7 @@ const CampaignModal = ({
     (async () => {
       try {
         const { data } = await api.get("/files/", {
-          params: { companyId }
+          params: { companyId },
         });
 
         setFile(Array.isArray(data?.files) ? data.files : []);
@@ -154,7 +318,8 @@ const CampaignModal = ({
         .get(`/whatsapp`, { params: { companyId, session: 0 } })
         .then(({ data }) => setWhatsapps(Array.isArray(data) ? data : []));
 
-      api.get(`/tags`, { params: { companyId } })
+      api
+        .get(`/tags`, { params: { companyId } })
         .then(({ data }) => {
           const fetchedTags = Array.isArray(data?.tags) ? data.tags : [];
           const formattedTagLists = fetchedTags.map((tag) => ({
@@ -166,7 +331,7 @@ const CampaignModal = ({
         .catch((error) => {
           console.error("Error retrieving tags:", error);
         });
-        
+
       if (!campaignId) return;
 
       api.get(`/campaigns/${campaignId}`).then(({ data }) => {
@@ -181,7 +346,7 @@ const CampaignModal = ({
             }
           });
 
-          return {...prevCampaignData, tagListId: data.tagId || "Nenhuma"};
+          return { ...prevCampaignData, tagListId: data.tagId || "Nenhuma" };
         });
       });
     }
@@ -199,9 +364,35 @@ const CampaignModal = ({
     setCampaignEditable(isEditable);
   }, [campaign.status, campaign.scheduledAt]);
 
+  useEffect(() => {
+    if (!open || !campaignId) {
+      setOpsSummary(null);
+      return;
+    }
+    let cancelled = false;
+    api
+      .get(`/campaigns/${campaignId}/progress`)
+      .then(({ data }) => {
+        if (!cancelled) {
+          setOpsSummary(data);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setOpsSummary(null);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, campaignId, campaign.status]);
+
   const handleClose = () => {
     onClose();
     setCampaign(initialState);
+    pendingSubmitRef.current = null;
+    setSubmitConfirmOpen(false);
+    setOpsSummary(null);
   };
 
   const handleAttachmentFile = (e) => {
@@ -211,7 +402,7 @@ const CampaignModal = ({
     }
   };
 
-  const handleSaveCampaign = async (values) => {
+  const handleSaveCampaign = async (values, actions = null) => {
     try {
       const dataValues = {};
       Object.entries(values).forEach(([key, value]) => {
@@ -248,6 +439,10 @@ const CampaignModal = ({
     } catch (err) {
       console.log(err);
       toastError(err);
+    } finally {
+      if (actions && typeof actions.setSubmitting === "function") {
+        actions.setSubmitting(false);
+      }
     }
   };
 
@@ -289,20 +484,31 @@ const CampaignModal = ({
       setCampaign((prev) => ({ ...prev, status: "CANCELADA" }));
       resetPagination();
     } catch (err) {
-      toast.error(err.message);
+      toastError(err);
     }
   };
 
-  const restartCampaign = async () => {
+  const runRestartCampaign = async () => {
     try {
       await api.post(`/campaigns/${campaign.id}/restart`);
       toast.success(i18n.t("campaigns.toasts.restart"));
       setCampaign((prev) => ({ ...prev, status: "EM_ANDAMENTO" }));
       resetPagination();
     } catch (err) {
-      toast.error(err.message);
+      toastError(err);
     }
   };
+
+  const confirmSubmitMessage = () => {
+    if (contactStats.valid > 0) {
+      return i18n.t("campaigns.dialog.confirmSend.messageWithCount", {
+        count: contactStats.valid,
+      });
+    }
+    return i18n.t("campaigns.dialog.confirmSend.generic");
+  };
+
+  const previewField = `message${messageTab + 1}`;
 
   return (
     <div className={classes.root}>
@@ -313,6 +519,40 @@ const CampaignModal = ({
         onConfirm={deleteMedia}
       >
         {i18n.t("campaigns.confirmationModal.deleteMessage")}
+      </ConfirmationModal>
+      <ConfirmationModal
+        title={i18n.t("campaigns.dialog.confirmSend.title")}
+        open={submitConfirmOpen}
+        onClose={() => {
+          setSubmitConfirmOpen(false);
+          if (pendingSubmitRef.current?.actions) {
+            pendingSubmitRef.current.actions.setSubmitting(false);
+          }
+          pendingSubmitRef.current = null;
+        }}
+        onConfirm={() => {
+          const p = pendingSubmitRef.current;
+          pendingSubmitRef.current = null;
+          setSubmitConfirmOpen(false);
+          if (p) {
+            handleSaveCampaign(p.values, p.actions);
+          }
+        }}
+        confirmText={i18n.t("campaigns.dialog.confirmSend.confirm")}
+      >
+        {confirmSubmitMessage()}
+      </ConfirmationModal>
+      <ConfirmationModal
+        title={i18n.t("campaigns.dialog.confirmRestart.title")}
+        open={restartConfirmOpen}
+        onClose={() => setRestartConfirmOpen(false)}
+        onConfirm={() => {
+          setRestartConfirmOpen(false);
+          runRestartCampaign();
+        }}
+        confirmText={i18n.t("campaigns.dialog.confirmRestart.confirm")}
+      >
+        {i18n.t("campaigns.dialog.confirmRestart.message")}
       </ConfirmationModal>
       <Dialog
         open={open}
@@ -344,14 +584,17 @@ const CampaignModal = ({
           enableReinitialize={true}
           validationSchema={CampaignSchema}
           onSubmit={(values, actions) => {
-            setTimeout(() => {
-              handleSaveCampaign(values);
-              actions.setSubmitting(false);
-            }, 400);
+            pendingSubmitRef.current = { values, actions };
+            setSubmitConfirmOpen(true);
           }}
         >
           {({ values, errors, touched, isSubmitting }) => (
             <Form>
+              <CampaignFormEffects
+                campaignId={campaignId}
+                open={open}
+                setContactStats={setContactStats}
+              />
               <DialogContent dividers>
                 <Grid spacing={2} container>
                   <Grid xs={12} md={9} item>
@@ -393,14 +636,16 @@ const CampaignModal = ({
                         disabled={!campaignEditable}
                       >
                         <MenuItem value="">Nenhuma</MenuItem>
-                        {(Array.isArray(contactLists) ? contactLists : []).map((contactList) => (
+                        {(Array.isArray(contactLists) ? contactLists : []).map(
+                          (contactList) => (
                             <MenuItem
                               key={contactList.id}
                               value={contactList.id}
                             >
                               {contactList.name}
                             </MenuItem>
-                          ))}
+                          )
+                        )}
                       </Field>
                     </FormControl>
                   </Grid>
@@ -425,11 +670,13 @@ const CampaignModal = ({
                         disabled={!campaignEditable}
                       >
                         <MenuItem value="">Nenhuma</MenuItem>
-                        {(Array.isArray(tagLists) ? tagLists : []).map((tagList) => (
+                        {(Array.isArray(tagLists) ? tagLists : []).map(
+                          (tagList) => (
                             <MenuItem key={tagList.id} value={tagList.id}>
                               {tagList.name}
                             </MenuItem>
-                          ))}
+                          )
+                        )}
                       </Field>
                     </FormControl>
                   </Grid>
@@ -454,11 +701,13 @@ const CampaignModal = ({
                         disabled={!campaignEditable}
                       >
                         <MenuItem value="">Nenhuma</MenuItem>
-                        {(Array.isArray(whatsapps) ? whatsapps : []).map((whatsapp) => (
+                        {(Array.isArray(whatsapps) ? whatsapps : []).map(
+                          (whatsapp) => (
                             <MenuItem key={whatsapp.id} value={whatsapp.id}>
                               {whatsapp.name}
                             </MenuItem>
-                          ))}
+                          )
+                        )}
                       </Field>
                     </FormControl>
                   </Grid>
@@ -481,13 +730,15 @@ const CampaignModal = ({
                     />
                   </Grid>
                   <Grid xs={12} md={4} item>
-                  <FormControl
+                    <FormControl
                       variant="outlined"
                       margin="dense"
                       className={classes.FormControl}
                       fullWidth
                     >
-                      <InputLabel id="fileListId-selection-label">{i18n.t("campaigns.dialog.form.fileList")}</InputLabel>
+                      <InputLabel id="fileListId-selection-label">
+                        {i18n.t("campaigns.dialog.form.fileList")}
+                      </InputLabel>
                       <Field
                         as={Select}
                         label={i18n.t("campaigns.dialog.form.fileList")}
@@ -497,8 +748,8 @@ const CampaignModal = ({
                         labelId="fileListId-selection-label"
                         value={values.fileListId || ""}
                       >
-                        <MenuItem value={""} >{"Nenhum"}</MenuItem>
-                        {(Array.isArray(file) ? file : []).map(f => (
+                        <MenuItem value={""}>{"Nenhum"}</MenuItem>
+                        {(Array.isArray(file) ? file : []).map((f) => (
                           <MenuItem key={f.id} value={f.id}>
                             {f.name}
                           </MenuItem>
@@ -506,6 +757,43 @@ const CampaignModal = ({
                       </Field>
                     </FormControl>
                   </Grid>
+                  <Grid xs={12} item>
+                    <Box>
+                      <Typography variant="subtitle2" color="textSecondary">
+                        {i18n.t("campaigns.dialog.contactStats.title")}
+                      </Typography>
+                      {contactStats.loading ? (
+                        <Typography variant="body2">
+                          {i18n.t("campaigns.dialog.contactStats.loading")}
+                        </Typography>
+                      ) : (
+                        <Typography variant="body2">
+                          {i18n.t("campaigns.dialog.contactStats.line", {
+                            total: contactStats.total,
+                            valid: contactStats.valid,
+                            invalid: contactStats.invalid,
+                          })}
+                        </Typography>
+                      )}
+                    </Box>
+                  </Grid>
+                  {campaignId && opsSummary && (
+                    <Grid xs={12} item>
+                      <Box>
+                        <Typography variant="subtitle2" color="textSecondary">
+                          {i18n.t("campaigns.dialog.opsSummary.title")}
+                        </Typography>
+                        <Typography variant="body2">
+                          {i18n.t("campaigns.dialog.opsSummary.line", {
+                            total: opsSummary.total,
+                            sent: opsSummary.sent,
+                            pending: opsSummary.pending,
+                            failed: opsSummary.failed ?? 0,
+                          })}
+                        </Typography>
+                      </Box>
+                    </Grid>
+                  )}
                   <Grid xs={12} item>
                     <Tabs
                       value={messageTab}
@@ -542,6 +830,18 @@ const CampaignModal = ({
                         <>{renderMessageField("message5")}</>
                       )}
                     </Box>
+                    <Typography variant="subtitle2" color="textSecondary">
+                      {i18n.t("campaigns.dialog.preview.title")}
+                    </Typography>
+                    <Typography variant="caption" display="block" gutterBottom>
+                      {i18n.t("campaigns.dialog.preview.mockLine")}
+                    </Typography>
+                    <Box className={classes.previewBox} component="div">
+                      <Typography variant="body2">
+                        {buildPreviewMessage(values[previewField]) ||
+                          i18n.t("campaigns.dialog.preview.empty")}
+                      </Typography>
+                    </Box>
                   </Grid>
                   {(campaign.mediaPath || attachment) && (
                     <Grid xs={12} item>
@@ -566,7 +866,7 @@ const CampaignModal = ({
                 {campaign.status === "CANCELADA" && (
                   <Button
                     color="primary"
-                    onClick={() => restartCampaign()}
+                    onClick={() => setRestartConfirmOpen(true)}
                     variant="outlined"
                   >
                     {i18n.t("campaigns.dialog.buttons.restart")}

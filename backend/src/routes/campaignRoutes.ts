@@ -1,5 +1,6 @@
 import express from "express";
 import isAuth from "../middleware/isAuth";
+import requireCompanyNotDelinquent from "../middleware/requireCompanyNotDelinquent";
 
 import * as CampaignController from "../controllers/CampaignController";
 import multer from "multer";
@@ -11,11 +12,42 @@ const routes = express.Router();
 
 routes.get("/campaigns/list", isAuth, CampaignController.findList);
 
+routes.get(
+  "/campaigns/contact-list-count",
+  isAuth,
+  CampaignController.contactListCount
+);
+
 routes.get("/campaigns", isAuth, CampaignController.index);
+
+routes.get(
+  "/campaigns/tag-estimate",
+  isAuth,
+  CampaignController.tagEstimate
+);
+
+routes.get(
+  "/campaigns/:id/contacts-count",
+  isAuth,
+  CampaignController.contactsCount
+);
+
+routes.get("/campaigns/:id/progress", isAuth, CampaignController.progress);
 
 routes.get("/campaigns/:id", isAuth, CampaignController.show);
 
-routes.post("/campaigns", isAuth, CampaignController.store);
+routes.post(
+  "/campaigns",
+  isAuth,
+  requireCompanyNotDelinquent,
+  CampaignController.store
+);
+
+routes.post(
+  "/campaigns/progress-batch",
+  isAuth,
+  CampaignController.progressBatch
+);
 
 routes.put("/campaigns/:id", isAuth, CampaignController.update);
 
@@ -23,11 +55,24 @@ routes.delete("/campaigns/:id", isAuth, CampaignController.remove);
 
 routes.post("/campaigns/:id/cancel", isAuth, CampaignController.cancel);
 
-routes.post("/campaigns/:id/restart", isAuth, CampaignController.restart);
+routes.post(
+  "/campaigns/:id/restart",
+  isAuth,
+  requireCompanyNotDelinquent,
+  CampaignController.restart
+);
+
+routes.post(
+  "/campaigns/:id/retry-failed",
+  isAuth,
+  requireCompanyNotDelinquent,
+  CampaignController.retryFailed
+);
 
 routes.post(
   "/campaigns/:id/media-upload",
   isAuth,
+  requireCompanyNotDelinquent,
   upload.array("file"),
   CampaignController.mediaUpload
 );

@@ -7,7 +7,7 @@ import moment from "moment";
 import Schedule from "./models/Schedule";
 import Contact from "./models/Contact";
 import { Op, QueryTypes, Sequelize } from "sequelize";
-import GetDefaultWhatsApp from "./helpers/GetDefaultWhatsApp";
+import ResolveWhatsappForSchedule from "./helpers/ResolveWhatsappForSchedule";
 import Campaign from "./models/Campaign";
 import ContactList from "./models/ContactList";
 import ContactListItem from "./models/ContactListItem";
@@ -22,6 +22,7 @@ import path from "path";
 import User from "./models/User";
 import Company from "./models/Company";
 import Plan from "./models/Plan";
+import Invoices from "./models/Invoices";
 import Ticket from "./models/Ticket";
 import ShowFileService from "./services/FileServices/ShowService";
 import FilesOptions from './models/FilesOptions';
@@ -29,6 +30,26 @@ import { addSeconds, differenceInSeconds } from "date-fns";
 import formatBody from "./helpers/Mustache";
 import { ClosedAllOpenTickets } from "./services/WbotServices/wbotClosedTickets";
 
+const SCHEDULE_UPCOMING_WINDOW_SEC = 300;
+const SCHEDULE_RETRY_BACKOFF_MINUTES = 2;
+const SCHEDULE_MAX_ATTEMPTS = 100;
+const SCHEDULE_SEND_DELAY_MS = 40000;
+
+async function emitScheduleSocketUpdate(scheduleId: number) {
+  const schedule = await Schedule.findByPk(scheduleId, {
+    include: [
+      { model: Contact, as: "contact", attributes: ["id", "name", "number"] },
+      { model: User, as: "user", attributes: ["id", "name"] },
+      { model: Whatsapp, as: "preferredWhatsapp", attributes: ["id", "name", "status"] }
+    ]
+  });
+  if (!schedule) return;
+  const io = getIO();
+  io.to(`company-${schedule.companyId}-mainchannel`).emit("schedule", {
+    action: "update",
+    schedule
+  });
+}
 
 const nodemailer = require('nodemailer');
 const CronJob = require('cron').CronJob;
@@ -39,7 +60,6 @@ const limiterDuration = process.env.REDIS_OPT_LIMITER_DURATION || 3000;
 
 interface ProcessCampaignData {
   id: number;
-  delay: number;
 }
 
 interface PrepareContactData {
@@ -219,29 +239,50 @@ async function handleCloseTicketsAutomatic() {
 
 async function handleVerifySchedules(job) {
   try {
-    const { count, rows: schedules } = await Schedule.findAndCountAll({
+    const now = moment();
+    const upcomingCutoff = moment().add(SCHEDULE_UPCOMING_WINDOW_SEC, "seconds");
+    const backoffCutoff = moment().subtract(
+      SCHEDULE_RETRY_BACKOFF_MINUTES,
+      "minutes"
+    );
+
+    const schedules = await Schedule.findAll({
       where: {
-        status: "PENDENTE",
         sentAt: null,
-        sendAt: {
-          [Op.gte]: moment().format("YYYY-MM-DD HH:mm:ss"),
-          [Op.lte]: moment().add("300", "seconds").format("YYYY-MM-DD HH:mm:ss")
-        }
+        [Op.or]: [
+          {
+            status: "PENDENTE",
+            sendAt: { [Op.lte]: upcomingCutoff.toDate() }
+          },
+          {
+            status: "AGUARDANDO_CONEXAO",
+            attemptCount: { [Op.lt]: SCHEDULE_MAX_ATTEMPTS },
+            [Op.or]: [
+              { lastAttemptAt: null },
+              { lastAttemptAt: { [Op.lt]: backoffCutoff.toDate() } }
+            ]
+          }
+        ]
       },
-      include: [{ model: Contact, as: "contact" }]
+      include: [{ model: Contact, as: "contact" }],
+      limit: 100,
+      order: [["sendAt", "ASC"]]
     });
-    if (count > 0) {
-      schedules.map(async schedule => {
-        await schedule.update({
-          status: "AGENDADA"
-        });
-        sendScheduledMessages.add(
-          "SendMessage",
-          { schedule },
-          { delay: 40000 }
+
+    for (const schedule of schedules) {
+      if (!schedule.contact) {
+        logger.error(
+          `[🧵] Agendamento ${schedule.id} sem contato; ignorando captura.`
         );
-        logger.info(`[🧵] Disparo agendado para: ${schedule.contact.name}`);
-      });
+        continue;
+      }
+      await schedule.update({ status: "AGENDADA" });
+      await sendScheduledMessages.add(
+        "SendMessage",
+        { scheduleId: schedule.id },
+        { delay: SCHEDULE_SEND_DELAY_MS }
+      );
+      logger.info(`[🧵] Disparo agendado para: ${schedule.contact.name}`);
     }
   } catch (e: any) {
     Sentry.captureException(e);
@@ -251,46 +292,104 @@ async function handleVerifySchedules(job) {
 }
 
 async function handleSendScheduledMessage(job) {
-  const {
-    data: { schedule }
-  } = job;
-  let scheduleRecord: Schedule | null = null;
+  const scheduleId =
+    job.data?.scheduleId ?? job.data?.schedule?.id ?? job.data?.schedule?.dataValues?.id;
+  if (!scheduleId) {
+    logger.error("SendScheduledMessage: scheduleId ausente no job");
+    return;
+  }
 
-  try {
-    scheduleRecord = await Schedule.findByPk(schedule.id);
-  } catch (e) {
-    Sentry.captureException(e);
-    logger.info(`Erro ao tentar consultar agendamento: ${schedule.id}`);
+  let scheduleRecord = await Schedule.findByPk(scheduleId, {
+    include: [{ model: Contact, as: "contact" }]
+  });
+
+  if (!scheduleRecord || !scheduleRecord.contact) {
+    logger.error(
+      `SendScheduledMessage: agendamento ${scheduleId} não encontrado ou sem contato`
+    );
+    return;
+  }
+
+  const now = moment();
+  const { whatsapp } = await ResolveWhatsappForSchedule(
+    scheduleRecord.companyId,
+    scheduleRecord.preferredWhatsappId
+  );
+
+  if (!whatsapp) {
+    const nextAttempt = (scheduleRecord.attemptCount || 0) + 1;
+    if (nextAttempt >= SCHEDULE_MAX_ATTEMPTS) {
+      await scheduleRecord.update({
+        status: "ERRO",
+        lastError:
+          "Limite de tentativas atingido: nenhuma conexão WhatsApp disponível.",
+        lastAttemptAt: now.toDate(),
+        attemptCount: nextAttempt
+      });
+      await emitScheduleSocketUpdate(scheduleId);
+      return;
+    }
+    await scheduleRecord.update({
+      status: "AGUARDANDO_CONEXAO",
+      lastError:
+        "Nenhuma conexão WhatsApp ativa no momento. Nova tentativa automática em breve.",
+      lastAttemptAt: now.toDate(),
+      attemptCount: nextAttempt
+    });
+    await emitScheduleSocketUpdate(scheduleId);
+    return;
+  }
+
+  let filePath: string | null = null;
+  if (scheduleRecord.mediaPath) {
+    filePath = path.resolve("public", scheduleRecord.mediaPath);
   }
 
   try {
-    const whatsapp = await GetDefaultWhatsApp(schedule.companyId);
-
-    let filePath = null;
-    if (schedule.mediaPath) {
-      filePath = path.resolve("public", schedule.mediaPath);
-    }
-
     await SendMessage(whatsapp, {
-      number: schedule.contact.number,
-      body: formatBody(schedule.body, schedule.contact),
+      number: scheduleRecord.contact.number,
+      body: formatBody(scheduleRecord.body, scheduleRecord.contact),
       mediaPath: filePath
     });
 
-    await scheduleRecord?.update({
-      sentAt: moment().format("YYYY-MM-DD HH:mm"),
-      status: "ENVIADA"
+    await scheduleRecord.update({
+      sentAt: now.format("YYYY-MM-DD HH:mm"),
+      status: "ENVIADA",
+      lastError: null,
+      lastAttemptAt: now.toDate(),
+      attemptCount: scheduleRecord.attemptCount || 0
     });
 
-    logger.info(`[🧵] Mensagem agendada enviada para: ${schedule.contact.name}`);
+    logger.info(
+      `[🧵] Mensagem agendada enviada para: ${scheduleRecord.contact.name}`
+    );
     sendScheduledMessages.clean(15000, "completed");
+    await emitScheduleSocketUpdate(scheduleId);
   } catch (e: any) {
     Sentry.captureException(e);
-    await scheduleRecord?.update({
-      status: "ERRO"
+    const errMsg = e?.message || String(e);
+    const nextAttempt = (scheduleRecord.attemptCount || 0) + 1;
+
+    if (nextAttempt >= SCHEDULE_MAX_ATTEMPTS) {
+      await scheduleRecord.update({
+        status: "ERRO",
+        lastError: errMsg.slice(0, 2000),
+        lastAttemptAt: now.toDate(),
+        attemptCount: nextAttempt
+      });
+      await emitScheduleSocketUpdate(scheduleId);
+      logger.error("SendScheduledMessage -> SendMessage: error", errMsg);
+      return;
+    }
+
+    await scheduleRecord.update({
+      status: "AGUARDANDO_CONEXAO",
+      lastError: `Falha no envio (tentativa ${nextAttempt}/${SCHEDULE_MAX_ATTEMPTS}): ${errMsg.slice(0, 500)}`,
+      lastAttemptAt: now.toDate(),
+      attemptCount: nextAttempt
     });
-    logger.error("SendScheduledMessage -> SendMessage: error", e.message);
-    throw e;
+    await emitScheduleSocketUpdate(scheduleId);
+    logger.error("SendScheduledMessage -> SendMessage: error", errMsg);
   }
 }
 
@@ -316,17 +415,15 @@ async function handleVerifyCampaigns(job) {
     try {
       const now = moment();
       const scheduledAt = moment(campaign.scheduledAt);
-      const delay = scheduledAt.diff(now, "milliseconds");
+      const delay = Math.max(0, scheduledAt.diff(now, "milliseconds"));
       logger.info(
         `[📌] - Campanha enviada para a fila de processamento: Campanha=${campaign.id}, Delay Inicial=${delay}`
       );
       campaignQueue.add(
         "ProcessCampaign",
+        { id: campaign.id },
         {
-          id: campaign.id,
-          delay
-        },
-        {
+          delay,
           removeOnComplete: true
         }
       );
@@ -511,13 +608,19 @@ async function verifyAndFinalizeCampaign(campaign) {
   logger.info("[🚨] - Fim da verificação de finalização de campanhas");
 }
 
-function calculateDelay(index, baseDelay, longerIntervalAfter, greaterInterval, messageInterval) {
+function calculateDelay(
+  index: number,
+  baseDelay: Date,
+  longerIntervalAfterCount: number,
+  greaterIntervalMs: number,
+  messageIntervalMs: number
+) {
   const diffSeconds = differenceInSeconds(baseDelay, new Date());
-  if (index > longerIntervalAfter) {
-    return diffSeconds * 1000 + greaterInterval
-  } else {
-    return diffSeconds * 1000 + messageInterval
+  const baseMs = Math.max(0, diffSeconds * 1000);
+  if (index >= longerIntervalAfterCount) {
+    return Math.max(0, baseMs + greaterIntervalMs);
   }
+  return Math.max(0, baseMs + messageIntervalMs);
 }
 
 async function getCampaignContacts(campaignId: number, batchSize: number = 100, offset: number = 0) {
@@ -590,17 +693,21 @@ async function handleProcessCampaign(job) {
       logger.info(`[📊] - Processando lote de ${contacts.length} contatos para campanha ${id} (offset: ${offset})`);
 
       const baseDelay = campaign.scheduledAt;
-      const longerIntervalAfter = parseToMilliseconds(settings.longerIntervalAfter);
-      const greaterInterval = parseToMilliseconds(settings.greaterInterval);
-      const messageInterval = settings.messageInterval;
+      const longerIntervalAfterCount = Number(settings.longerIntervalAfter);
+      const longCount =
+        Number.isFinite(longerIntervalAfterCount) && longerIntervalAfterCount >= 0
+          ? longerIntervalAfterCount
+          : 20;
+      const greaterIntervalMs = Number(settings.greaterInterval) * 1000;
+      const messageIntervalMs = Number(settings.messageInterval) * 1000;
 
       const queuePromises = contacts.map((contact, index) => {
         const delay = calculateDelay(
           offset + index,
           baseDelay,
-          longerIntervalAfter,
-          greaterInterval,
-          messageInterval
+          longCount,
+          greaterIntervalMs,
+          messageIntervalMs
         );
 
         return campaignQueue.add(
@@ -856,7 +963,7 @@ async function handleDispatchCampaign(job) {
 
     logger.info(`[🚩] - Atualizando campanha para enviada... | CampaignShippingId: ${campaignShippingId} CampanhaID: ${campaignId}`);
 
-    await campaignShipping.update({ deliveredAt: moment() });
+    await campaignShipping.update({ deliveredAt: moment(), failedAt: null });
 
     await verifyAndFinalizeCampaign(campaign);
 
@@ -878,6 +985,21 @@ async function handleDispatchCampaign(job) {
       error: err.message,
       stack: err.stack
     });
+    try {
+      await CampaignShipping.update(
+        { failedAt: moment() },
+        {
+          where: {
+            id: job.data.campaignShippingId,
+            deliveredAt: null
+          }
+        }
+      );
+    } catch (markErr: any) {
+      logger.error(
+        `[🚨] - Erro ao marcar falha em CampaignShipping: ${markErr.message}`
+      );
+    }
   }
 }
 
@@ -907,7 +1029,6 @@ async function handleInvoiceCreate() {
     companies.map(async c => {
       var dueDate = c.dueDate;
       const date = moment(dueDate).format();
-      const timestamp = moment().format();
       const hoje = moment(moment()).format("DD/MM/yyyy");
       var vencimento = moment(dueDate).format("DD/MM/yyyy");
 
@@ -916,20 +1037,33 @@ async function handleInvoiceCreate() {
 
       if (dias < 20) {
         const plan = await Plan.findByPk(c.planId);
+        if (!plan) {
+          return;
+        }
 
-        const sql = `SELECT COUNT(*) mycount FROM "Invoices" WHERE "companyId" = ${c.id} AND "dueDate"::text LIKE '${moment(dueDate).format("yyyy-MM-DD")}%';`
-        const invoice = await sequelize.query(sql,
-          { type: QueryTypes.SELECT }
-        );
-        if (invoice[0]['mycount'] > 0) {
+        const datePrefix = moment(dueDate).format("YYYY-MM-DD");
+        const likePattern = `${datePrefix}%`;
+        const existingCount = await Invoices.count({
+          where: {
+            [Op.and]: [
+              { companyId: c.id },
+              Sequelize.literal(
+                `"Invoices"."dueDate"::text LIKE ${sequelize.escape(likePattern)}`
+              )
+            ]
+          }
+        });
 
+        if (existingCount > 0) {
+          // já existe fatura para este ciclo
         } else {
-          const sql = `INSERT INTO "Invoices" (detail, status, value, "updatedAt", "createdAt", "dueDate", "companyId")
-          VALUES ('${plan.name}', 'open', '${plan.value}', '${timestamp}', '${timestamp}', '${date}', ${c.id});`
-
-          const invoiceInsert = await sequelize.query(sql,
-            { type: QueryTypes.INSERT }
-          );
+          await Invoices.create({
+            detail: plan.name,
+            status: "open",
+            value: Number(plan.value),
+            dueDate: date,
+            companyId: c.id
+          });
 
           /*           let transporter = nodemailer.createTransport({
                       service: 'gmail',

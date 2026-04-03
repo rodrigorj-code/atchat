@@ -1,5 +1,12 @@
-declare namespace Express {
-  export interface Request {
-    user: { id: string; profile: string; companyId: number };
+import type Whatsapp from "../models/Whatsapp";
+
+declare global {
+  namespace Express {
+    interface Request {
+      user: { id: string; profile: string; companyId: number };
+      apiWhatsapp?: Whatsapp;
+    }
   }
 }
+
+export {};

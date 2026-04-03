@@ -1,4 +1,5 @@
 import * as Yup from "yup";
+import { Op, Sequelize } from "sequelize";
 
 import AppError from "../../errors/AppError";
 import Tag from "../../models/Tag";
@@ -17,7 +18,7 @@ const CreateService = async ({
   companyId
 }: Request): Promise<Tag> => {
   const schema = Yup.object().shape({
-    name: Yup.string().required().min(3)
+    name: Yup.string().required().trim().min(2).max(80)
   });
 
   try {
@@ -26,9 +27,30 @@ const CreateService = async ({
     throw new AppError(err.message);
   }
 
-  const [tag] = await Tag.findOrCreate({
-    where: { name, color, companyId, kanban },
-    defaults: { name, color, companyId, kanban }
+  const trimmed = name.trim();
+
+  const duplicate = await Tag.findOne({
+    where: {
+      companyId,
+      [Op.and]: Sequelize.where(
+        Sequelize.fn("LOWER", Sequelize.col("Tag.name")),
+        trimmed.toLowerCase()
+      )
+    }
+  });
+
+  if (duplicate) {
+    throw new AppError(
+      "Já existe uma tag com este nome nesta empresa.",
+      400
+    );
+  }
+
+  const tag = await Tag.create({
+    name: trimmed,
+    color: color || "#A4CCCC",
+    companyId,
+    kanban
   });
 
   await tag.reload();

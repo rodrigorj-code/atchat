@@ -2,6 +2,7 @@ import { Op, Sequelize } from "sequelize";
 import Contact from "../../models/Contact";
 import Schedule from "../../models/Schedule";
 import User from "../../models/User";
+import Whatsapp from "../../models/Whatsapp";
 
 interface Request {
   searchParam?: string;
@@ -78,6 +79,12 @@ const ListService = async ({
     include: [
       { model: Contact, as: "contact", attributes: ["id", "name"] },
       { model: User, as: "user", attributes: ["id", "name"] },
+      {
+        model: Whatsapp,
+        as: "preferredWhatsapp",
+        attributes: ["id", "name", "status"],
+        required: false
+      }
     ]
   });
 

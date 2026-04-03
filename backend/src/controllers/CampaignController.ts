@@ -2,8 +2,6 @@ import * as Yup from "yup";
 import { Request, Response } from "express";
 import { getIO } from "../libs/socket";
 import { head } from "lodash";
-import fs from "fs";
-import path from "path";
 
 import ListService from "../services/CampaignService/ListService";
 import CreateService from "../services/CampaignService/CreateService";
@@ -11,10 +9,17 @@ import ShowService from "../services/CampaignService/ShowService";
 import UpdateService from "../services/CampaignService/UpdateService";
 import DeleteService from "../services/CampaignService/DeleteService";
 import FindService from "../services/CampaignService/FindService";
-
-import Campaign from "../models/Campaign";
+import UploadMediaService from "../services/CampaignService/UploadMediaService";
+import DeleteMediaService from "../services/CampaignService/DeleteMediaService";
+import CampaignContactsCountService from "../services/CampaignService/CampaignContactsCountService";
+import ContactListContactsCountService from "../services/CampaignService/ContactListContactsCountService";
+import CampaignProgressService from "../services/CampaignService/CampaignProgressService";
+import CampaignProgressBatchService from "../services/CampaignService/CampaignProgressBatchService";
+import TagEstimateService from "../services/CampaignService/TagEstimateService";
+import { RetryFailedService } from "../services/CampaignService/RetryFailedService";
 
 import AppError from "../errors/AppError";
+import Campaign from "../models/Campaign";
 import { CancelService } from "../services/CampaignService/CancelService";
 import { RestartService } from "../services/CampaignService/RestartService";
 import TicketTag from "../models/TicketTag";
@@ -41,6 +46,102 @@ type StoreData = {
 
 type FindParams = {
   companyId: string;
+};
+
+type ContactListCountQuery = {
+  contactListId?: string;
+};
+
+export const contactListCount = async (
+  req: Request,
+  res: Response
+): Promise<Response> => {
+  const { contactListId } = req.query as ContactListCountQuery;
+  const { companyId } = req.user;
+
+  const data = await ContactListContactsCountService(contactListId, +companyId);
+
+  return res.status(200).json(data);
+};
+
+export const contactsCount = async (
+  req: Request,
+  res: Response
+): Promise<Response> => {
+  const { id } = req.params;
+  const { companyId } = req.user;
+
+  const data = await CampaignContactsCountService(id, +companyId);
+
+  return res.status(200).json(data);
+};
+
+export const progress = async (
+  req: Request,
+  res: Response
+): Promise<Response> => {
+  const { id } = req.params;
+  const { companyId } = req.user;
+
+  const data = await CampaignProgressService(id, +companyId);
+
+  return res.status(200).json(data);
+};
+
+type ProgressBatchBody = {
+  ids?: number[];
+};
+
+export const progressBatch = async (
+  req: Request,
+  res: Response
+): Promise<Response> => {
+  const { ids } = req.body as ProgressBatchBody;
+  const { companyId } = req.user;
+
+  const data = await CampaignProgressBatchService(
+    Array.isArray(ids) ? ids : [],
+    +companyId
+  );
+
+  return res.status(200).json(data);
+};
+
+type TagEstimateQuery = {
+  tagId?: string;
+  contactListId?: string;
+};
+
+export const tagEstimate = async (
+  req: Request,
+  res: Response
+): Promise<Response> => {
+  const { tagId, contactListId } = req.query as TagEstimateQuery;
+  const { companyId } = req.user;
+
+  if (tagId === undefined || tagId === "" || Number.isNaN(Number(tagId))) {
+    throw new AppError("ERR_CAMPAIGN_TAG_REQUIRED", 400);
+  }
+
+  const data = await TagEstimateService(
+    Number(tagId),
+    +companyId,
+    contactListId ? Number(contactListId) : undefined
+  );
+
+  return res.status(200).json(data);
+};
+
+export const retryFailed = async (
+  req: Request,
+  res: Response
+): Promise<Response> => {
+  const { id } = req.params;
+  const { companyId } = req.user;
+
+  const result = await RetryFailedService(+id, +companyId);
+
+  return res.status(200).json(result);
 };
 
 export const index = async (req: Request, res: Response): Promise<Response> => {
@@ -140,8 +241,9 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
 
 export const show = async (req: Request, res: Response): Promise<Response> => {
   const { id } = req.params;
+  const { companyId } = req.user;
 
-  const record = await ShowService(id);
+  const record = await ShowService(id, +companyId);
 
   return res.status(200).json(record);
 };
@@ -185,8 +287,9 @@ export const cancel = async (
   res: Response
 ): Promise<Response> => {
   const { id } = req.params;
+  const { companyId } = req.user;
 
-  await CancelService(+id);
+  await CancelService(+id, +companyId);
 
   return res.status(204).json({ message: "Cancelamento realizado" });
 };
@@ -196,8 +299,9 @@ export const restart = async (
   res: Response
 ): Promise<Response> => {
   const { id } = req.params;
+  const { companyId } = req.user;
 
-  await RestartService(+id);
+  await RestartService(+id, +companyId);
 
   return res.status(204).json({ message: "Reinício dos disparos" });
 };
@@ -209,7 +313,7 @@ export const remove = async (
   const { id } = req.params;
   const { companyId } = req.user;
 
-  await DeleteService(id);
+  await DeleteService(id, +companyId);
 
   const io = getIO();
   io.to(`company-${companyId}-mainchannel`).emit(`company-${companyId}-campaign`, {
@@ -235,16 +339,22 @@ export const mediaUpload = async (
   res: Response
 ): Promise<Response> => {
   const { id } = req.params;
+  const { companyId } = req.user;
   const files = req.files as Express.Multer.File[];
   const file = head(files);
 
   try {
-    const campaign = await Campaign.findByPk(id);
-    campaign.mediaPath = file.filename;
-    campaign.mediaName = file.originalname;
-    await campaign.save();
+    await UploadMediaService({
+      id,
+      companyId: +companyId,
+      mediaPath: file.filename,
+      mediaName: file.originalname
+    });
     return res.send({ mensagem: "Mensagem enviada" });
   } catch (err: any) {
+    if (err instanceof AppError) {
+      throw err;
+    }
     throw new AppError(err.message);
   }
 };
@@ -254,20 +364,15 @@ export const deleteMedia = async (
   res: Response
 ): Promise<Response> => {
   const { id } = req.params;
+  const { companyId } = req.user;
 
   try {
-    const campaign = await Campaign.findByPk(id);
-    const filePath = path.resolve("public", campaign.mediaPath);
-    const fileExists = fs.existsSync(filePath);
-    if (fileExists) {
-      fs.unlinkSync(filePath);
-    }
-
-    campaign.mediaPath = null;
-    campaign.mediaName = null;
-    await campaign.save();
+    await DeleteMediaService(id, +companyId);
     return res.send({ mensagem: "Arquivo excluído" });
   } catch (err: any) {
+    if (err instanceof AppError) {
+      throw err;
+    }
     throw new AppError(err.message);
   }
 };

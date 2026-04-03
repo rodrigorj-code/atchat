@@ -6,6 +6,8 @@ import User from "../../models/User";
 import Plan from "../../models/Plan";
 import Company from "../../models/Company";
 
+const ALLOWED_PROFILES = ["admin", "user", "supervisor"];
+
 interface Request {
   email: string;
   password: string;
@@ -14,7 +16,7 @@ interface Request {
   companyId?: number;
   profile?: string;
   whatsappId?: number;
-  allTicket?:string;
+  allTicket?: string;
 }
 
 interface Response {
@@ -34,6 +36,10 @@ const CreateUserService = async ({
   whatsappId,
   allTicket
 }: Request): Promise<Response> => {
+  if (!ALLOWED_PROFILES.includes(profile)) {
+    throw new AppError("ERR_INVALID_PROFILE", 400);
+  }
+
   if (companyId !== undefined) {
     const company = await Company.findOne({
       where: {
@@ -58,39 +64,48 @@ const CreateUserService = async ({
   }
 
   const schema = Yup.object().shape({
-    name: Yup.string().required().min(2),
+    name: Yup.string().required().min(2).max(120),
     email: Yup.string()
       .email()
       .required()
+      .transform(v => (typeof v === "string" ? v.trim().toLowerCase() : v))
       .test(
-        "Check-email",
+        "Check-email-company",
         "An user with this email already exists.",
         async value => {
           if (!value) return false;
-          const emailExists = await User.findOne({
-            where: { email: value }
-          });
+          const where: Record<string, unknown> = {
+            email: value
+          };
+          if (companyId !== undefined && companyId !== null) {
+            where.companyId = companyId;
+          }
+          const emailExists = await User.findOne({ where });
           return !emailExists;
         }
       ),
-    password: Yup.string().required().min(5)
+    password: Yup.string().required().min(5).max(128)
   });
 
   try {
-    await schema.validate({ email, password, name });
-  } catch (err) {
+    await schema.validate({
+      email: email.trim().toLowerCase(),
+      password,
+      name: name.trim()
+    });
+  } catch (err: any) {
     throw new AppError(err.message);
   }
 
   const user = await User.create(
     {
-      email,
+      email: email.trim().toLowerCase(),
       password,
-      name,
+      name: name.trim(),
       companyId,
       profile,
       whatsappId: whatsappId || null,
-	  allTicket
+      allTicket
     },
     { include: ["queues", "company"] }
   );
@@ -99,7 +114,7 @@ const CreateUserService = async ({
 
   await user.reload();
 
-  const serializedUser = SerializeUser(user);
+  const serializedUser = await SerializeUser(user);
 
   return serializedUser;
 };

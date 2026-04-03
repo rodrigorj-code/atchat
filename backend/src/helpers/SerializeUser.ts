@@ -2,6 +2,7 @@ import Queue from "../models/Queue";
 import Company from "../models/Company";
 import User from "../models/User";
 import Setting from "../models/Setting";
+import { getCompanyFinanceFlags, CompanyFinanceFlags } from "./companyFinanceStatus";
 
 interface SerializedUser {
   id: number;
@@ -12,7 +13,8 @@ interface SerializedUser {
   company: Company | null;
   super: boolean;
   queues: Queue[];
-  allTicket: string,
+  allTicket: string;
+  finance: CompanyFinanceFlags;
 }
 
 export const SerializeUser = async (user: User): Promise<SerializedUser> => {
@@ -25,6 +27,14 @@ export const SerializeUser = async (user: User): Promise<SerializedUser> => {
     company: user.company,
     super: user.super,
     queues: user.queues,
-	allTicket: user.allTicket,
+    allTicket: user.allTicket,
+    finance: user.company
+      ? getCompanyFinanceFlags(user.company)
+      : {
+          overdue: false,
+          delinquent: false,
+          dueDate: null,
+          daysPastDue: null
+        }
   };
 };

@@ -9,6 +9,14 @@ import api from "../../services/api";
 import toastError from "../../errors/toastError";
 import { SocketContext } from "../../context/Socket/SocketContext";
 import moment from "moment";
+import { computeFinanceFromDueDate } from "../../helpers/financeFlags";
+
+const BUSINESS_FORBIDDEN = [
+  "ERR_COMPANY_DELINQUENT",
+  "ERR_EXTERNAL_API_NOT_ALLOWED",
+  "ERR_NO_PERMISSION",
+];
+
 const useAuth = () => {
   const history = useHistory();
   const [isAuth, setIsAuth] = useState(false);
@@ -40,6 +48,10 @@ const useAuth = () => {
       const originalRequest = error.config;
 
       if (error?.response?.status === 403 && !originalRequest._retry) {
+        const errCode = error?.response?.data?.error;
+        if (errCode && BUSINESS_FORBIDDEN.includes(errCode)) {
+          return Promise.reject(error);
+        }
         if (isRefreshing) {
           return new Promise((resolve, reject) => {
             failedRequestsQueue.push({ resolve, reject });
@@ -148,6 +160,28 @@ const useAuth = () => {
     }
   }, [socketManager, user]);
 
+  useEffect(() => {
+    const companyId = localStorage.getItem("companyId");
+    if (!companyId) return;
+    const socket = socketManager.getSocket(companyId);
+    const handler = (data) => {
+      if (data.action !== "CONCLUIDA" || !data.company) return;
+      setUser((prev) => {
+        const dueDate = data.company.dueDate;
+        const finance = computeFinanceFromDueDate(dueDate);
+        return {
+          ...prev,
+          company: { ...prev.company, ...data.company, dueDate },
+          finance,
+        };
+      });
+    };
+    socket.on(`company-${companyId}-payment`, handler);
+    return () => {
+      socket.off(`company-${companyId}-payment`, handler);
+    };
+  }, [socketManager]);
+
   const handleLogin = async (userData) => {
     setLoading(true);
 
@@ -167,40 +201,39 @@ const useAuth = () => {
       }
 
       moment.locale("pt-br");
-      const dueDate = data.user.company.dueDate;
-      const hoje = moment(moment()).format("DD/MM/yyyy");
-      const vencimento = moment(dueDate).format("DD/MM/yyyy");
+      const dueDate = data.user.company?.dueDate;
+      const vencimento = dueDate ? moment(dueDate).format("DD/MM/yyyy") : null;
 
-      var diff = moment(dueDate).diff(moment(moment()).format());
-
-      var before = moment(moment().format()).isBefore(dueDate);
-      var dias = moment.duration(diff).asDays();
-
-      if (before === true) {
-        localStorage.setItem("token", JSON.stringify(data.token));
-        localStorage.setItem("companyId", companyId);
-        localStorage.setItem("userId", id);
+      localStorage.setItem("token", JSON.stringify(data.token));
+      localStorage.setItem("companyId", companyId);
+      localStorage.setItem("userId", id);
+      if (vencimento) {
         localStorage.setItem("companyDueDate", vencimento);
-        api.defaults.headers.Authorization = `Bearer ${data.token}`;
-        setUser(data.user);
-        setIsAuth(true);
-        toast.success(i18n.t("auth.toasts.success"));
-        if (Math.round(dias) < 5) {
+      }
+      api.defaults.headers.Authorization = `Bearer ${data.token}`;
+      setUser(data.user);
+      setIsAuth(true);
+      toast.success(i18n.t("auth.toasts.success"));
+
+      if (dueDate) {
+        const dias = moment.duration(moment(dueDate).diff(moment())).asDays();
+        if (dias >= 0 && Math.round(dias) < 5) {
           toast.warn(
-            `Sua assinatura vence em ${Math.round(dias)} ${
-              Math.round(dias) === 1 ? "dia" : "dias"
-            } `
+            i18n.t("finance.login.expiringSoon", {
+              days: Math.round(dias),
+              count: Math.round(dias),
+            })
           );
         }
-        history.push("/tickets");
-        setLoading(false);
-      } else {
-        toastError(`Opss! Sua assinatura venceu ${vencimento}.
-Entre em contato com o Suporte para mais informações! `);
-        setLoading(false);
       }
 
-      //quebra linha
+      if (data.user.finance?.delinquent) {
+        toast.warn(i18n.t("finance.login.delinquentWarning"), { autoClose: 10000 });
+      }
+
+      history.push("/tickets");
+      setLoading(false);
+
     } catch (err) {
       toastError(err);
       setLoading(false);

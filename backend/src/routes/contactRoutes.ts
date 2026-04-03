@@ -16,6 +16,24 @@ contactRoutes.get("/contacts", isAuth, ContactController.index);
 
 contactRoutes.get("/contacts/list", isAuth, ContactController.list);
 
+contactRoutes.get(
+  "/contacts/:contactId/summary",
+  isAuth,
+  ContactController.summary
+);
+
+contactRoutes.post(
+  "/contacts/:contactId/tags",
+  isAuth,
+  ContactController.addTag
+);
+
+contactRoutes.delete(
+  "/contacts/:contactId/tags/:tagId",
+  isAuth,
+  ContactController.removeTag
+);
+
 contactRoutes.get("/contacts/:contactId", isAuth, ContactController.show);
 
 contactRoutes.post("/contacts", isAuth, ContactController.store);

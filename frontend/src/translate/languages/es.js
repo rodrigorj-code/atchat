@@ -255,80 +255,94 @@ const messages = {
         action: "Acción",
         PAY: "PAGAR",
         PAID: "PAGADO",
+        searchPlaceholder: "Buscar por ID o descripción…",
+        empty: "No hay facturas.",
+        emptyHint: "Las facturas generadas aparecerán aquí.",
+        statusLabels: {
+          paid: "Pagada",
+          overdue: "Vencida",
+          open: "Abierta",
+        },
+      },
+      finance: {
+        banner: {
+          message:
+            "Su empresa tiene un pago pendiente. Regularice para mantener el servicio al día.",
+          action: "Ir a Facturación",
+        },
+        page: {
+          delinquentAlert:
+            "Hay una pendencia financiera. El importe del PIX siempre es el de la factura.",
+        },
+        login: {
+          expiringSoon:
+            "Su suscripción vence en {{days}} día(s). Renueve en Facturación.",
+          delinquentWarning:
+            "Atención: hay un pago pendiente. Abra Facturación para pagar con PIX.",
+        },
       },
       checkoutPage: {
+        modalTitle: "Pago con PIX",
+        noInvoice:
+          "Para pagar con PIX, abra Facturación y pulse Pagar en la factura deseada.",
+        pixFlowTitle: "Pago de factura — PIX",
+        pixFlowSubtitle:
+          "El importe cobrado es siempre el de la factura seleccionada. El servidor genera el cobro PIX.",
         steps: {
           data: "Datos",
           customize: "Personalizar",
           review: "Revisar",
+          plan: "Plan",
+          pixReview: "Revisar PIX",
         },
-        success: "¡Suscripción realizada con éxito!, esperando la realización del pago",
+        success:
+          "Cobro PIX generado. Escanee el QR o copie el código para pagar.",
         closeToEnd: "¡Falta poco!",
         BACK: "VOLVER",
         PAY: "PAGAR",
+        PAY_PIX: "GENERAR PIX",
         NEXT: "SIGUIENTE",
+        pix: {
+          invoiceHeading: "Factura a pagar",
+          amountCharged: "Importe (PIX)",
+          dueDate: "Vencimiento",
+          amountFromInvoice:
+            "Este importe es el de la factura. Se enviará al pasarela.",
+          totalLabel: "Total PIX",
+          waitingHint:
+            "Esperando pago. El cobro caduca en unos {{minutes}} min (aprox.).",
+          expiredHint:
+            "Este cobro PIX puede haber caducado. Cierre y vaya a Facturación para generar otro.",
+          paidToast: "¡Pago confirmado! Nueva fecha: {{date}}",
+          instructions:
+            "Abra la app del banco, pague con PIX y espere la confirmación automática.",
+          copyPix: "Copiar código PIX",
+          copied: "Copiado",
+          missingQr: "No se pudo mostrar el QR. Intente de nuevo.",
+          invoiceRef: "Factura #{{id}} — {{detail}}",
+          redirecting: "Redirigiendo…",
+        },
         review: {
           title: "Resumen de la suscripción",
+          titlePix: "Confirmar pago PIX",
+          confirmPixHint:
+            "Revise el importe y el plan. Al continuar se creará un cobro PIX inmediato.",
+          pixSectionTitle: "Cobro (factura)",
+          planSectionTitle: "Plan de referencia",
+          planReferenceOnly:
+            "Los límites del plan son informativos. El cobro real es el de la factura.",
+          invoiceId: "Factura",
+          chargesFromInvoice: "Importe cobrado en PIX:",
+          dueLabel: "Vencimiento",
           details: "Detalles del plan",
           users: "Usuarios",
-          whatsapp: "Whatsapp",
-          charges: "Cobro: Mensual",
+          whatsapp: "Conexiones WhatsApp",
+          charges: "Cobro: mensual (referencia)",
           total: "Total",
         },
         form: {
-          firstName: {
-            label: "Nombre completo*",
-            required: "El nombre completo es obligatorio",
-          },
-          lastName: {
-            label: "Apellido*",
-            required: "El apellido es obligatorio",
-          },
-          address1: {
-            label: "Dirección*",
-            required: "La dirección es obligatoria",
-          },
-          city: {
-            label: "Ciudad*",
-            required: "La ciudad es obligatoria",
-          },
-          state: {
-            label: "Estado/Provincia*",
-            required: "El estado/provincia es obligatorio",
-          },
-          zipcode: {
-            label: "Código Postal*",
-            required: "El código postal es obligatorio",
-            invalid: "Formato de código postal inválido",
-          },
-          country: {
-            label: "País*",
-            required: "El país es obligatorio",
-          },
-          useAddressForPaymentDetails: {
-            label: "Usar esta dirección para los detalles de pago",
-          },
-          invoiceId: {
-            label: "Usar este ID de factura",
-          },
-          nameOnCard: {
-            label: "Nombre en la tarjeta*",
-            required: "El nombre en la tarjeta es obligatorio",
-          },
-          cardNumber: {
-            label: "Número de tarjeta*",
-            required: "El número de tarjeta es obligatorio",
-            invalid: "Número de tarjeta inválido (ej: 4111111111111)",
-          },
-          expiryDate: {
-            label: "Fecha de vencimiento*",
-            required: "La fecha de vencimiento es obligatoria",
-            invalid: "Fecha de vencimiento inválida"
-          },
-          cvv: {
-            label: "CVV*",
-            required: "El CVV es obligatorio",
-            invalid: "CVV inválido (ej: 123)",
+          planField: {
+            label: "Plan seleccionado (referencia)",
           },
         },
         pricing: {
@@ -722,10 +736,15 @@ const messages = {
           email: "Email",
           password: "Contraseña",
           profile: "Perfil",
+          profileSupervisor: "Supervisor",
+          passwordOptionalEdit: "Déjelo en blanco para mantener la contraseña actual.",
           whatsapp: "Conexión Predeterminada",
           allTicket: "Ticket Sin Cola [Invisible]",
           allTicketEnabled: "Habilitado",
           allTicketDesabled: "Deshabilitado",
+        },
+        hints: {
+          passwordCreate: "Use una contraseña de al menos 5 caracteres.",
         },
         formErrors: {
           name: {
@@ -734,6 +753,7 @@ const messages = {
             long: "Nombre demasiado largo",
           },
           password: {
+            required: "La contraseña es obligatoria",
             short: "Contraseña demasiado corta",
             long: "Contraseña demasiado larga",
           },
@@ -762,6 +782,10 @@ const messages = {
           contact: "Contacto",
           sendAt: "Fecha de Programación",
           sentAt: "Fecha de Envío",
+          preferredWhatsapp: "Conexión preferida (opcional)",
+          preferredWhatsappHint:
+            "Déjelo vacío para enviar con cualquier conexión activa de la empresa.",
+          automaticConnection: "Automático (cualquier conexión activa)",
         },
         buttons: {
           okAdd: "Agregar",
@@ -923,7 +947,7 @@ const messages = {
           users: "Usuarios",
           settings: "Configuraciones",
           helps: "Ayuda",
-          messagesAPI: "API",
+          messagesAPI: "API WhatsApp",
           schedules: "Programaciones",
           campaigns: "Campañas",
           flows: "Flujos",
@@ -998,43 +1022,101 @@ const messages = {
         },
       },
       messagesAPI: {
-        title: "API",
-        labels: {
-          doc: "Documentación para envío de mensajes",
-          method: "Métodos de Envío",
-          textMessage: "Mensaje de Texto",
-          mediaMessage: "Mensaje Multimedia",
-          instructions: "Instrucciones",
-          observations: "Observaciones importantes",
-          before1: "Antes de enviar mensajes, es necesario registrar el token vinculado a la conexión que enviará los mensajes.",
-          before2: "Para realizar el registro acceda al menú 'Conexiones', haga clic en el botón editar de la conexión e inserte el token en el campo correspondiente.",
-          numberDescription: "El número para envío no debe tener máscara o caracteres especiales y debe estar compuesto por:",
-          countryCode: "Código del País",
-          number: "Número",
-          textMessage2: "1. Mensajes de Texto",
-          textMessageInstructions: "A continuación la lista de información necesaria para enviar mensajes de texto:",
-          method2: "Método",
-          e: "y",
-          tests: "Prueba de Envío",
-          mediaMessage2: "2. Mensajes Multimedia",
+        title: "API de envío WhatsApp",
+        subtitle:
+          "Envíe mensajes desde sistemas externos por HTTP usando el token de la conexión WhatsApp elegida.",
+        copySuccess: "URL copiada al portapapeles.",
+        sections: {
+          overview: "Visión general",
+          token: "Cómo obtener el token",
+          endpoint: "Endpoint y autenticación",
+          requestBodies: "Formatos de envío",
+          responses: "Respuestas HTTP",
+          testText: "Probar mensaje de texto",
+          testMedia: "Probar mensaje con archivo",
+        },
+        overviewP1:
+          "Esta página documenta la API de envío de mensajes WhatsApp. Cada token pertenece a una sola conexión (línea / número) de su empresa.",
+        overviewP2:
+          "El token no se crea aquí: en Conexiones, edite la conexión deseada y genere o copie el token. Ese secreto identifica qué conexión enviará los mensajes.",
+        tokenSteps:
+          "Abra Conexiones, elija la conexión que debe enviar, edítela y genere el token. Guárdelo en un lugar seguro: quien tenga el token puede enviar mensajes por esa conexión.",
+        openConnections: "Ir a Conexiones",
+        endpointUrlLabel: "URL del endpoint",
+        endpointUrlHelp:
+          "Use exactamente esta URL en integraciones (servidor, Postman o scripts).",
+        methodLabel: "Método HTTP",
+        authTitle: "Encabezado obligatorio",
+        authLine: "Authorization: Bearer <token>",
+        authHelp:
+          "Reemplace <token> por el valor generado en Conexiones para la conexión elegida.",
+        contentTypeJson: "Content-Type: application/json (solo texto)",
+        contentTypeMultipart:
+          "Content-Type: multipart/form-data (envío con archivo)",
+        jsonBodyTitle: "Cuerpo JSON (texto)",
+        jsonBodyExample:
+          '{ "number": "5511999999999", "body": "Su mensaje aquí" }',
+        multipartBodyTitle: "Multipart (medio)",
+        multipartFields:
+          "Campos: number (texto), medias (archivo). El campo body opcional puede usarse como leyenda según el backend.",
+        numberFormatTitle: "Formato del número",
+        numberFormatText:
+          "Solo dígitos, con código de país y DDD, sin espacios ni símbolos. Ejemplo: 5511999999999.",
+        responsesIntro: "Respuestas frecuentes de esta API:",
+        responses: {
+          r200: "200 — Envío procesado correctamente (el cuerpo puede incluir un mensaje de confirmación).",
+          r401:
+            "401 — Token inválido o ausente (ERR_INVALID_API_TOKEN).",
+          r403:
+            "403 — Plan sin permiso para API externa (ERR_EXTERNAL_API_NOT_ALLOWED).",
+          r429: "429 — Límite de solicitudes excedido (ERR_RATE_LIMIT_EXCEEDED).",
+          r400:
+            "400 — Error de validación o de envío (p. ej. ERR_MESSAGE_SEND_FAILED con mensaje opcional).",
         },
         textMessage: {
-          number: "Número",
-          body: "Mensaje",
-          token: "Token registrado",
+          number: "Número del destinatario",
+          body: "Texto del mensaje",
+          token: "Token de la conexión (Bearer)",
+          tokenPlaceholder: "Pegue el token generado en Conexiones",
+          tokenHelper:
+            "Cada token corresponde a una conexión WhatsApp. No lo comparta públicamente.",
+          numberPlaceholder: "5511999999999",
+          numberHelper:
+            "Solo dígitos, con código de país y DDD, sin máscara.",
         },
         mediaMessage: {
-          number: "Número",
+          number: "Número del destinatario",
           body: "Nombre del archivo",
           media: "Archivo",
-          token: "Token registrado",
+          token: "Token de la conexión (Bearer)",
+          tokenPlaceholder: "Pegue el token generado en Conexiones",
+          tokenHelper:
+            "El mismo token que para texto, para la conexión que enviará el archivo.",
+          numberPlaceholder: "5511999999999",
+          numberHelper:
+            "Solo dígitos, con código de país y DDD, sin máscara.",
+          chooseFile: "Seleccionar archivo",
+          noFile: "Ningún archivo seleccionado",
+          fileRequired: "Seleccione un archivo para enviar.",
+        },
+        test: {
+          endpointReadonly: "Endpoint (solo lectura)",
+          textIntro:
+            "Complete el token de la conexión, el número y el mensaje. La solicitud se envía como JSON al mismo endpoint documentado.",
+          mediaIntro:
+            "Use el mismo endpoint con multipart: número, archivo en medias y token en el encabezado.",
+          noResultYet: "Aún no hay pruebas. El resultado aparecerá aquí.",
+          resultOk: "Éxito — HTTP {{status}}",
+          resultErr: "Fallo en la solicitud",
+          resultErrStatus: "Fallo — HTTP {{status}}",
         },
         toasts: {
-          unauthorized: "¡Esta empresa no tiene permiso para acceder a esta página! Le estamos redirigiendo.",
+          unauthorized:
+            "Esta empresa no tiene permiso para acceder a esta página. Redirigiendo…",
           success: "¡Mensaje enviado con éxito!",
         },
         buttons: {
-          send: "Enviar",
+          send: "Enviar prueba",
         },
       },
       notifications: {
@@ -1043,26 +1125,46 @@ const messages = {
       },
       quickMessages: {
         title: "Respuestas Rápidas",
-        searchPlaceholder: "Buscar...",
+        searchPlaceholder: "Buscar por atajo o texto…",
         noAttachment: "Sin adjunto",
+        empty: {
+          title: "No hay respuestas rápidas",
+          subtitle: "Ajuste la búsqueda o cree un atajo para usar con / en el chat.",
+        },
         confirmationModal: {
           deleteTitle: "Eliminación",
-          deleteMessage: "¡Esta acción es irreversible! ¿Desea continuar?",
+          deleteMessage:
+            "La lista del chat se actualizará. Esta acción no se puede deshacer.",
+        },
+        validation: {
+          shortcodeRequired: "Indique el atajo",
+          shortcodeMin: "Mínimo 2 caracteres",
+          shortcodeMax: "Máximo 80 caracteres",
+          messageRequired: "Indique el mensaje",
+          messageMax: "Mensaje demasiado largo",
+          categoryMax: "Máximo 120 caracteres",
         },
         buttons: {
           add: "Agregar",
           attach: "Adjuntar Archivo",
           cancel: "Cancelar",
           edit: "Editar",
+          delete: "Eliminar",
         },
         toasts: {
-          success: "¡Atajo agregado con éxito!",
-          deleted: "¡Atajo eliminado con éxito!",
+          success: "¡Respuesta rápida guardada!",
+          deleted: "Respuesta rápida eliminada.",
+          deletedMedia: "Adjunto eliminado.",
         },
         dialog: {
           title: "Mensaje Rápido",
           shortcode: "Atajo",
+          shortcodeHint: "ej.: hola (uso en chat: /hola)",
+          shortcodeHelper: "Se normaliza en minúsculas; evite espacios en el atajo.",
+          category: "Grupo / etiqueta (opcional)",
           message: "Respuesta",
+          previewLabel: "Vista previa",
+          previewEmpty: "(sin texto)",
           save: "Guardar",
           cancel: "Cancelar",
           geral: "Permitir editar",
@@ -1072,9 +1174,14 @@ const messages = {
         },
         table: {
           shortcode: "Atajo",
+          category: "Grupo",
+          messagePreview: "Vista previa",
           message: "Mensaje",
           actions: "Acciones",
           mediaName: "Nombre del Archivo",
+          attachment: "Adjunto",
+          createdAt: "Creado",
+          updatedAt: "Actualizado",
           status: "Estado",
         },
       },
@@ -1311,22 +1418,45 @@ const messages = {
       },
       users: {
         title: "Usuarios",
+        searchPlaceholder: "Buscar por nombre o correo…",
         table: {
           id: "ID",
           name: "Nombre",
           email: "Email",
           profile: "Perfil",
+          queues: "Colas",
+          online: "Estado",
+          tickets: "Tickets",
+          createdAt: "Registro",
           actions: "Acciones",
+        },
+        profileLabels: {
+          admin: "Administrador",
+          user: "Usuario",
+          supervisor: "Supervisor",
+        },
+        online: {
+          yes: "En línea",
+          no: "Fuera de línea",
+        },
+        empty: {
+          title: "No se encontraron usuarios",
+          subtitle: "Ajuste la búsqueda o agregue un nuevo usuario.",
         },
         buttons: {
           add: "Agregar usuario",
+          edit: "Editar",
+          delete: "Eliminar",
         },
         toasts: {
           deleted: "Usuario eliminado con éxito.",
         },
         confirmationModal: {
           deleteTitle: "Eliminar",
-          deleteMessage: "Todos los datos del usuario se perderán. Las atenciones abiertas de este usuario serán movidas a la cola.",
+          deleteMessage:
+            "Esta acción elimina el usuario y los vínculos con colas. No se puede eliminar si hay tickets asignados: transfiéralos antes.",
+          deleteWarningTickets:
+            "Este usuario tiene {{count}} ticket(s) asignado(s). La eliminación se bloqueará hasta transferir las atenciones.",
         },
       },
       todolist: {
@@ -1359,6 +1489,14 @@ const messages = {
       },
       schedules: {
         title: "Programaciones",
+        statusLabels: {
+          PENDENTE: "Pendiente",
+          AGENDADA: "En cola",
+          ENVIADA: "Enviada",
+          ERRO: "Error",
+          AGUARDANDO_CONEXAO: "Esperando conexión",
+        },
+        preferredShort: "Preferida",
         confirmationModal: {
           deleteTitle: "¿Está seguro que desea eliminar esta Programación?",
           deleteMessage: "Esta acción no puede ser revertida.",
@@ -1690,6 +1828,34 @@ const messages = {
         ERR_FETCH_WAPP_MSG: "Error al buscar el mensaje en WhatsApp, tal vez sea muy antiguo.",
         ERR_QUEUE_COLOR_ALREADY_EXISTS: "Este color ya está en uso, elija otro.",
         ERR_WAPP_GREETING_REQUIRED: "El mensaje de saludo es obligatorio cuando hay más de una cola.",
+        ERR_CAMPAIGN_NOT_FOUND: "Campaña no encontrada.",
+        ERR_CAMPAIGN_INVALID_STATUS:
+            "Esta acción no está permitida para el estado actual de la campaña.",
+        ERR_CAMPAIGN_EMPTY_LIST: "Seleccione una lista de contactos o una etiqueta.",
+        ERR_CAMPAIGN_NO_VALID_CONTACTS:
+            "No hay contactos válidos para enviar en esta lista.",
+        ERR_CAMPAIGN_TAG_REQUIRED: "Se requiere una etiqueta para la estimación.",
+        ERR_CAMPAIGN_NO_FAILED_TO_RETRY:
+            "No hay envíos fallidos para reintentar en esta campaña.",
+        ERR_INVALID_API_TOKEN:
+            "Token de API inválido o ausente. Verifique el encabezado Authorization: Bearer.",
+        ERR_EXTERNAL_API_NOT_ALLOWED:
+            "El plan de la empresa no permite la API externa. Actualice el plan o contacte al soporte.",
+        ERR_RATE_LIMIT_EXCEEDED:
+            "Límite de solicitudes por minuto superado. Espere e intente de nuevo.",
+        ERR_MESSAGE_SEND_FAILED:
+            "No se pudo completar el envío del mensaje.",
+        ERR_INVOICE_NOT_FOUND: "Factura no encontrada.",
+        ERR_FORBIDDEN_INVOICE: "Esta factura no pertenece a su empresa.",
+        ERR_INVOICE_ALREADY_PAID: "Esta factura ya está pagada.",
+        ERR_SUBSCRIPTION_VALIDATION: "Datos inválidos para generar PIX.",
+        ERR_SUBSCRIPTION_PIX_CREATE:
+            "No se pudo crear el cobro PIX. Intente de nuevo.",
+        ERR_SUBSCRIPTION_WEBHOOK_CONFIG_VALIDATION: "Datos de webhook inválidos.",
+        ERR_WEBHOOK_UNAUTHORIZED: "Webhook no autorizado (token inválido).",
+        ERR_COMPANY_DELINQUENT:
+            "Pago atrasado: esta acción está suspendida hasta regularizar en Facturación (PIX).",
+        ERR_NO_COMPANY_FOUND: "Empresa no encontrada.",
       },
     }
   }

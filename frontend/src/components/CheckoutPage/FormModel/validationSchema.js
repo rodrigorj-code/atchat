@@ -1,29 +1,6 @@
-import * as Yup from 'yup';
-import checkoutFormModel from './checkoutFormModel';
-const {
-  formField: {
-    firstName,
-    address1,
-    city,
-    zipcode,
-    country,
-  }
-} = checkoutFormModel;
+import * as Yup from "yup";
 
-
-export default [
-  Yup.object().shape({
-    [firstName.name]: Yup.string().required(`${firstName.requiredErrorMsg}`),
-    [address1.name]: Yup.string().required(`${address1.requiredErrorMsg}`),
-    [city.name]: Yup.string()
-      .nullable()
-      .required(`${city.requiredErrorMsg}`),
-    [zipcode.name]: Yup.string()
-      .required(`${zipcode.requiredErrorMsg}`),
-
-    [country.name]: Yup.string()
-      .nullable()
-      .required(`${country.requiredErrorMsg}`)
-  }),
-
-];
+/**
+ * Fluxo PIX em 2 passos: plano + revisão. Validações de endereço/cartão não se aplicam.
+ */
+export default [Yup.object(), Yup.object()];

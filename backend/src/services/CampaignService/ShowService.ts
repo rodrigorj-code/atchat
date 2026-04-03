@@ -5,8 +5,12 @@ import ContactList from "../../models/ContactList";
 import ContactListItem from "../../models/ContactListItem";
 import Whatsapp from "../../models/Whatsapp";
 
-const ShowService = async (id: string | number): Promise<Campaign> => {
-  const record = await Campaign.findByPk(id, {
+const ShowService = async (
+  id: string | number,
+  companyId: number
+): Promise<Campaign> => {
+  const record = await Campaign.findOne({
+    where: { id, companyId },
     include: [
       { model: CampaignShipping },
       { model: ContactList, include: [{ model: ContactListItem }] },
@@ -15,7 +19,7 @@ const ShowService = async (id: string | number): Promise<Campaign> => {
   });
 
   if (!record) {
-    throw new AppError("ERR_NO_TICKETNOTE_FOUND", 404);
+    throw new AppError("ERR_CAMPAIGN_NOT_FOUND", 404);
   }
 
   return record;

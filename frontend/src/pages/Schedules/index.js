@@ -165,7 +165,7 @@ const Schedules = () => {
     handleOpenScheduleModalFromContactId();
     const socket = socketManager.getSocket(user.companyId);
 
-    socket.on(`company${user.companyId}-schedule`, (data) => {
+    const onSchedule = (data) => {
       if (data.action === "update" || data.action === "create") {
         dispatch({ type: "UPDATE_SCHEDULES", payload: data.schedule });
       }
@@ -173,10 +173,12 @@ const Schedules = () => {
       if (data.action === "delete") {
         dispatch({ type: "DELETE_SCHEDULE", payload: +data.scheduleId });
       }
-    });
+    };
+
+    socket.on("schedule", onSchedule);
 
     return () => {
-      socket.disconnect();
+      socket.off("schedule", onSchedule);
     };
   }, [handleOpenScheduleModalFromContactId, socketManager, user]);
 
@@ -296,7 +298,15 @@ const Schedules = () => {
           events={schedules.map((schedule) => ({
             title: (
               <div className="event-container">
-                <div style={eventTitleStyle}>{schedule.contact.name}</div>
+                <div style={eventTitleStyle}>
+                  {schedule.contact?.name}
+                  <span style={{ fontSize: "11px", opacity: 0.85, display: "block" }}>
+                    {i18n.t(`schedules.statusLabels.${schedule.status || "PENDENTE"}`)}
+                    {schedule.preferredWhatsapp?.name
+                      ? ` · ${i18n.t("schedules.preferredShort")}: ${schedule.preferredWhatsapp.name}`
+                      : ""}
+                  </span>
+                </div>
                 <DeleteOutlineIcon
                   onClick={() => handleDeleteSchedule(schedule.id)}
                   className="delete-icon"

@@ -1,5 +1,13 @@
-import React, { useState, useEffect, useReducer, useContext } from "react";
+import React, {
+	useState,
+	useEffect,
+	useReducer,
+	useContext,
+	useCallback,
+} from "react";
 import { toast } from "react-toastify";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 import { makeStyles } from "@material-ui/core/styles";
 import Paper from "@material-ui/core/Paper";
@@ -13,6 +21,10 @@ import IconButton from "@material-ui/core/IconButton";
 import SearchIcon from "@material-ui/icons/Search";
 import TextField from "@material-ui/core/TextField";
 import InputAdornment from "@material-ui/core/InputAdornment";
+import Box from "@material-ui/core/Box";
+import Typography from "@material-ui/core/Typography";
+import Chip from "@material-ui/core/Chip";
+import Tooltip from "@material-ui/core/Tooltip";
 
 import DeleteOutlineIcon from "@material-ui/icons/DeleteOutline";
 import EditIcon from "@material-ui/icons/Edit";
@@ -30,265 +42,400 @@ import ConfirmationModal from "../../components/ConfirmationModal";
 import toastError from "../../errors/toastError";
 import { SocketContext } from "../../context/Socket/SocketContext";
 
-const reducer = (state, action) => {
-  if (action.type === "LOAD_USERS") {
-    const users = action.payload;
-    const newUsers = [];
-
-    users.forEach((user) => {
-      const userIndex = state.findIndex((u) => u.id === user.id);
-      if (userIndex !== -1) {
-        state[userIndex] = user;
-      } else {
-        newUsers.push(user);
-      }
-    });
-
-    return [...state, ...newUsers];
-  }
-
-  if (action.type === "UPDATE_USERS") {
-    const user = action.payload;
-    const userIndex = state.findIndex((u) => u.id === user.id);
-
-    if (userIndex !== -1) {
-      state[userIndex] = user;
-      return [...state];
-    } else {
-      return [user, ...state];
-    }
-  }
-
-  if (action.type === "DELETE_USER") {
-    const userId = action.payload;
-
-    const userIndex = state.findIndex((u) => u.id === userId);
-    if (userIndex !== -1) {
-      state.splice(userIndex, 1);
-    }
-    return [...state];
-  }
-
-  if (action.type === "RESET") {
-    return [];
-  }
+const chipTextColor = hex => {
+	if (!hex || typeof hex !== "string") return "#fff";
+	const h = hex.replace("#", "").slice(0, 6);
+	if (h.length !== 6) return "#fff";
+	const r = parseInt(h.substr(0, 2), 16);
+	const g = parseInt(h.substr(2, 2), 16);
+	const b = parseInt(h.substr(4, 2), 16);
+	if (Number.isNaN(r + g + b)) return "#fff";
+	const yiq = (r * 299 + g * 587 + b * 114) / 1000;
+	return yiq >= 186 ? "#111" : "#fff";
 };
 
-const useStyles = makeStyles((theme) => ({
-  mainPaper: {
-    flex: 1,
-    padding: theme.spacing(1),
-    overflowY: "scroll",
-    ...theme.scrollbarStyles,
-  },
+const reducer = (state, action) => {
+	if (action.type === "LOAD_USERS") {
+		const users = action.payload;
+		const page = action.pageNumber ?? 1;
+		if (page === 1) {
+			return users.map(u => ({ ...u }));
+		}
+		const existing = [...state];
+		users.forEach(user => {
+			const userIndex = existing.findIndex(u => u.id === user.id);
+			if (userIndex !== -1) {
+				existing[userIndex] = { ...existing[userIndex], ...user };
+			} else {
+				existing.push(user);
+			}
+		});
+		return existing;
+	}
+
+	if (action.type === "UPDATE_USERS") {
+		const user = action.payload;
+		const userIndex = state.findIndex(u => u.id === user.id);
+
+		if (userIndex !== -1) {
+			const prev = state[userIndex];
+			state[userIndex] = { ...prev, ...user };
+			return [...state];
+		}
+		return [user, ...state];
+	}
+
+	if (action.type === "DELETE_USER") {
+		const userId = action.payload;
+
+		const userIndex = state.findIndex(u => u.id === userId);
+		if (userIndex !== -1) {
+			state.splice(userIndex, 1);
+		}
+		return [...state];
+	}
+
+	if (action.type === "RESET") {
+		return [];
+	}
+};
+
+const useStyles = makeStyles(theme => ({
+	mainPaper: {
+		flex: 1,
+		padding: theme.spacing(2),
+		overflowY: "auto",
+		...theme.scrollbarStyles,
+	},
+	queueChips: {
+		display: "flex",
+		flexWrap: "wrap",
+		gap: theme.spacing(0.5),
+		justifyContent: "center",
+		maxWidth: 280,
+		margin: "0 auto",
+	},
 }));
 
+const profileLabel = profile => {
+	const key = `users.profileLabels.${profile}`;
+	const t = i18n.t(key);
+	return t !== key ? t : profile || "—";
+};
+
 const Users = () => {
-  const classes = useStyles();
+	const classes = useStyles();
 
-  const [loading, setLoading] = useState(false);
-  const [pageNumber, setPageNumber] = useState(1);
-  const [hasMore, setHasMore] = useState(false);
-  const [selectedUser, setSelectedUser] = useState(null);
-  const [deletingUser, setDeletingUser] = useState(null);
-  const [userModalOpen, setUserModalOpen] = useState(false);
-  const [confirmModalOpen, setConfirmModalOpen] = useState(false);
-  const [searchParam, setSearchParam] = useState("");
-  const [users, dispatch] = useReducer(reducer, []);
+	const [loading, setLoading] = useState(false);
+	const [pageNumber, setPageNumber] = useState(1);
+	const [hasMore, setHasMore] = useState(false);
+	const [selectedUser, setSelectedUser] = useState(null);
+	const [deletingUser, setDeletingUser] = useState(null);
+	const [userModalOpen, setUserModalOpen] = useState(false);
+	const [confirmModalOpen, setConfirmModalOpen] = useState(false);
+	const [searchParam, setSearchParam] = useState("");
+	const [listVersion, setListVersion] = useState(0);
+	const [users, dispatch] = useReducer(reducer, []);
 
-  const socketManager = useContext(SocketContext);
+	const socketManager = useContext(SocketContext);
 
-  useEffect(() => {
-    dispatch({ type: "RESET" });
-    setPageNumber(1);
-  }, [searchParam]);
+	const reloadList = useCallback(() => {
+		setPageNumber(1);
+		setListVersion(v => v + 1);
+	}, []);
 
-  useEffect(() => {
-    setLoading(true);
-    const delayDebounceFn = setTimeout(() => {
-      const fetchUsers = async () => {
-        try {
-          const { data } = await api.get("/users/", {
-            params: { searchParam, pageNumber },
-          });
-          dispatch({ type: "LOAD_USERS", payload: data.users });
-          setHasMore(data.hasMore);
-          setLoading(false);
-        } catch (err) {
-          toastError(err);
-        }
-      };
-      fetchUsers();
-    }, 500);
-    return () => clearTimeout(delayDebounceFn);
-  }, [searchParam, pageNumber]);
+	useEffect(() => {
+		setLoading(true);
+		const delayDebounceFn = setTimeout(() => {
+			const fetchUsers = async () => {
+				try {
+					const { data } = await api.get("/users/", {
+						params: { searchParam, pageNumber },
+					});
+					dispatch({
+						type: "LOAD_USERS",
+						payload: data.users,
+						pageNumber,
+					});
+					setHasMore(data.hasMore);
+				} catch (err) {
+					toastError(err);
+				} finally {
+					setLoading(false);
+				}
+			};
+			fetchUsers();
+		}, 300);
+		return () => clearTimeout(delayDebounceFn);
+	}, [searchParam, pageNumber, listVersion]);
 
-  useEffect(() => {
-    const companyId = localStorage.getItem("companyId");
-    const socket = socketManager.getSocket(companyId);
+	useEffect(() => {
+		const companyId = localStorage.getItem("companyId");
+		const socket = socketManager.getSocket(companyId);
 
-    socket.on(`company-${companyId}-user`, (data) => {
-      if (data.action === "update" || data.action === "create") {
-        dispatch({ type: "UPDATE_USERS", payload: data.user });
-      }
+		const onUserEvent = data => {
+			if (data.action === "update" || data.action === "create") {
+				dispatch({ type: "UPDATE_USERS", payload: data.user });
+			}
 
-      if (data.action === "delete") {
-        dispatch({ type: "DELETE_USER", payload: +data.userId });
-      }
-    });
+			if (data.action === "delete") {
+				dispatch({ type: "DELETE_USER", payload: +data.userId });
+			}
+		};
 
-    return () => {
-      socket.disconnect();
-    };
-  }, [socketManager]);
+		socket.on(`company-${companyId}-user`, onUserEvent);
 
-  const handleOpenUserModal = () => {
-    setSelectedUser(null);
-    setUserModalOpen(true);
-  };
+		return () => {
+			socket.off(`company-${companyId}-user`, onUserEvent);
+		};
+	}, [socketManager]);
 
-  const handleCloseUserModal = () => {
-    setSelectedUser(null);
-    setUserModalOpen(false);
-  };
+	const handleOpenUserModal = () => {
+		setSelectedUser(null);
+		setUserModalOpen(true);
+	};
 
-  const handleSearch = (event) => {
-    setSearchParam(event.target.value.toLowerCase());
-  };
+	const handleCloseUserModal = () => {
+		setSelectedUser(null);
+		setUserModalOpen(false);
+	};
 
-  const handleEditUser = (user) => {
-    setSelectedUser(user);
-    setUserModalOpen(true);
-  };
+	const handleSearch = event => {
+		const v = event.target.value.toLowerCase();
+		setSearchParam(v);
+		setPageNumber(1);
+		dispatch({ type: "RESET" });
+	};
 
-  const handleDeleteUser = async (userId) => {
-    try {
-      await api.delete(`/users/${userId}`);
-      toast.success(i18n.t("users.toasts.deleted"));
-    } catch (err) {
-      toastError(err);
-    }
-    setDeletingUser(null);
-    setSearchParam("");
-    setPageNumber(1);
-  };
+	const handleEditUser = user => {
+		setSelectedUser(user);
+		setUserModalOpen(true);
+	};
 
-  const loadMore = () => {
-    setPageNumber((prevState) => prevState + 1);
-  };
+	const handleDeleteUser = async userId => {
+		try {
+			await api.delete(`/users/${userId}`);
+			toast.success(i18n.t("users.toasts.deleted"));
+		} catch (err) {
+			toastError(err);
+		}
+		setDeletingUser(null);
+		setConfirmModalOpen(false);
+	};
 
-  const handleScroll = (e) => {
-    if (!hasMore || loading) return;
-    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
-    if (scrollHeight - (scrollTop + 100) < clientHeight) {
-      loadMore();
-    }
-  };
+	const loadMore = () => {
+		setPageNumber(prevState => prevState + 1);
+	};
 
-  return (
-    <MainContainer>
-      <ConfirmationModal
-        title={
-          deletingUser &&
-          `${i18n.t("users.confirmationModal.deleteTitle")} ${
-            deletingUser.name
-          }?`
-        }
-        open={confirmModalOpen}
-        onClose={setConfirmModalOpen}
-        onConfirm={() => handleDeleteUser(deletingUser.id)}
-      >
-        {i18n.t("users.confirmationModal.deleteMessage")}
-      </ConfirmationModal>
-      <UserModal
-        open={userModalOpen}
-        onClose={handleCloseUserModal}
-        aria-labelledby="form-dialog-title"
-        userId={selectedUser && selectedUser.id}
-      />
-      <MainHeader>
-        <Title>{i18n.t("users.title")}</Title>
-        <MainHeaderButtonsWrapper>
-          <TextField
-            placeholder={i18n.t("contacts.searchPlaceholder")}
-            type="search"
-            value={searchParam}
-            onChange={handleSearch}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon style={{ color: "gray" }} />
-                </InputAdornment>
-              ),
-            }}
-          />
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={handleOpenUserModal}
-          >
-            {i18n.t("users.buttons.add")}
-          </Button>
-        </MainHeaderButtonsWrapper>
-      </MainHeader>
-      <Paper
-        className={classes.mainPaper}
-        variant="outlined"
-        onScroll={handleScroll}
-      >
-        <Table size="small">
-          <TableHead>
-            <TableRow>
-			<TableCell align="center">
-                {i18n.t("users.table.id")}
-              </TableCell>
-              <TableCell align="center">{i18n.t("users.table.name")}</TableCell>
-              <TableCell align="center">
-                {i18n.t("users.table.email")}
-              </TableCell>
-              <TableCell align="center">
-                {i18n.t("users.table.profile")}
-              </TableCell>
-              <TableCell align="center">
-                {i18n.t("users.table.actions")}
-              </TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            <>
-              {users.map((user) => (
-                <TableRow key={user.id}>
-				  <TableCell align="center">{user.id}</TableCell>
-                  <TableCell align="center">{user.name}</TableCell>
-                  <TableCell align="center">{user.email}</TableCell>
-                  <TableCell align="center">{user.profile}</TableCell>
-                  <TableCell align="center">
-                    <IconButton
-                      size="small"
-                      onClick={() => handleEditUser(user)}
-                    >
-                      <EditIcon />
-                    </IconButton>
+	const handleScroll = e => {
+		if (!hasMore || loading) return;
+		const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+		if (scrollHeight - (scrollTop + 100) < clientHeight) {
+			loadMore();
+		}
+	};
 
-                    <IconButton
-                      size="small"
-                      onClick={(e) => {
-                        setConfirmModalOpen(true);
-                        setDeletingUser(user);
-                      }}
-                    >
-                      <DeleteOutlineIcon />
-                    </IconButton>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {loading && <TableRowSkeleton columns={4} />}
-            </>
-          </TableBody>
-        </Table>
-      </Paper>
-    </MainContainer>
-  );
+	const formatCreated = d => {
+		if (!d) return "—";
+		try {
+			return format(new Date(d), "dd/MM/yyyy HH:mm", { locale: ptBR });
+		} catch {
+			return "—";
+		}
+	};
+
+	const ticketCount = u => u.ticketsAssignedCount ?? 0;
+
+	return (
+		<MainContainer>
+			<ConfirmationModal
+				title={
+					deletingUser &&
+					`${i18n.t("users.confirmationModal.deleteTitle")} ${
+						deletingUser.name
+					}?`
+				}
+				open={confirmModalOpen}
+				onClose={() => setConfirmModalOpen(false)}
+				onConfirm={() => handleDeleteUser(deletingUser.id)}
+			>
+				{deletingUser && ticketCount(deletingUser) > 0 ? (
+					<>
+						<Typography variant="body2" paragraph>
+							{i18n.t("users.confirmationModal.deleteWarningTickets", {
+								count: ticketCount(deletingUser),
+							})}
+						</Typography>
+						<Typography variant="body2" color="textSecondary">
+							{i18n.t("users.confirmationModal.deleteMessage")}
+						</Typography>
+					</>
+				) : (
+					i18n.t("users.confirmationModal.deleteMessage")
+				)}
+			</ConfirmationModal>
+			<UserModal
+				open={userModalOpen}
+				onClose={handleCloseUserModal}
+				aria-labelledby="form-dialog-title"
+				userId={selectedUser && selectedUser.id}
+				reload={reloadList}
+			/>
+			<MainHeader>
+				<Title>{i18n.t("users.title")}</Title>
+				<MainHeaderButtonsWrapper>
+					<TextField
+						placeholder={i18n.t("users.searchPlaceholder")}
+						type="search"
+						value={searchParam}
+						onChange={handleSearch}
+						InputProps={{
+							startAdornment: (
+								<InputAdornment position="start">
+									<SearchIcon style={{ color: "gray" }} />
+								</InputAdornment>
+							),
+						}}
+					/>
+					<Button
+						variant="contained"
+						color="primary"
+						onClick={handleOpenUserModal}
+					>
+						{i18n.t("users.buttons.add")}
+					</Button>
+				</MainHeaderButtonsWrapper>
+			</MainHeader>
+			<Paper
+				className={classes.mainPaper}
+				variant="outlined"
+				onScroll={handleScroll}
+			>
+				{!loading && users.length === 0 ? (
+					<Box py={8} textAlign="center">
+						<Typography variant="h6" color="textSecondary" gutterBottom>
+							{i18n.t("users.empty.title")}
+						</Typography>
+						<Typography variant="body2" color="textSecondary">
+							{i18n.t("users.empty.subtitle")}
+						</Typography>
+					</Box>
+				) : (
+					<Table size="small">
+						<TableHead>
+							<TableRow>
+								<TableCell align="center">
+									{i18n.t("users.table.id")}
+								</TableCell>
+								<TableCell align="center">
+									{i18n.t("users.table.name")}
+								</TableCell>
+								<TableCell align="center">
+									{i18n.t("users.table.email")}
+								</TableCell>
+								<TableCell align="center">
+									{i18n.t("users.table.profile")}
+								</TableCell>
+								<TableCell align="center">
+									{i18n.t("users.table.queues")}
+								</TableCell>
+								<TableCell align="center">
+									{i18n.t("users.table.online")}
+								</TableCell>
+								<TableCell align="center">
+									{i18n.t("users.table.tickets")}
+								</TableCell>
+								<TableCell align="center">
+									{i18n.t("users.table.createdAt")}
+								</TableCell>
+								<TableCell align="center">
+									{i18n.t("users.table.actions")}
+								</TableCell>
+							</TableRow>
+						</TableHead>
+						<TableBody>
+							<>
+								{users.map(user => (
+									<TableRow key={user.id}>
+										<TableCell align="center">{user.id}</TableCell>
+										<TableCell align="center">{user.name}</TableCell>
+										<TableCell align="center">{user.email}</TableCell>
+										<TableCell align="center">
+											{profileLabel(user.profile)}
+										</TableCell>
+										<TableCell align="center">
+											<div className={classes.queueChips}>
+												{user.queues && user.queues.length > 0 ? (
+													user.queues.map(q => (
+														<Chip
+															key={q.id}
+															size="small"
+															label={q.name}
+															style={{
+																backgroundColor: q.color || "#eee",
+																color: chipTextColor(q.color),
+															}}
+														/>
+													))
+												) : (
+													<Typography variant="caption" color="textSecondary">
+														—
+													</Typography>
+												)}
+											</div>
+										</TableCell>
+										<TableCell align="center">
+											<Chip
+												size="small"
+												label={
+													user.online
+														? i18n.t("users.online.yes")
+														: i18n.t("users.online.no")
+												}
+												color={user.online ? "primary" : "default"}
+												variant={user.online ? "default" : "outlined"}
+											/>
+										</TableCell>
+										<TableCell align="center">
+											{ticketCount(user)}
+										</TableCell>
+										<TableCell align="center">
+											{formatCreated(user.createdAt)}
+										</TableCell>
+										<TableCell align="center">
+											<Tooltip title={i18n.t("users.buttons.edit")}>
+												<IconButton
+													size="small"
+													onClick={() => handleEditUser(user)}
+													aria-label={i18n.t("users.buttons.edit")}
+												>
+													<EditIcon />
+												</IconButton>
+											</Tooltip>
+
+											<Tooltip title={i18n.t("users.buttons.delete")}>
+												<IconButton
+													size="small"
+													onClick={() => {
+														setConfirmModalOpen(true);
+														setDeletingUser(user);
+													}}
+													aria-label={i18n.t("users.buttons.delete")}
+												>
+													<DeleteOutlineIcon />
+												</IconButton>
+											</Tooltip>
+										</TableCell>
+									</TableRow>
+								))}
+								{loading && <TableRowSkeleton columns={9} />}
+							</>
+						</TableBody>
+					</Table>
+				)}
+			</Paper>
+		</MainContainer>
+	);
 };
 
 export default Users;
