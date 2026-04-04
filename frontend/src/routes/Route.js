@@ -28,7 +28,10 @@ const Route = ({ component: Component, isPrivate = false, ...rest }) => {
 	return (
 		<>
 			{loading && <BackdropLoading />}
-			<RouterRoute {...rest} component={Component} />
+			<RouterRoute
+				{...rest}
+				{...(Component ? { component: Component } : {})}
+			/>
 		</>
 	);
 };
