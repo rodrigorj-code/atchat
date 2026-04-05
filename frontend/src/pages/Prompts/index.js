@@ -227,7 +227,7 @@ const Prompts = () => {
           </Button>
         </MainHeaderButtonsWrapper>
       </MainHeader>
-      <Box p={1} mb={1} maxWidth={960}>
+      <Box p={1} mb={1} width="100%">
         <Typography variant="body2" color="textSecondary" component="div">
           {i18n.t("prompts.openAiHelp")}
         </Typography>

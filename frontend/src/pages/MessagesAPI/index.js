@@ -41,7 +41,8 @@ const useStyles = makeStyles((theme) => ({
     fontWeight: 600
   },
   formContainer: {
-    maxWidth: 520
+    width: "100%",
+    maxWidth: "100%",
   },
   textRight: {
     textAlign: "right"

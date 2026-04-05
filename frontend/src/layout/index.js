@@ -171,6 +171,8 @@ const useStyles = makeStyles((theme) => ({
   },
   content: {
     flex: 1,
+    width: "100%",
+    maxWidth: "100%",
     overflow: "auto",
     overflowX: "hidden",
     minHeight: 0,

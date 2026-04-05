@@ -47,8 +47,7 @@ const useStyles = makeStyles((theme) => ({
     display: "flex",
     flexDirection: "column",
     width: "100%",
-    maxWidth: 720,
-    margin: "0 auto",
+    maxWidth: "100%",
     padding: theme.spacing(2),
   },
   pageTitle: {

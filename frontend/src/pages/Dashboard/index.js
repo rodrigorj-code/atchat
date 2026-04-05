@@ -44,6 +44,8 @@ import { i18n } from "../../translate/i18n";
 
 const useStyles = makeStyles((theme) => ({
   container: {
+    width: "100%",
+    maxWidth: "100%",
     paddingTop: theme.spacing(3),
     paddingBottom: theme.spacing(4),
     paddingLeft: theme.spacing(2),
@@ -317,7 +319,7 @@ const Dashboard = () => {
 
   return (
     <div className={classes.dashboardBg}>
-      <Container maxWidth="lg" className={classes.container}>
+      <Container maxWidth={false} disableGutters className={classes.container}>
         {/* Seletor de período - compacto, canto superior direito */}
         <div className={classes.periodSelectorRow}>
           <FormControl size="small" variant="outlined" className={classes.periodSelect}>
