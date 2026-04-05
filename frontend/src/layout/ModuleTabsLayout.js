@@ -7,60 +7,60 @@ import Tab from "@material-ui/core/Tab";
 import { makeStyles } from "@material-ui/core/styles";
 
 const useStyles = makeStyles((theme) => ({
-  /** Área do módulo: respiro abaixo da AppBar e antes do conteúdo */
+  /** Área do módulo: respiro moderado; conteúdo com mais peso visual que a barra de tabs */
   moduleWrap: {
     width: "100%",
     maxWidth: "100%",
     boxSizing: "border-box",
-    paddingTop: theme.spacing(2),
+    paddingTop: theme.spacing(1),
     paddingBottom: 0,
-    paddingLeft: theme.spacing(2),
-    paddingRight: theme.spacing(2),
+    paddingLeft: theme.spacing(1.5),
+    paddingRight: theme.spacing(1.5),
     [theme.breakpoints.up("md")]: {
-      paddingLeft: theme.spacing(3),
-      paddingRight: theme.spacing(3),
+      paddingLeft: theme.spacing(2),
+      paddingRight: theme.spacing(2),
     },
   },
-  /** Faixa de cabeçalho (reserva visual antes das tabs) */
   headerSpacer: {
-    minHeight: theme.spacing(0.5),
-    marginBottom: theme.spacing(1.5),
+    minHeight: 0,
+    marginBottom: theme.spacing(1),
   },
   tabsPaper: {
     borderRadius: theme.shape.borderRadius,
     border: `1px solid ${theme.palette.divider}`,
     backgroundColor: theme.palette.background.paper,
     overflow: "hidden",
-    marginBottom: theme.spacing(2),
+    marginBottom: theme.spacing(1.25),
     boxShadow: "none",
   },
   tabs: {
-    minHeight: 48,
+    minHeight: 38,
     "& .MuiTabs-indicator": {
-      height: 3,
-      borderRadius: "3px 3px 0 0",
+      height: 2,
+      borderRadius: "2px 2px 0 0",
     },
     "& .MuiTab-root": {
-      minHeight: 48,
-      paddingTop: theme.spacing(1.25),
-      paddingBottom: theme.spacing(1.25),
+      minHeight: 38,
+      paddingTop: theme.spacing(0.5),
+      paddingBottom: theme.spacing(0.5),
+      paddingLeft: theme.spacing(1.25),
+      paddingRight: theme.spacing(1.25),
       textTransform: "none",
       fontWeight: 500,
-      fontSize: "0.875rem",
-      lineHeight: 1.3,
+      fontSize: "0.8125rem",
+      lineHeight: 1.25,
       letterSpacing: "0.01em",
     },
     "& .MuiTab-textColorPrimary.Mui-selected": {
       fontWeight: 600,
     },
   },
-  /** Conteúdo abaixo das abas — separado da barra de tabs */
   contentBelow: {
     width: "100%",
     maxWidth: "100%",
     boxSizing: "border-box",
-    paddingTop: theme.spacing(0.5),
-    paddingBottom: theme.spacing(3),
+    paddingTop: theme.spacing(1),
+    paddingBottom: theme.spacing(2),
     minHeight: 0,
   },
 }));

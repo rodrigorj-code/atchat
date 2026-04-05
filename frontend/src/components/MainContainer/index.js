@@ -6,9 +6,12 @@ import Container from "@material-ui/core/Container";
 const useStyles = makeStyles(theme => ({
 	mainContainer: {
 		flex: 1,
-		padding: theme.spacing(2),
+		padding: theme.spacing(1.5, 2),
 		minHeight: 0,
 		boxSizing: "border-box",
+		[theme.breakpoints.up("md")]: {
+			padding: theme.spacing(2, 2.5),
+		},
 	},
 
 	contentWrapper: {

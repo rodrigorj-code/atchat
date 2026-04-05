@@ -4,7 +4,6 @@ import { Link as RouterLink, useLocation } from "react-router-dom";
 import ListItem from "@material-ui/core/ListItem";
 import ListItemIcon from "@material-ui/core/ListItemIcon";
 import ListItemText from "@material-ui/core/ListItemText";
-import Divider from "@material-ui/core/Divider";
 import { Badge } from "@material-ui/core";
 import DashboardOutlinedIcon from "@material-ui/icons/DashboardOutlined";
 import WhatsAppIcon from "@material-ui/icons/WhatsApp";
@@ -295,11 +294,12 @@ const MainListItems = (props) => {
     path.startsWith("/contact-lists") ||
     path === "/campaigns-config" ||
     path.startsWith("/campaign/");
+  const selChatInterno = path.startsWith("/chats");
   const selEquipe =
     path === "/users" ||
     path === "/setores" ||
     path === "/queues" ||
-    path.startsWith("/chats");
+    path.startsWith("/queues/");
   const selConfig =
     path === "/connections" || path === "/messages-api" || path === "/settings";
   const selFinanceiro = path === "/financeiro";
@@ -313,11 +313,9 @@ const MainListItems = (props) => {
   const selAjuda = path === "/helps";
 
   const toAutomacao = defaultAutomacaoPath(planFlags, isAdmin);
-  const toEquipe = isAdmin ? "/users" : "/chats";
 
-  const secondaryNav = (
+  const standaloneAfterConfig = (
     <>
-      <Divider style={{ margin: "8px 0" }} />
       <ListItemLink
         to="/todolist"
         primary={i18n.t("mainDrawer.listItems.tasks")}
@@ -347,6 +345,24 @@ const MainListItems = (props) => {
         listItemTextClassName={classes.listItemText}
         selected={selAvaliacao}
       />
+      <ListItemLink
+        to="/tags"
+        primary={i18n.t("mainDrawer.listItems.tags")}
+        icon={<LocalOfferIcon />}
+        listItemClassName={classes.listItem}
+        listItemIconClassName={classes.listItemIcon}
+        listItemTextClassName={classes.listItemText}
+        selected={selTags}
+      />
+      <ListItemLink
+        to="/files"
+        primary={i18n.t("mainDrawer.listItems.files")}
+        icon={<AttachFile />}
+        listItemClassName={classes.listItem}
+        listItemIconClassName={classes.listItemIcon}
+        listItemTextClassName={classes.listItemText}
+        selected={selArquivos}
+      />
       {user.super && (
         <ListItemLink
           to="/announcements"
@@ -358,24 +374,6 @@ const MainListItems = (props) => {
           selected={selInformativos}
         />
       )}
-      <ListItemLink
-        to="/files"
-        primary={i18n.t("mainDrawer.listItems.files")}
-        icon={<AttachFile />}
-        listItemClassName={classes.listItem}
-        listItemIconClassName={classes.listItemIcon}
-        listItemTextClassName={classes.listItemText}
-        selected={selArquivos}
-      />
-      <ListItemLink
-        to="/tags"
-        primary={i18n.t("mainDrawer.listItems.tags")}
-        icon={<LocalOfferIcon />}
-        listItemClassName={classes.listItem}
-        listItemIconClassName={classes.listItemIcon}
-        listItemTextClassName={classes.listItemText}
-        selected={selTags}
-      />
       <ListItemLink
         to="/helps"
         primary={i18n.t("mainDrawer.listItems.helps")}
@@ -417,6 +415,20 @@ const MainListItems = (props) => {
       />
 
       <ListItemLink
+        to="/chats"
+        primary={i18n.t("mainDrawer.sections.chatInterno")}
+        icon={
+          <Badge color="secondary" variant="dot" invisible={invisible}>
+            <ForumIcon />
+          </Badge>
+        }
+        listItemClassName={classes.listItem}
+        listItemIconClassName={classes.listItemIcon}
+        listItemTextClassName={classes.listItemText}
+        selected={selChatInterno}
+      />
+
+      <ListItemLink
         to={toAutomacao}
         primary={i18n.t("mainDrawer.sections.automacao")}
         icon={<AccountTree />}
@@ -441,13 +453,9 @@ const MainListItems = (props) => {
           )}
 
           <ListItemLink
-            to={toEquipe}
+            to="/users"
             primary={i18n.t("mainDrawer.sections.equipe")}
-            icon={
-              <Badge color="secondary" variant="dot" invisible={invisible}>
-                <PeopleAltOutlinedIcon />
-              </Badge>
-            }
+            icon={<PeopleAltOutlinedIcon />}
             listItemClassName={classes.listItem}
             listItemIconClassName={classes.listItemIcon}
             listItemTextClassName={classes.listItemText}
@@ -477,29 +485,10 @@ const MainListItems = (props) => {
             listItemTextClassName={classes.listItemText}
             selected={selConfig}
           />
-
-          {secondaryNav}
         </>
       )}
 
-      {!isAdmin && (
-        <>
-          <ListItemLink
-            to="/chats"
-            primary={i18n.t("mainDrawer.sections.equipe")}
-            icon={
-              <Badge color="secondary" variant="dot" invisible={invisible}>
-                <ForumIcon />
-              </Badge>
-            }
-            listItemClassName={classes.listItem}
-            listItemIconClassName={classes.listItemIcon}
-            listItemTextClassName={classes.listItemText}
-            selected={selEquipe}
-          />
-          {secondaryNav}
-        </>
-      )}
+      {standaloneAfterConfig}
     </div>
   );
 };

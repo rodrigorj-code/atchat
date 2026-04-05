@@ -1041,12 +1041,12 @@ const messages = {
 				sections: {
 					dashboard: "Dashboard",
 					atendimento: "Customer service",
+					chatInterno: "Internal chat",
 					equipe: "Team",
 					automacao: "Automation",
 					campanhas: "Campaigns",
 					financeiro: "Financial",
 					configuracoes: "Settings",
-					mais: "More",
 				},
 				listItems: {
 					dashboard: "Dashboard",

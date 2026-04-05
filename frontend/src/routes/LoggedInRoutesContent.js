@@ -128,12 +128,8 @@ function AtendimentoModule({ planFlags, isAdmin }) {
     if (isAdmin) {
       t.push({ path: "/group-manager", label: i18n.t("mainDrawer.listItems.groups") });
     }
-    t.push({ path: "/todolist", label: i18n.t("mainDrawer.listItems.tasks") });
-    if (planFlags.useSchedules) {
-      t.push({ path: "/schedules", label: i18n.t("mainDrawer.listItems.schedules") });
-    }
     return t;
-  }, [planFlags.useKanban, planFlags.useSchedules, isAdmin, i18n.language]);
+  }, [planFlags.useKanban, isAdmin, i18n.language]);
 
   return (
     <ModuleTabsLayout tabs={tabs}>
@@ -142,8 +138,6 @@ function AtendimentoModule({ planFlags, isAdmin }) {
         <Route exact path="/kanban" component={Kanban} />
         <Route exact path="/contacts" component={Contacts} />
         <Route exact path="/group-manager" component={GroupManager} />
-        <Route exact path="/todolist" component={ToDoList} />
-        <Route exact path="/schedules" component={Schedules} />
       </Switch>
     </ModuleTabsLayout>
   );
@@ -212,14 +206,13 @@ function CampanhasModule() {
 
 function EquipeModule({ isAdmin }) {
   const tabs = useMemo(() => {
-    if (isAdmin) {
-      return [
-        { path: "/users", label: i18n.t("mainDrawer.listItems.users") },
-        { path: "/setores", label: i18n.t("mainDrawer.listItems.sectors") },
-        { path: "/chats", label: i18n.t("mainDrawer.listItems.chats") },
-      ];
+    if (!isAdmin) {
+      return [];
     }
-    return [{ path: "/chats", label: i18n.t("mainDrawer.listItems.chats") }];
+    return [
+      { path: "/users", label: i18n.t("mainDrawer.listItems.users") },
+      { path: "/setores", label: i18n.t("mainDrawer.listItems.sectors") },
+    ];
   }, [isAdmin, i18n.language]);
 
   return (
@@ -228,7 +221,6 @@ function EquipeModule({ isAdmin }) {
         <Route exact path="/users" component={Users} />
         <Route exact path="/setores" component={Setores} />
         <Route exact path="/queues" component={Queues} />
-        <Route exact path="/chats/:id?" component={Chat} />
       </Switch>
     </ModuleTabsLayout>
   );
@@ -260,14 +252,7 @@ export default function LoggedInRoutesContent() {
   const planFlags = usePlanFlags();
   const isAdmin = user?.profile === "admin";
 
-  const atendimentoPaths = [
-    "/tickets/:ticketId?",
-    "/kanban",
-    "/contacts",
-    "/group-manager",
-    "/todolist",
-    "/schedules",
-  ];
+  const atendimentoPaths = ["/tickets/:ticketId?", "/kanban", "/contacts", "/group-manager"];
 
   const automacaoPathsBase = ["/queue-integration", "/prompts", "/quick-messages"];
   const automacaoPaths = planFlags.useCampaigns
@@ -282,7 +267,7 @@ export default function LoggedInRoutesContent() {
     "/campaign/:campaignId/report",
   ];
 
-  const equipePaths = ["/users", "/setores", "/queues", "/chats/:id?"];
+  const equipePaths = ["/users", "/setores", "/queues"];
 
   const configPaths = ["/connections", "/messages-api", "/settings"];
 
@@ -294,6 +279,12 @@ export default function LoggedInRoutesContent() {
         path={atendimentoPaths}
         render={() => <AtendimentoModule planFlags={planFlags} isAdmin={isAdmin} />}
       />
+
+      <Route exact path="/chats" component={Chat} />
+      <Route exact path="/chats/:id" component={Chat} />
+
+      <Route exact path="/todolist" component={ToDoList} />
+      <Route exact path="/schedules" component={Schedules} />
 
       {!planFlags.useCampaigns && (
         <>

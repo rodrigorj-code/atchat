@@ -1113,12 +1113,12 @@ const messages = {
         sections: {
           dashboard: "Dashboard",
           atendimento: "Atendimento",
+          chatInterno: "Chat interno",
           equipe: "Equipe",
           automacao: "Automação",
           campanhas: "Campanhas",
           financeiro: "Financeiro",
           configuracoes: "Configurações",
-          mais: "Mais",
         },
         listItems: {
           dashboard: "Dashboard",

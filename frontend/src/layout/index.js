@@ -189,22 +189,22 @@ const useStyles = makeStyles((theme) => ({
   containerWithScroll: {
     flex: 1,
     minHeight: 0,
-    padding: theme.spacing(0.5, 0),
+    padding: 0,
     overflowY: "auto",
     overflowX: "hidden",
     ...theme.scrollbarStyles,
   },
   drawerFooter: {
     flexShrink: 0,
-    padding: theme.spacing(1.5, 2),
-    borderTop: "1px solid rgba(0, 0, 0, 0.08)",
-    backgroundColor: "rgba(0, 0, 0, 0.02)",
+    padding: theme.spacing(1.25, 2),
+    borderTop: "1px solid rgba(0, 0, 0, 0.06)",
+    backgroundColor: "transparent",
   },
   drawerFooterUser: {
     display: "flex",
     alignItems: "center",
-    gap: theme.spacing(1.5),
-    marginBottom: theme.spacing(1),
+    gap: theme.spacing(1.25),
+    marginBottom: theme.spacing(0.5),
   },
   drawerFooterRole: {
     fontSize: "0.75rem",
@@ -212,10 +212,10 @@ const useStyles = makeStyles((theme) => ({
     marginBottom: 0,
   },
   drawerFooterVersion: {
-    fontSize: "0.65rem",
+    fontSize: "0.625rem",
     color: theme.palette.text.secondary,
-    marginTop: theme.spacing(0.75),
-    opacity: 0.85,
+    marginTop: theme.spacing(0.5),
+    opacity: 0.7,
   },
   NotificationsPopOver: {
     // color: theme.barraSuperior.secondary.main,
@@ -423,7 +423,6 @@ const LoggedInLayout = ({ children, themeToggle }) => {
           <List className={classes.containerWithScroll}>
             <MainListItems drawerClose={drawerClose} />
           </List>
-          <Divider />
           {drawerOpen && (
             <div className={classes.drawerFooter}>
               <div className={classes.drawerFooterUser}>
