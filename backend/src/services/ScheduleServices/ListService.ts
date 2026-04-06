@@ -3,6 +3,8 @@ import Contact from "../../models/Contact";
 import Schedule from "../../models/Schedule";
 import User from "../../models/User";
 import Whatsapp from "../../models/Whatsapp";
+import ScheduleContact from "../../models/ScheduleContact";
+import sequelize from "../../database";
 
 interface Request {
   searchParam?: string;
@@ -25,56 +27,59 @@ const ListService = async ({
   pageNumber = "1",
   companyId
 }: Request): Promise<Response> => {
-  let whereCondition = {};
   const limit = 20;
   const offset = limit * (+pageNumber - 1);
 
-  if (searchParam) {
-    whereCondition = {
-      [Op.or]: [
-        {
-          "$Schedule.body$": Sequelize.where(
-            Sequelize.fn("LOWER", Sequelize.col("Schedule.body")),
-            "LIKE",
-            `%${searchParam.toLowerCase()}%`
-          )
-        },
-        {
-          "$Contact.name$": Sequelize.where(
-            Sequelize.fn("LOWER", Sequelize.col("contact.name")),
-            "LIKE",
-            `%${searchParam.toLowerCase()}%`
-          )
-        },
-      ],
+  const clauses: any[] = [
+    {
+      companyId: {
+        [Op.eq]: companyId
+      }
     }
-  }
+  ];
 
   if (contactId !== "") {
-    whereCondition = {
-      ...whereCondition,
-      contactId
-    }
+    clauses.push({ contactId });
   }
 
   if (userId !== "") {
-    whereCondition = {
-      ...whereCondition,
-      userId
-    }
+    clauses.push({ userId });
   }
 
-  whereCondition = {
-    ...whereCondition,
-    companyId: {
-      [Op.eq]: companyId
-    }
+  if (searchParam) {
+    const term = `%${searchParam.toLowerCase()}%`;
+    const escaped = sequelize.escape(term);
+    clauses.push({
+      [Op.or]: [
+        Sequelize.where(
+          Sequelize.fn("LOWER", Sequelize.col("Schedule.body")),
+          "LIKE",
+          term
+        ),
+        Sequelize.where(
+          Sequelize.fn("LOWER", Sequelize.col("contact.name")),
+          "LIKE",
+          term
+        ),
+        Sequelize.literal(`EXISTS (
+          SELECT 1 FROM "ScheduleContacts" sc
+          INNER JOIN "Contacts" c ON c.id = sc."contactId"
+          WHERE sc."scheduleId" = "Schedule"."id"
+          AND LOWER(c."name") LIKE ${escaped}
+        )`)
+      ]
+    });
   }
+
+  const whereCondition = { [Op.and]: clauses };
 
   const { count, rows: schedules } = await Schedule.findAndCountAll({
     where: whereCondition,
     limit,
     offset,
+    distinct: true,
+    col: "Schedule.id",
+    subQuery: false,
     order: [["createdAt", "DESC"]],
     include: [
       { model: Contact, as: "contact", attributes: ["id", "name"] },
@@ -84,6 +89,15 @@ const ListService = async ({
         as: "preferredWhatsapp",
         attributes: ["id", "name", "status"],
         required: false
+      },
+      {
+        model: ScheduleContact,
+        as: "scheduleContacts",
+        attributes: ["id", "contactId"],
+        required: false,
+        include: [
+          { model: Contact, as: "contact", attributes: ["id", "name"] }
+        ]
       }
     ]
   });

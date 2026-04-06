@@ -864,11 +864,25 @@ const messages = {
           add: "Nueva Programación",
           edit: "Editar Programación",
         },
+        subtitle:
+          "Automatización operativa (recordatorios, cobros, seguimiento). No es campaña masiva de marketing.",
         form: {
           body: "Mensaje",
           contact: "Contacto",
+          contacts: "Contactos",
+          sendType: "Tipo de envío",
+          sendSingle: "Envío único",
+          sendRecurring: "Envío recurrente",
           sendAt: "Fecha de Programación",
           sentAt: "Fecha de Envío",
+          timeToSend: "Hora",
+          companyTimezone: "Horarios en la zona",
+          recurrence: "Frecuencia",
+          recurrenceDaily: "Diaria",
+          recurrenceWeekly: "Semanal",
+          recurrenceMonthly: "Mensual",
+          weekdays: "Días de la semana",
+          dayOfMonth: "Día del mes",
           preferredWhatsapp: "Conexión preferida (opcional)",
           preferredWhatsappHint:
             "Déjelo vacío para enviar con cualquier conexión activa de la empresa.",
@@ -878,6 +892,13 @@ const messages = {
           okAdd: "Agregar",
           okEdit: "Guardar",
           cancel: "Cancelar",
+        },
+        confirmationModal: {
+          deleteTitle: "¿Eliminar adjunto?",
+          deleteMessage: "El archivo se quitará de esta programación.",
+        },
+        toasts: {
+          deleted: "Adjunto eliminado.",
         },
         success: "Programación guardada con éxito.",
       },
@@ -1646,6 +1667,20 @@ const messages = {
       },
       schedules: {
         title: "Programaciones",
+        typeSingle: "Único",
+        typeRecurring: "Recurrente",
+        paused: "Pausado",
+        active: "Activo",
+        contactsCount: "{{count}} contacto(s)",
+        nextRun: "Próxima ejecución",
+        companyTimezoneShort: "Zona",
+        frequencyShort: {
+          daily: "Diaria",
+          weekly: "Semanal",
+          monthly: "Mensual",
+        },
+        listIntro:
+          "Lista de programaciones (única o recurrente). Campañas masivas están en Campañas.",
         statusLabels: {
           PENDENTE: "Pendiente",
           AGENDADA: "En cola",
@@ -1660,6 +1695,10 @@ const messages = {
         },
         table: {
           contact: "Contacto",
+          type: "Tipo",
+          recurrence: "Frecuencia",
+          contacts: "Contactos",
+          nextRun: "Próxima ejecución",
           body: "Mensaje",
           sendAt: "Fecha de Programación",
           sentAt: "Fecha de Envío",
@@ -1686,6 +1725,8 @@ const messages = {
         },
         buttons: {
           add: "Nueva Programación",
+          pause: "Pausar",
+          resume: "Activar",
         },
         toasts: {
           deleted: "Programación eliminada con éxito.",
@@ -1833,6 +1874,10 @@ const messages = {
             monthly: "Mensual",
             expire: "Vencimiento",
             createdAt: "Creada En",
+            timezone: "Zona horaria de la empresa",
+            timezoneHint:
+              "Se usa para calcular horarios de agendamientos y recurrencias. Los datos se guardan en UTC.",
+            timezoneFooter: "Lista IANA (ej.: America/Sao_Paulo).",
           },
           buttons: {
             clear: "Limpiar",
@@ -1840,6 +1885,7 @@ const messages = {
             expire: "+ Vencimiento",
             user: "Usuario",
             save: "Guardar",
+            saveTimezone: "Guardar zona horaria",
           },
         },
         schedules: {

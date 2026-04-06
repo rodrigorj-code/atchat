@@ -15,7 +15,7 @@ import MainHeaderButtonsWrapper from "../../components/MainHeaderButtonsWrapper"
 import ScheduleModal from "../../components/ScheduleModal";
 import ConfirmationModal from "../../components/ConfirmationModal";
 import toastError from "../../errors/toastError";
-import moment from "moment";
+import moment from "moment-timezone";
 import { SocketContext } from "../../context/Socket/SocketContext";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import usePlans from "../../hooks/usePlans";
@@ -25,6 +25,16 @@ import "react-big-calendar/lib/css/react-big-calendar.css";
 import SearchIcon from "@material-ui/icons/Search";
 import DeleteOutlineIcon from "@material-ui/icons/DeleteOutline";
 import EditIcon from "@material-ui/icons/Edit";
+import PauseCircleOutlineIcon from "@material-ui/icons/PauseCircleOutline";
+import PlayCircleOutlineIcon from "@material-ui/icons/PlayCircleOutline";
+import Table from "@material-ui/core/Table";
+import TableBody from "@material-ui/core/TableBody";
+import TableCell from "@material-ui/core/TableCell";
+import TableHead from "@material-ui/core/TableHead";
+import TableRow from "@material-ui/core/TableRow";
+import IconButton from "@material-ui/core/IconButton";
+import Tooltip from "@material-ui/core/Tooltip";
+import Typography from "@material-ui/core/Typography";
 
 import "./Schedules.css"; // Importe o arquivo CSS
 import { createMomentLocalizer } from "../../translate/calendar-locale";
@@ -118,7 +128,20 @@ const Schedules = () => {
   const [schedules, dispatch] = useReducer(reducer, []);
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
   const [contactId, setContactId] = useState(+getUrlParam("contactId"));
+  const [companyTz, setCompanyTz] = useState("America/Sao_Paulo");
 
+
+  useEffect(() => {
+    if (!user?.companyId) return;
+    (async () => {
+      try {
+        const { data } = await api.get(`/companies/${user.companyId}`);
+        setCompanyTz(data?.timezone || "America/Sao_Paulo");
+      } catch (e) {
+        /* mantém default */
+      }
+    })();
+  }, [user?.companyId]);
 
   const fetchSchedules = useCallback(async () => {
     try {
@@ -240,6 +263,42 @@ const Schedules = () => {
     return str;
   };
 
+  const contactLabel = (schedule) => {
+    const names = (schedule.scheduleContacts || [])
+      .map((sc) => sc.contact?.name)
+      .filter(Boolean);
+    if (names.length) {
+      return names.length > 1 ? `${names[0]} +${names.length - 1}` : names[0];
+    }
+    return schedule.contact?.name || "—";
+  };
+
+  const eventDate = (schedule) => {
+    if (schedule.scheduleType === "recurring" && schedule.nextRunAt) {
+      return new Date(schedule.nextRunAt);
+    }
+    return new Date(schedule.sendAt);
+  };
+
+  const formatUtcInCompanyTz = (utcDate) => {
+    if (!utcDate) return "—";
+    return moment.utc(utcDate).tz(companyTz).format("DD/MM/YYYY HH:mm");
+  };
+
+  const handleTogglePause = async (schedule) => {
+    if (user.profile !== "admin") return;
+    const active = schedule.isActive !== false;
+    try {
+      await api.put(`/schedules/${schedule.id}`, {
+        isActive: !active,
+      });
+      toast.success(i18n.t("scheduleModal.success"));
+      await fetchSchedules();
+    } catch (err) {
+      toastError(err);
+    }
+  };
+
   return (
     <MainContainer>
       <ConfirmationModal
@@ -288,19 +347,29 @@ const Schedules = () => {
         </MainHeaderButtonsWrapper>
       </MainHeader>
       <Paper className={classes.mainPaper} variant="outlined" onScroll={handleScroll}>
+        <Typography variant="body2" color="textSecondary" style={{ padding: "8px 4px" }}>
+          {i18n.t("schedules.listIntro")}{" "}
+          <span style={{ whiteSpace: "nowrap" }}>
+            ({i18n.t("schedules.companyTimezoneShort")}: {companyTz})
+          </span>
+        </Typography>
         <Calendar
           messages={defaultMessages}
           formats={{
-          agendaDateFormat: "DD/MM ddd",
-          weekdayFormat: "dddd"
-      }}
+            agendaDateFormat: "DD/MM ddd",
+            weekdayFormat: "dddd",
+          }}
           localizer={localizer}
           events={schedules.map((schedule) => ({
             title: (
               <div className="event-container">
                 <div style={eventTitleStyle}>
-                  {schedule.contact?.name}
+                  {contactLabel(schedule)}
                   <span style={{ fontSize: "11px", opacity: 0.85, display: "block" }}>
+                    {schedule.scheduleType === "recurring"
+                      ? i18n.t("schedules.typeRecurring")
+                      : i18n.t("schedules.typeSingle")}
+                    {" · "}
                     {i18n.t(`schedules.statusLabels.${schedule.status || "PENDENTE"}`)}
                     {schedule.preferredWhatsapp?.name
                       ? ` · ${i18n.t("schedules.preferredShort")}: ${schedule.preferredWhatsapp.name}`
@@ -308,7 +377,10 @@ const Schedules = () => {
                   </span>
                 </div>
                 <DeleteOutlineIcon
-                  onClick={() => handleDeleteSchedule(schedule.id)}
+                  onClick={() => {
+                    setDeletingSchedule(schedule);
+                    setConfirmModalOpen(true);
+                  }}
                   className="delete-icon"
                 />
                 <EditIcon
@@ -320,13 +392,97 @@ const Schedules = () => {
                 />
               </div>
             ),
-            start: new Date(schedule.sendAt),
-            end: new Date(schedule.sendAt),
+            start: eventDate(schedule),
+            end: eventDate(schedule),
           }))}
           startAccessor="start"
           endAccessor="end"
           style={{ height: 500 }}
         />
+        <Table size="small" style={{ marginTop: 16 }}>
+          <TableHead>
+            <TableRow>
+              <TableCell>{i18n.t("schedules.table.type")}</TableCell>
+              <TableCell>{i18n.t("schedules.table.contact")}</TableCell>
+              <TableCell>{i18n.t("schedules.table.recurrence")}</TableCell>
+              <TableCell align="right">{i18n.t("schedules.table.contacts")}</TableCell>
+              <TableCell>{i18n.t("schedules.table.nextRun")}</TableCell>
+              <TableCell>{i18n.t("schedules.table.status")}</TableCell>
+              <TableCell align="right">{i18n.t("schedules.table.actions")}</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {schedules.map((row) => {
+              const n =
+                row.scheduleContacts?.length ||
+                (row.contactId ? 1 : 0);
+              const next =
+                row.scheduleType === "recurring" && row.nextRunAt
+                  ? formatUtcInCompanyTz(row.nextRunAt)
+                  : row.sendAt
+                    ? formatUtcInCompanyTz(row.sendAt)
+                    : "—";
+              const freq =
+                row.scheduleType === "recurring" && row.recurrenceType
+                  ? i18n.t(`schedules.frequencyShort.${row.recurrenceType}`)
+                  : "—";
+              return (
+                <TableRow key={row.id}>
+                  <TableCell>
+                    {row.scheduleType === "recurring"
+                      ? i18n.t("schedules.typeRecurring")
+                      : i18n.t("schedules.typeSingle")}
+                    {row.scheduleType === "recurring" && row.isActive === false
+                      ? ` (${i18n.t("schedules.paused")})`
+                      : ""}
+                  </TableCell>
+                  <TableCell>{truncate(contactLabel(row), 40)}</TableCell>
+                  <TableCell>{freq}</TableCell>
+                  <TableCell align="right">{n}</TableCell>
+                  <TableCell>{next}</TableCell>
+                  <TableCell>{i18n.t(`schedules.statusLabels.${row.status || "PENDENTE"}`)}</TableCell>
+                  <TableCell align="right">
+                    {user.profile === "admin" &&
+                      row.scheduleType === "recurring" &&
+                      row.sentAt == null && (
+                        <Tooltip
+                          title={
+                            row.isActive === false
+                              ? i18n.t("schedules.buttons.resume")
+                              : i18n.t("schedules.buttons.pause")
+                          }
+                        >
+                          <IconButton
+                            size="small"
+                            onClick={() => handleTogglePause(row)}
+                            aria-label="pause-toggle"
+                          >
+                            {row.isActive === false ? (
+                              <PlayCircleOutlineIcon fontSize="small" />
+                            ) : (
+                              <PauseCircleOutlineIcon fontSize="small" />
+                            )}
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                    <IconButton size="small" onClick={() => handleEditSchedule(row)}>
+                      <EditIcon fontSize="small" />
+                    </IconButton>
+                    <IconButton
+                      size="small"
+                      onClick={() => {
+                        setDeletingSchedule(row);
+                        setConfirmModalOpen(true);
+                      }}
+                    >
+                      <DeleteOutlineIcon fontSize="small" />
+                    </IconButton>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
       </Paper>
     </MainContainer>
   );

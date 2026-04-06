@@ -40,8 +40,14 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     body,
     sendAt,
     contactId,
+    contactIds,
     userId,
-    preferredWhatsappId
+    preferredWhatsappId,
+    scheduleType,
+    recurrenceType,
+    recurrenceDaysOfWeek,
+    recurrenceDayOfMonth,
+    timeToSend
   } = req.body;
   const { companyId } = req.user;
 
@@ -49,12 +55,18 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     body,
     sendAt,
     contactId,
+    contactIds,
     companyId,
     userId,
     preferredWhatsappId:
       preferredWhatsappId === "" || preferredWhatsappId === undefined
         ? null
-        : Number(preferredWhatsappId)
+        : Number(preferredWhatsappId),
+    scheduleType,
+    recurrenceType,
+    recurrenceDaysOfWeek,
+    recurrenceDayOfMonth,
+    timeToSend
   });
 
   const io = getIO();

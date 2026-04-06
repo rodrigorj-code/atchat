@@ -1,21 +1,13 @@
 import Schedule from "../../models/Schedule";
 import AppError from "../../errors/AppError";
-import Contact from "../../models/Contact";
-import User from "../../models/User";
-import Whatsapp from "../../models/Whatsapp";
+import { scheduleDefaultIncludes } from "./CreateService";
 
-const ScheduleService = async (id: string | number, companyId: number): Promise<Schedule> => {
+const ScheduleService = async (
+  id: string | number,
+  companyId: number
+): Promise<Schedule> => {
   const schedule = await Schedule.findByPk(id, {
-    include: [
-      { model: Contact, as: "contact", attributes: ["id", "name"] },
-      { model: User, as: "user", attributes: ["id", "name"] },
-      {
-        model: Whatsapp,
-        as: "preferredWhatsapp",
-        attributes: ["id", "name", "status"],
-        required: false
-      }
-    ]
+    include: scheduleDefaultIncludes()
   });
 
   if (!schedule) {
@@ -23,7 +15,7 @@ const ScheduleService = async (id: string | number, companyId: number): Promise<
   }
 
   if (schedule.companyId !== companyId) {
-    throw new AppError("Não é possível excluir registro de outra empresa");
+    throw new AppError("Não é possível acessar registro de outra empresa");
   }
 
   return schedule;

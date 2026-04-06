@@ -860,11 +860,25 @@ const messages = {
 					add: "New Schedule",
 					edit: "Edit Schedule",
 				},
+				subtitle:
+					"Operational automation (reminders, billing, follow-up). Not a mass marketing campaign.",
 				form: {
 					body: "Message",
 					contact: "Contact",
+					contacts: "Contacts",
+					sendType: "Send type",
+					sendSingle: "One-time",
+					sendRecurring: "Recurring",
 					sendAt: "Schedule Date",
 					sentAt: "Send Date",
+					timeToSend: "Time",
+					companyTimezone: "Times use company timezone",
+					recurrence: "Frequency",
+					recurrenceDaily: "Daily",
+					recurrenceWeekly: "Weekly",
+					recurrenceMonthly: "Monthly",
+					weekdays: "Weekdays",
+					dayOfMonth: "Day of month",
 					preferredWhatsapp: "Preferred connection (optional)",
 					preferredWhatsappHint:
 						"Leave blank to send via any active company connection.",
@@ -874,6 +888,13 @@ const messages = {
 					okAdd: "Add",
 					okEdit: "Save",
 					cancel: "Cancel",
+				},
+				confirmationModal: {
+					deleteTitle: "Remove attachment?",
+					deleteMessage: "The file will be removed from this schedule.",
+				},
+				toasts: {
+					deleted: "Attachment removed.",
 				},
 				success: "Schedule saved successfully.",
 			},
@@ -1742,6 +1763,20 @@ const messages = {
 			},
 			schedules: {
 				title: "Schedules",
+				typeSingle: "One-time",
+				typeRecurring: "Recurring",
+				paused: "Paused",
+				active: "Active",
+				contactsCount: "{{count}} contact(s)",
+				nextRun: "Next run",
+				companyTimezoneShort: "TZ",
+				frequencyShort: {
+					daily: "Daily",
+					weekly: "Weekly",
+					monthly: "Monthly",
+				},
+				listIntro:
+					"List of schedules (one-time or recurring). Mass campaigns are under Campaigns.",
 				statusLabels: {
 					PENDENTE: "Pending",
 					AGENDADA: "Queued",
@@ -1756,6 +1791,10 @@ const messages = {
 				},
 				table: {
 					contact: "Contact",
+					type: "Type",
+					recurrence: "Frequency",
+					contacts: "Contacts",
+					nextRun: "Next run",
 					body: "Message",
 					sendAt: "Schedule Date",
 					sentAt: "Send Date",
@@ -1782,6 +1821,8 @@ const messages = {
 				},
 				buttons: {
 					add: "New Schedule",
+					pause: "Pause",
+					resume: "Resume",
 				},
 				toasts: {
 					deleted: "Schedule deleted successfully.",
@@ -1938,6 +1979,10 @@ const messages = {
 						monthly: "Monthly",
 						expire: "Expiration",
 						createdAt: "Created On",
+						timezone: "Company timezone",
+						timezoneHint:
+							"Used for schedule and recurrence times. Stored data remains in UTC.",
+						timezoneFooter: "IANA list (e.g. America/Sao_Paulo).",
 					},
 					buttons: {
 						clear: "Clear",
@@ -1945,6 +1990,7 @@ const messages = {
 						expire: "+ Expiration",
 						user: "User",
 						save: "Save",
+						saveTimezone: "Save timezone",
 					},
 				},
 				schedules: {

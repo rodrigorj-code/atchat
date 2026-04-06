@@ -70,6 +70,15 @@ const useCompanies = () => {
         return responseData;
     }
 
+    const updateTimezone = async (id, timezone) => {
+        const { data: responseData } = await api.request({
+            url: `/companies/${id}/timezone`,
+            method: 'PUT',
+            data: { timezone }
+        });
+        return responseData;
+    }
+
     return {
         save,
         update,
@@ -78,7 +87,8 @@ const useCompanies = () => {
         find,
         finding,
         findAll,
-        updateSchedules
+        updateSchedules,
+        updateTimezone
     }
 }
 

@@ -930,11 +930,25 @@ const messages = {
           add: "Novo Agendamento",
           edit: "Editar Agendamento",
         },
+        subtitle:
+          "Automação operacional (lembretes, cobranças, follow-up). Não é campanha de marketing em massa.",
         form: {
           body: "Mensagem",
           contact: "Contato",
+          contacts: "Contatos",
+          sendType: "Tipo de envio",
+          sendSingle: "Envio único",
+          sendRecurring: "Envio recorrente",
           sendAt: "Data de Agendamento",
           sentAt: "Data de Envio",
+          timeToSend: "Horário",
+          companyTimezone: "Horários interpretados no fuso",
+          recurrence: "Frequência",
+          recurrenceDaily: "Diária",
+          recurrenceWeekly: "Semanal",
+          recurrenceMonthly: "Mensal",
+          weekdays: "Dias da semana",
+          dayOfMonth: "Dia do mês",
           preferredWhatsapp: "Conexão preferencial (opcional)",
           preferredWhatsappHint:
             "Deixe em branco para enviar automaticamente por qualquer conexão ativa da empresa.",
@@ -944,6 +958,13 @@ const messages = {
           okAdd: "Adicionar",
           okEdit: "Salvar",
           cancel: "Cancelar",
+        },
+        confirmationModal: {
+          deleteTitle: "Excluir anexo?",
+          deleteMessage: "O arquivo será removido deste agendamento.",
+        },
+        toasts: {
+          deleted: "Anexo removido.",
         },
         success: "Agendamento salvo com sucesso.",
       },
@@ -1845,6 +1866,20 @@ const messages = {
       },
       schedules: {
         title: "Agendamentos",
+        typeSingle: "Único",
+        typeRecurring: "Recorrente",
+        paused: "Pausado",
+        active: "Ativo",
+        contactsCount: "{{count}} contato(s)",
+        nextRun: "Próxima execução",
+        companyTimezoneShort: "Fuso",
+        frequencyShort: {
+          daily: "Diária",
+          weekly: "Semanal",
+          monthly: "Mensal",
+        },
+        listIntro:
+          "Lista dos agendamentos (único ou recorrente). Campanhas em massa ficam em Campanhas.",
         statusLabels: {
           PENDENTE: "Pendente",
           AGENDADA: "Na fila",
@@ -1859,6 +1894,10 @@ const messages = {
         },
         table: {
           contact: "Contato",
+          type: "Tipo",
+          recurrence: "Frequência",
+          contacts: "Contatos",
+          nextRun: "Próxima execução",
           body: "Mensagem",
           sendAt: "Data de Agendamento",
           sentAt: "Data de Envio",
@@ -1885,6 +1924,8 @@ const messages = {
         },
         buttons: {
           add: "Novo Agendamento",
+          pause: "Pausar",
+          resume: "Ativar",
         },
         toasts: {
           deleted: "Agendamento excluído com sucesso.",
@@ -2043,6 +2084,10 @@ const messages = {
             monthly: "Mensal",
             expire: "Vencimento",
             createdAt: "Criada Em",
+            timezone: "Fuso horário da empresa",
+            timezoneHint:
+              "Usado para calcular horários de agendamentos e recorrências. Dados no servidor permanecem em UTC.",
+            timezoneFooter: "Lista IANA (ex.: America/Sao_Paulo).",
           },
           buttons: {
             clear: "Limpar",
@@ -2050,6 +2095,7 @@ const messages = {
             expire: "+ Vencimento",
             user: "Usuário",
             save: "Salvar",
+            saveTimezone: "Salvar fuso horário",
           },
         },
         schedules: {

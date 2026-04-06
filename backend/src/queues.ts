@@ -5,7 +5,10 @@ import Whatsapp from "./models/Whatsapp";
 import { logger } from "./utils/logger";
 import moment from "moment";
 import Schedule from "./models/Schedule";
+import ScheduleContact from "./models/ScheduleContact";
 import Contact from "./models/Contact";
+import { computeNextRunAfter, RecurrenceType } from "./helpers/scheduleNextRun";
+import { getCompanyTimezoneById } from "./helpers/companyTimezone";
 import { Op, QueryTypes, Sequelize } from "sequelize";
 import ResolveWhatsappForSchedule from "./helpers/ResolveWhatsappForSchedule";
 import Campaign from "./models/Campaign";
@@ -40,7 +43,14 @@ async function emitScheduleSocketUpdate(scheduleId: number) {
     include: [
       { model: Contact, as: "contact", attributes: ["id", "name", "number"] },
       { model: User, as: "user", attributes: ["id", "name"] },
-      { model: Whatsapp, as: "preferredWhatsapp", attributes: ["id", "name", "status"] }
+      { model: Whatsapp, as: "preferredWhatsapp", attributes: ["id", "name", "status"] },
+      {
+        model: ScheduleContact,
+        as: "scheduleContacts",
+        include: [
+          { model: Contact, as: "contact", attributes: ["id", "name", "number"] }
+        ]
+      }
     ]
   });
   if (!schedule) return;
@@ -239,50 +249,91 @@ async function handleCloseTicketsAutomatic() {
 
 async function handleVerifySchedules(job) {
   try {
-    const now = moment();
-    const upcomingCutoff = moment().add(SCHEDULE_UPCOMING_WINDOW_SEC, "seconds");
-    const backoffCutoff = moment().subtract(
-      SCHEDULE_RETRY_BACKOFF_MINUTES,
-      "minutes"
-    );
+    const upcomingCutoff = moment
+      .utc()
+      .add(SCHEDULE_UPCOMING_WINDOW_SEC, "seconds");
+    const backoffCutoff = moment
+      .utc()
+      .subtract(SCHEDULE_RETRY_BACKOFF_MINUTES, "minutes");
+
+    const retryClause = {
+      status: "AGUARDANDO_CONEXAO",
+      attemptCount: { [Op.lt]: SCHEDULE_MAX_ATTEMPTS },
+      [Op.or]: [
+        { lastAttemptAt: null },
+        { lastAttemptAt: { [Op.lt]: backoffCutoff.toDate() } }
+      ]
+    };
 
     const schedules = await Schedule.findAll({
       where: {
-        sentAt: null,
         [Op.or]: [
           {
-            status: "PENDENTE",
-            sendAt: { [Op.lte]: upcomingCutoff.toDate() }
+            [Op.and]: [
+              { [Op.or]: [{ scheduleType: null }, { scheduleType: "single" }] },
+              { sentAt: null },
+              {
+                [Op.or]: [
+                  {
+                    status: "PENDENTE",
+                    sendAt: { [Op.lte]: upcomingCutoff.toDate() }
+                  },
+                  retryClause
+                ]
+              }
+            ]
           },
           {
-            status: "AGUARDANDO_CONEXAO",
-            attemptCount: { [Op.lt]: SCHEDULE_MAX_ATTEMPTS },
-            [Op.or]: [
-              { lastAttemptAt: null },
-              { lastAttemptAt: { [Op.lt]: backoffCutoff.toDate() } }
+            [Op.and]: [
+              { scheduleType: "recurring" },
+              { isActive: true },
+              {
+                [Op.or]: [
+                  {
+                    status: "PENDENTE",
+                    nextRunAt: { [Op.lte]: upcomingCutoff.toDate() }
+                  },
+                  { ...retryClause }
+                ]
+              }
             ]
           }
         ]
       },
-      include: [{ model: Contact, as: "contact" }],
+      include: [
+        { model: Contact, as: "contact" },
+        {
+          model: ScheduleContact,
+          as: "scheduleContacts",
+          include: [{ model: Contact, as: "contact" }]
+        }
+      ],
       limit: 100,
       order: [["sendAt", "ASC"]]
     });
 
     for (const schedule of schedules) {
-      if (!schedule.contact) {
+      const hasPivot =
+        schedule.scheduleContacts &&
+        schedule.scheduleContacts.some(sc => sc.contact);
+      const hasPrimary = Boolean(schedule.contact);
+      if (!hasPivot && !hasPrimary) {
         logger.error(
           `[🧵] Agendamento ${schedule.id} sem contato; ignorando captura.`
         );
         continue;
       }
+      const label =
+        schedule.contact?.name ||
+        schedule.scheduleContacts?.find(sc => sc.contact)?.contact?.name ||
+        String(schedule.id);
       await schedule.update({ status: "AGENDADA" });
       await sendScheduledMessages.add(
         "SendMessage",
         { scheduleId: schedule.id },
         { delay: SCHEDULE_SEND_DELAY_MS }
       );
-      logger.info(`[🧵] Disparo agendado para: ${schedule.contact.name}`);
+      logger.info(`[🧵] Disparo agendado para: ${label}`);
     }
   } catch (e: any) {
     Sentry.captureException(e);
@@ -299,18 +350,45 @@ async function handleSendScheduledMessage(job) {
     return;
   }
 
-  let scheduleRecord = await Schedule.findByPk(scheduleId, {
-    include: [{ model: Contact, as: "contact" }]
+  const scheduleRecord = await Schedule.findByPk(scheduleId, {
+    include: [
+      { model: Contact, as: "contact" },
+      {
+        model: ScheduleContact,
+        as: "scheduleContacts",
+        include: [{ model: Contact, as: "contact" }]
+      }
+    ]
   });
 
-  if (!scheduleRecord || !scheduleRecord.contact) {
+  if (!scheduleRecord) {
+    logger.error(`SendScheduledMessage: agendamento ${scheduleId} não encontrado`);
+    return;
+  }
+
+  const isRecurring = scheduleRecord.scheduleType === "recurring";
+  const pivotRows = (scheduleRecord.scheduleContacts || []).filter(
+    (sc: any) => sc.contact
+  );
+
+  const recipients: { link: any; contact: Contact }[] = pivotRows.map(
+    (sc: any) => ({
+      link: sc,
+      contact: sc.contact as Contact
+    })
+  );
+  if (!recipients.length && scheduleRecord.contact) {
+    recipients.push({ link: null, contact: scheduleRecord.contact });
+  }
+
+  if (!recipients.length) {
     logger.error(
-      `SendScheduledMessage: agendamento ${scheduleId} não encontrado ou sem contato`
+      `SendScheduledMessage: agendamento ${scheduleId} sem contatos válidos`
     );
     return;
   }
 
-  const now = moment();
+  const now = moment.utc();
   const { whatsapp } = await ResolveWhatsappForSchedule(
     scheduleRecord.companyId,
     scheduleRecord.preferredWhatsappId
@@ -345,52 +423,108 @@ async function handleSendScheduledMessage(job) {
     filePath = path.resolve("public", scheduleRecord.mediaPath);
   }
 
-  try {
-    await SendMessage(whatsapp, {
-      number: scheduleRecord.contact.number,
-      body: formatBody(scheduleRecord.body, scheduleRecord.contact),
-      mediaPath: filePath
-    });
+  const failures: string[] = [];
+  let successes = 0;
 
-    await scheduleRecord.update({
-      sentAt: now.format("YYYY-MM-DD HH:mm"),
-      status: "ENVIADA",
-      lastError: null,
-      lastAttemptAt: now.toDate(),
-      attemptCount: scheduleRecord.attemptCount || 0
-    });
+  for (const { link, contact } of recipients) {
+    try {
+      await SendMessage(whatsapp, {
+        number: contact.number,
+        body: formatBody(scheduleRecord.body, contact),
+        mediaPath: filePath
+      });
+      successes += 1;
+      if (link) {
+        await link.update({
+          lastSentAt: now.toDate(),
+          lastError: null
+        });
+      }
+    } catch (e: any) {
+      Sentry.captureException(e);
+      const errMsg = (e?.message || String(e)).slice(0, 2000);
+      failures.push(`${contact.name || contact.id}: ${errMsg}`);
+      if (link) {
+        await link.update({ lastError: errMsg });
+      }
+    }
+  }
 
-    logger.info(
-      `[🧵] Mensagem agendada enviada para: ${scheduleRecord.contact.name}`
-    );
-    sendScheduledMessages.clean(15000, "completed");
-    await emitScheduleSocketUpdate(scheduleId);
-  } catch (e: any) {
-    Sentry.captureException(e);
-    const errMsg = e?.message || String(e);
-    const nextAttempt = (scheduleRecord.attemptCount || 0) + 1;
+  const summaryError =
+    failures.length > 0 ? failures.join("; ").slice(0, 2000) : null;
 
-    if (nextAttempt >= SCHEDULE_MAX_ATTEMPTS) {
+  if (!isRecurring) {
+    if (successes === 0) {
+      const nextAttempt = (scheduleRecord.attemptCount || 0) + 1;
+      if (nextAttempt >= SCHEDULE_MAX_ATTEMPTS) {
+        await scheduleRecord.update({
+          status: "ERRO",
+          lastError: summaryError || "Falha ao enviar para todos os contatos.",
+          lastAttemptAt: now.toDate(),
+          attemptCount: nextAttempt
+        });
+        await emitScheduleSocketUpdate(scheduleId);
+        return;
+      }
       await scheduleRecord.update({
-        status: "ERRO",
-        lastError: errMsg.slice(0, 2000),
+        status: "AGUARDANDO_CONEXAO",
+        lastError: `Falha no envio (tentativa ${nextAttempt}/${SCHEDULE_MAX_ATTEMPTS}): ${(summaryError || "").slice(0, 500)}`,
         lastAttemptAt: now.toDate(),
         attemptCount: nextAttempt
       });
       await emitScheduleSocketUpdate(scheduleId);
-      logger.error("SendScheduledMessage -> SendMessage: error", errMsg);
       return;
     }
-
     await scheduleRecord.update({
-      status: "AGUARDANDO_CONEXAO",
-      lastError: `Falha no envio (tentativa ${nextAttempt}/${SCHEDULE_MAX_ATTEMPTS}): ${errMsg.slice(0, 500)}`,
+      sentAt: now.utc().format("YYYY-MM-DD HH:mm"),
+      status: "ENVIADA",
+      lastError: summaryError,
       lastAttemptAt: now.toDate(),
-      attemptCount: nextAttempt
+      attemptCount: 0
+    });
+    logger.info(
+      `[🧵] Mensagem agendada enviada (${successes} contato(s)) agendamento ${scheduleId}`
+    );
+    sendScheduledMessages.clean(15000, "completed");
+    await emitScheduleSocketUpdate(scheduleId);
+    return;
+  }
+
+  if (!scheduleRecord.timeToSend || !scheduleRecord.recurrenceType) {
+    await scheduleRecord.update({
+      status: "ERRO",
+      lastError: "Configuração de recorrência inválida (sem horário ou frequência).",
+      lastAttemptAt: now.toDate()
     });
     await emitScheduleSocketUpdate(scheduleId);
-    logger.error("SendScheduledMessage -> SendMessage: error", errMsg);
+    return;
   }
+
+  const scheduleTz = await getCompanyTimezoneById(scheduleRecord.companyId);
+  const nextRun = computeNextRunAfter(
+    scheduleTz,
+    moment.utc().toDate(),
+    scheduleRecord.recurrenceType as RecurrenceType,
+    scheduleRecord.timeToSend,
+    scheduleRecord.recurrenceDaysOfWeek,
+    scheduleRecord.recurrenceDayOfMonth
+  );
+
+  await scheduleRecord.update({
+    lastRunAt: now.toDate(),
+    nextRunAt: nextRun,
+    sendAt: nextRun,
+    status: "PENDENTE",
+    lastError: summaryError,
+    lastAttemptAt: now.toDate(),
+    attemptCount: 0
+  });
+
+  logger.info(
+    `[🧵] Recorrência ${scheduleId} executada; próxima: ${nextRun.toISOString()}`
+  );
+  sendScheduledMessages.clean(15000, "completed");
+  await emitScheduleSocketUpdate(scheduleId);
 }
 
 async function handleVerifyCampaigns(job) {

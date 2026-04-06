@@ -10,6 +10,7 @@ import CreateCompanyService from "../services/CompanyService/CreateCompanyServic
 import UpdateCompanyService from "../services/CompanyService/UpdateCompanyService";
 import ShowCompanyService from "../services/CompanyService/ShowCompanyService";
 import UpdateSchedulesService from "../services/CompanyService/UpdateSchedulesService";
+import UpdateCompanyTimezoneService from "../services/CompanyService/UpdateCompanyTimezoneService";
 import DeleteCompanyService from "../services/CompanyService/DeleteCompanyService";
 import FindAllCompaniesService from "../services/CompanyService/FindAllCompaniesService";
 import { verify } from "jsonwebtoken";
@@ -110,6 +111,30 @@ export const update = async (
   const { id } = req.params;
 
   const company = await UpdateCompanyService({ id, ...companyData });
+
+  return res.status(200).json(company);
+};
+
+export const updateTimezone = async (
+  req: Request,
+  res: Response
+): Promise<Response> => {
+  const { id } = req.params;
+  const { timezone } = req.body as { timezone?: string };
+  const companyId = Number(id);
+
+  if (companyId !== req.user.companyId) {
+    const requestUser = await User.findByPk(req.user.id, { attributes: ["super"] });
+    if (!requestUser?.super) {
+      throw new AppError("ERR_NO_PERMISSION", 403);
+    }
+  }
+
+  if (timezone === undefined || typeof timezone !== "string") {
+    throw new AppError("Informe o fuso horário", 400);
+  }
+
+  const company = await UpdateCompanyTimezoneService(id, timezone);
 
   return res.status(200).json(company);
 };

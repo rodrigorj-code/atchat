@@ -20,6 +20,7 @@ import useAuth from "../../hooks/useAuth.js";
 import useSettings from "../../hooks/useSettings";
 
 import OnlyForSuperUser from "../../components/OnlyForSuperUser";
+import CompanyTimezoneSettings from "../../components/CompanyTimezoneSettings";
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -155,6 +156,10 @@ const SettingsCustom = () => {
         <Title>{i18n.t("settings.title")}</Title>
       </MainHeader>
       <Paper className={classes.mainPaper} elevation={1}>
+        <CompanyTimezoneSettings
+          company={company}
+          onSaved={(c) => setCompany(c)}
+        />
         <Tabs
           value={tab}
           indicatorColor="primary"

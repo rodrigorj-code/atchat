@@ -51,6 +51,10 @@ class Company extends Model<Company> {
   @Column
   language: string;
 
+  /** IANA timezone (ex.: America/Sao_Paulo) — usado em agendamentos/recorrência */
+  @Column({ defaultValue: "America/Sao_Paulo" })
+  timezone: string;
+
   @Column({
     type: DataType.JSONB
   })

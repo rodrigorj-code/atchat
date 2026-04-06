@@ -1,3 +1,4 @@
+import moment from "moment-timezone";
 import AppError from "../../errors/AppError";
 import Company from "../../models/Company";
 import Setting from "../../models/Setting";
@@ -12,6 +13,7 @@ interface CompanyData {
   campaignsEnabled?: boolean;
   dueDate?: string;
   recurrence?: string;
+  timezone?: string;
 }
 
 const UpdateCompanyService = async (
@@ -26,11 +28,19 @@ const UpdateCompanyService = async (
     planId,
     campaignsEnabled,
     dueDate,
-    recurrence
+    recurrence,
+    timezone
   } = companyData;
 
   if (!company) {
     throw new AppError("ERR_NO_COMPANY_FOUND", 404);
+  }
+
+  if (timezone !== undefined) {
+    const tz = String(timezone).trim();
+    if (!tz || !moment.tz.zone(tz)) {
+      throw new AppError("Fuso horário inválido", 400);
+    }
   }
 
   await company.update({
@@ -40,7 +50,8 @@ const UpdateCompanyService = async (
     status,
     planId,
     dueDate,
-    recurrence
+    recurrence,
+    ...(timezone !== undefined ? { timezone: String(timezone).trim() } : {})
   });
 
   if (companyData.campaignsEnabled !== undefined) {

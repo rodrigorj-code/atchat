@@ -31,6 +31,7 @@ import { useDate } from "../../hooks/useDate";
 
 import moment from "moment";
 import { i18n } from "../../translate/i18n";
+import { getIanaTimezones } from "../../utils/ianaTimezones";
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -85,6 +86,7 @@ export function CompanyForm(props) {
     campaignsEnabled: false,
     dueDate: "",
     recurrence: "",
+    timezone: "America/Sao_Paulo",
     ...initialValue,
   });
 
@@ -230,6 +232,23 @@ export function CompanyForm(props) {
                   className={classes.fullWidth}
                   margin="dense"
                 />
+              </Grid>
+              <Grid xs={12} sm={6} md={4} item>
+                <Field
+                  as={TextField}
+                  select
+                  name="timezone"
+                  label={i18n.t("settings.company.form.timezone")}
+                  variant="outlined"
+                  className={classes.fullWidth}
+                  margin="dense"
+                >
+                  {getIanaTimezones().map((z) => (
+                    <MenuItem key={z} value={z}>
+                      {z}
+                    </MenuItem>
+                  ))}
+                </Field>
               </Grid>
               <Grid xs={12} sm={6} md={2} item>
                 <FormControl margin="dense" variant="outlined" fullWidth>
@@ -510,6 +529,7 @@ export default function CompaniesManager() {
     campaignsEnabled: false,
     dueDate: "",
     recurrence: "",
+    timezone: "America/Sao_Paulo",
   });
 
   useEffect(() => {
@@ -577,6 +597,7 @@ export default function CompaniesManager() {
       campaignsEnabled: false,
       dueDate: "",
       recurrence: "",
+      timezone: "America/Sao_Paulo",
     }));
   };
 
@@ -602,6 +623,7 @@ export default function CompaniesManager() {
       campaignsEnabled,
       dueDate: data.dueDate || "",
       recurrence: data.recurrence || "",
+      timezone: data.timezone || "America/Sao_Paulo",
     }));
   };
 

@@ -18,6 +18,7 @@ import TicketTraking from "../models/TicketTraking";
 import UserRating from "../models/UserRating";
 import QueueOption from "../models/QueueOption";
 import Schedule from "../models/Schedule";
+import ScheduleContact from "../models/ScheduleContact";
 import Tag from "../models/Tag";
 import TicketTag from "../models/TicketTag";
 import ContactList from "../models/ContactList";
@@ -72,6 +73,7 @@ const models = [
   UserRating,
   QueueOption,
   Schedule,
+  ScheduleContact,
   Tag,
   TicketTag,
   ContactList,

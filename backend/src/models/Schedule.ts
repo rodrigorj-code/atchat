@@ -8,13 +8,15 @@ import {
   AutoIncrement,
   DataType,
   BelongsTo,
-  ForeignKey
+  ForeignKey,
+  HasMany
 } from "sequelize-typescript";
 import Company from "./Company";
 import Contact from "./Contact";
 import Ticket from "./Ticket";
 import User from "./User";
 import Whatsapp from "./Whatsapp";
+import ScheduleContact from "./ScheduleContact";
 
 @Table
 class Schedule extends Model<Schedule> {
@@ -75,6 +77,33 @@ class Schedule extends Model<Schedule> {
 
   @Column
   mediaName: string;
+
+  @Column({ allowNull: true })
+  scheduleType: string | null;
+
+  @Column({ allowNull: true })
+  recurrenceType: string | null;
+
+  @Column({ type: DataType.JSONB, allowNull: true })
+  recurrenceDaysOfWeek: number[] | null;
+
+  @Column({ allowNull: true })
+  recurrenceDayOfMonth: number | null;
+
+  @Column({ allowNull: true })
+  timeToSend: string | null;
+
+  @Column({ allowNull: true })
+  lastRunAt: Date | null;
+
+  @Column({ allowNull: true })
+  nextRunAt: Date | null;
+
+  @Column({ defaultValue: true })
+  isActive: boolean;
+
+  @HasMany(() => ScheduleContact)
+  scheduleContacts: ScheduleContact[];
 
   @BelongsTo(() => Contact, "contactId")
   contact: Contact;
