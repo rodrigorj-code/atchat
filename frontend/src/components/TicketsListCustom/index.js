@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useReducer, useContext } from "react";
+import React, { useState, useEffect, useReducer, useContext, useCallback, useMemo } from "react";
+import { useParams } from "react-router-dom";
 
 import { makeStyles } from "@material-ui/core/styles";
 import List from "@material-ui/core/List";
@@ -23,6 +24,9 @@ const useStyles = makeStyles((theme) => ({
   ticketsListWrapper: {
     position: "relative",
     display: "flex",
+    flex: 1,
+    minHeight: 0,
+    width: "100%",
     height: "100%",
     flexDirection: "column",
     overflow: "hidden",
@@ -32,8 +36,10 @@ const useStyles = makeStyles((theme) => ({
 
   ticketsList: {
     flex: 1,
+    minHeight: 0,
     maxHeight: "100%",
-    overflowY: "scroll",
+    overflowY: "auto",
+    WebkitOverflowScrolling: "touch",
     ...theme.scrollbarStyles,
     borderTop: `2px solid ${theme.palette.divider}`,
   },
@@ -124,7 +130,7 @@ const reducer = (state, action) => {
 
     const ticketIndex = state.findIndex((t) => t.id === ticketId);
     if (ticketIndex !== -1) {
-      state[ticketIndex].unreadMessages = 0;
+      state[ticketIndex] = { ...state[ticketIndex], unreadMessages: 0 };
     }
 
     return [...state];
@@ -161,7 +167,8 @@ const reducer = (state, action) => {
     const contact = action.payload;
     const ticketIndex = state.findIndex((t) => t.contactId === contact.id);
     if (ticketIndex !== -1) {
-      state[ticketIndex].contact = contact;
+      const prev = state[ticketIndex];
+      state[ticketIndex] = { ...prev, contact };
     }
     return [...state];
   }
@@ -200,6 +207,7 @@ const TicketsListCustom = (props) => {
     socketActive = true,
   } = props;
   const classes = useStyles();
+  const { ticketId: routeTicketId } = useParams();
   const [pageNumber, setPageNumber] = useState(1);
   const [ticketsList, dispatch] = useReducer(reducer, []);
   const { user } = useContext(AuthContext);
@@ -388,12 +396,12 @@ const TicketsListCustom = (props) => {
     socketActive,
     status,
     showAll,
-    user,
+    user?.id,
+    user?.profile,
     selectedQueueIds,
     tags,
     users,
     profile,
-    queues,
     socketManager,
     chatbotOnly,
     groupsOnly,
@@ -406,19 +414,28 @@ const TicketsListCustom = (props) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ticketsList]);
 
-  const loadMore = () => {
+  const loadMore = useCallback(() => {
     setPageNumber((prevState) => prevState + 1);
-  };
+  }, []);
 
-  const handleScroll = (e) => {
-    if (!hasMore || loading) return;
+  const handleScroll = useCallback(
+    (e) => {
+      if (!hasMore || loading) return;
 
-    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+      const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
 
-    if (scrollHeight - (scrollTop + 100) < clientHeight) {
-      loadMore();
-    }
-  };
+      if (scrollHeight - (scrollTop + 100) < clientHeight) {
+        loadMore();
+      }
+    },
+    [hasMore, loading, loadMore]
+  );
+
+  const isRowSelected = useMemo(() => {
+    if (!routeTicketId) return () => false;
+    return (ticket) =>
+      ticket.uuid === routeTicketId || String(ticket.id) === String(routeTicketId);
+  }, [routeTicketId]);
 
   return (
     <Paper className={classes.ticketsListWrapper} style={style} data-tickets-list-panel>
@@ -446,7 +463,12 @@ const TicketsListCustom = (props) => {
           ) : (
             <>
               {ticketsList.map((ticket) => (
-                <TicketListItem ticket={ticket} key={ticket.id} compact={compact} />
+                <TicketListItem
+                  ticket={ticket}
+                  key={ticket.id}
+                  compact={compact}
+                  selected={isRowSelected(ticket)}
+                />
               ))}
             </>
           )}

@@ -19,7 +19,7 @@ import {
   Button,
 } from "@material-ui/core";
 import Alert from "@material-ui/lab/Alert";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 
 import MenuIcon from "@material-ui/icons/Menu";
 import AccountCircle from "@material-ui/icons/AccountCircle";
@@ -178,6 +178,19 @@ const useStyles = makeStyles((theme) => ({
     minHeight: 0,
     WebkitOverflowScrolling: "touch",
   },
+  /** Atendimentos: encadear altura para scroll só na lista/conversa (não no documento) */
+  contentTicketsFocus: {
+    display: "flex",
+    flexDirection: "column",
+    overflow: "hidden",
+  },
+  contentChildrenGrow: {
+    flex: 1,
+    minHeight: 0,
+    display: "flex",
+    flexDirection: "column",
+    overflow: "hidden",
+  },
   container: {
     paddingTop: theme.spacing(4),
     paddingBottom: theme.spacing(4),
@@ -237,6 +250,9 @@ const useStyles = makeStyles((theme) => ({
 
 const LoggedInLayout = ({ children, themeToggle }) => {
   const classes = useStyles();
+  const location = useLocation();
+  const isTicketsPage =
+    location.pathname === "/tickets" || location.pathname.startsWith("/tickets/");
   const [userModalOpen, setUserModalOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -546,7 +562,9 @@ const LoggedInLayout = ({ children, themeToggle }) => {
           </div>
         </Toolbar>
       </AppBar>
-      <main className={classes.content}>
+      <main
+        className={clsx(classes.content, isTicketsPage && classes.contentTicketsFocus)}
+      >
         <div className={classes.appBarSpacer} />
 
         {user?.finance?.delinquent && (
@@ -580,7 +598,13 @@ const LoggedInLayout = ({ children, themeToggle }) => {
           </Alert>
         )}
 
-        {children ? children : null}
+        {children ? (
+          isTicketsPage ? (
+            <div className={classes.contentChildrenGrow}>{children}</div>
+          ) : (
+            children
+          )
+        ) : null}
       </main>
     </div>
   );

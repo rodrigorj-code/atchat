@@ -3,6 +3,9 @@ import { useHistory } from "react-router-dom";
 
 const TicketsContext = createContext();
 
+/** Setter estável: consumidores não re-renderizam quando só `currentTicket` muda (ex.: lista de tickets). */
+const TicketsSetContext = createContext();
+
 const TicketsContextProvider = ({ children }) => {
 	const [currentTicket, setCurrentTicket] = useState({ id: null, code: null });
     const history = useHistory();
@@ -15,12 +18,14 @@ const TicketsContextProvider = ({ children }) => {
     }, [currentTicket])
 
 	return (
-		<TicketsContext.Provider
-			value={{ currentTicket, setCurrentTicket }}
-		>
-			{children}
-		</TicketsContext.Provider>
+		<TicketsSetContext.Provider value={setCurrentTicket}>
+			<TicketsContext.Provider
+				value={{ currentTicket, setCurrentTicket }}
+			>
+				{children}
+			</TicketsContext.Provider>
+		</TicketsSetContext.Provider>
 	);
 };
 
-export { TicketsContext, TicketsContextProvider };
+export { TicketsContext, TicketsSetContext, TicketsContextProvider };

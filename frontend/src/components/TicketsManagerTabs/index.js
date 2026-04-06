@@ -58,10 +58,24 @@ import useTicketsKeyboardShortcuts from "../../hooks/useTicketsKeyboardShortcuts
  * Não confundir com `TicketsManager`/`TicketsList` legados.
  */
 const useStyles = makeStyles(theme => ({
+	ticketsRoot: {
+		position: "relative",
+		display: "flex",
+		flexDirection: "column",
+		flex: 1,
+		minHeight: 0,
+		width: "100%",
+		height: "100%",
+		overflow: "hidden",
+		borderTopRightRadius: 0,
+		borderBottomRightRadius: 0,
+		borderRadius: 0,
+	},
 	ticketsWrapper: {
 		position: "relative",
 		display: "flex",
-		height: "100%",
+		flex: 1,
+		minHeight: 0,
 		flexDirection: "column",
 		overflow: "hidden",
 		borderTopRightRadius: 0,
@@ -548,7 +562,7 @@ const TicketsManagerTabs = () => {
   };
 
   return (
-    <Paper elevation={0} variant="outlined" className={classes.ticketsWrapper} style={{ position: "relative" }}>
+    <Paper elevation={0} variant="outlined" className={classes.ticketsRoot}>
       <NewTicketModal
         modalOpen={newTicketModalOpen}
         onClose={(ticket) => handleCloseOrOpenTicket(ticket)}

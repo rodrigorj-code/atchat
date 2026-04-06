@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef, useContext } from "react";
+import React, { useState, useEffect, useRef, useContext, useCallback } from "react";
 
-import { useHistory, useParams } from "react-router-dom";
+import { useHistory } from "react-router-dom";
 import { parseISO, format, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import clsx from "clsx";
@@ -25,7 +25,7 @@ import AndroidIcon from "@material-ui/icons/Android";
 import VisibilityIcon from "@material-ui/icons/Visibility";
 import TicketMessagesDialog from "../TicketMessagesDialog";
 import { AuthContext } from "../../context/Auth/AuthContext";
-import { TicketsContext } from "../../context/Tickets/TicketsContext";
+import { TicketsSetContext } from "../../context/Tickets/TicketsContext";
 import toastError from "../../errors/toastError";
 import { v4 as uuidv4 } from "uuid";
 
@@ -224,7 +224,7 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const TicketListItemCustom = ({ ticket, compact = false }) => {
+const TicketListItemCustom = ({ ticket, compact = false, selected = false }) => {
   const classes = useStyles();
   const theme = useTheme();
   const history = useHistory();
@@ -233,15 +233,16 @@ const TicketListItemCustom = ({ ticket, compact = false }) => {
   const [tag, setTag] = useState([]);
 
   const [openTicketMessageDialog, setOpenTicketMessageDialog] = useState(false);
-  const { ticketId } = useParams();
   const isMounted = useRef(true);
-  const { setCurrentTicket } = useContext(TicketsContext);
+  const setCurrentTicket = useContext(TicketsSetContext);
   const { user } = useContext(AuthContext);
   const { profile } = user;
 
   useEffect(() => {
     if (ticket.userId && ticket.user) {
       setTicketUser(ticket.user?.name?.toUpperCase());
+    } else {
+      setTicketUser(null);
     }
 
     setTag(Array.isArray(ticket?.tags) ? ticket.tags : []);
@@ -249,8 +250,7 @@ const TicketListItemCustom = ({ ticket, compact = false }) => {
     return () => {
       isMounted.current = false;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [ticket]);
 
   const handleCloseTicket = async (id) => {
     setTag(Array.isArray(ticket?.tags) ? ticket.tags : []);
@@ -340,11 +340,14 @@ const TicketListItemCustom = ({ ticket, compact = false }) => {
     }
   };
 
-  const handleSelectTicket = (ticket) => {
-    const code = uuidv4();
-    const { id, uuid } = ticket;
-    setCurrentTicket({ id, uuid, code });
-  };
+  const handleSelectTicket = useCallback(
+    (t) => {
+      const code = uuidv4();
+      const { id, uuid } = t;
+      setCurrentTicket({ id, uuid, code });
+    },
+    [setCurrentTicket]
+  );
 
   const renderTicketInfo = () => {
     return (
@@ -389,7 +392,7 @@ const TicketListItemCustom = ({ ticket, compact = false }) => {
           if (ticket.status === "pending") return;
           handleSelectTicket(ticket);
         }}
-        selected={ticketId && +ticketId === ticket.id}
+        selected={selected}
         className={clsx(classes.listItemRoot, {
           [classes.pendingTicket]: ticket.status === "pending",
           [classes.listItemCompact]: compact,
@@ -558,4 +561,10 @@ const TicketListItemCustom = ({ ticket, compact = false }) => {
   );
 };
 
-export default TicketListItemCustom;
+function ticketListItemPropsAreEqual(prev, next) {
+  if (prev.compact !== next.compact) return false;
+  if (prev.selected !== next.selected) return false;
+  return prev.ticket === next.ticket;
+}
+
+export default React.memo(TicketListItemCustom, ticketListItemPropsAreEqual);

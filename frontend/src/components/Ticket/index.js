@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect, useContext, useRef } from "react";
 import { useParams, useHistory } from "react-router-dom";
 
 import { toast } from "react-toastify";
@@ -27,6 +27,8 @@ const drawerWidth = 320;
 const useStyles = makeStyles((theme) => ({
   root: {
     display: "flex",
+    flex: 1,
+    minHeight: 0,
     height: "100%",
     position: "relative",
     overflow: "hidden",
@@ -34,6 +36,7 @@ const useStyles = makeStyles((theme) => ({
 
   mainWrapper: {
     flex: 1,
+    minHeight: 0,
     height: "100%",
     display: "flex",
     flexDirection: "column",
@@ -57,6 +60,26 @@ const useStyles = makeStyles((theme) => ({
     }),
     marginRight: 0,
   },
+
+  chatBody: {
+    flex: 1,
+    minHeight: 0,
+    display: "flex",
+    flexDirection: "column",
+    overflow: "hidden",
+  },
+
+  chatBodyMain: {
+    flex: 1,
+    minHeight: 0,
+    display: "flex",
+    flexDirection: "column",
+    overflow: "hidden",
+  },
+
+  messageInputFooter: {
+    flexShrink: 0,
+  },
 }));
 
 const Ticket = () => {
@@ -72,6 +95,8 @@ const Ticket = () => {
   const [ticket, setTicket] = useState({});
 
   const socketManager = useContext(SocketContext);
+  const ticketRef = useRef(ticket);
+  ticketRef.current = ticket;
 
   useEffect(() => {
     setLoading(true);
@@ -101,26 +126,29 @@ const Ticket = () => {
       fetchTicket();
     }, 500);
     return () => clearTimeout(delayDebounceFn);
-  }, [ticketId, user, history]);
+  }, [ticketId, history, user]);
 
   useEffect(() => {
     const companyId = localStorage.getItem("companyId");
     const socket = socketManager.getSocket(companyId);
 
-    socket.on("ready", () => socket.emit("joinChatBox", `${ticket.id}`));
+    const joinRoom = () => {
+      const id = ticketRef.current?.id;
+      if (id) socket.emit("joinChatBox", `${id}`);
+    };
 
-    socket.on(`company-${companyId}-ticket`, (data) => {
-      if (data.action === "update" && data.ticket.id === ticket.id) {
+    const handleTicket = (data) => {
+      const id = ticketRef.current?.id;
+      if (!id) return;
+      if (data.action === "update" && data.ticket?.id === id) {
         setTicket(data.ticket);
       }
-
-      if (data.action === "delete" && data.ticketId === ticket.id) {
-        // toast.success("Ticket deleted sucessfully.");
+      if (data.action === "delete" && data.ticketId === id) {
         history.push("/tickets");
       }
-    });
+    };
 
-    socket.on(`company-${companyId}-contact`, (data) => {
+    const handleContact = (data) => {
       if (data.action === "update") {
         setContact((prevState) => {
           if (prevState.id === data.contact?.id) {
@@ -129,12 +157,23 @@ const Ticket = () => {
           return prevState;
         });
       }
-    });
+    };
+
+    socket.on("ready", joinRoom);
+    socket.on(`company-${companyId}-ticket`, handleTicket);
+    socket.on(`company-${companyId}-contact`, handleContact);
 
     return () => {
       socket.disconnect();
     };
-  }, [ticketId, ticket, history, socketManager]);
+  }, [ticketId, history, socketManager]);
+
+  useEffect(() => {
+    if (!ticket?.id) return;
+    const companyId = localStorage.getItem("companyId");
+    const socket = socketManager.getSocket(companyId);
+    socket.emit("joinChatBox", `${ticket.id}`);
+  }, [ticket?.id, socketManager]);
 
   const handleDrawerOpen = () => {
     setDrawerOpen(true);
@@ -163,8 +202,10 @@ const Ticket = () => {
           ticket={ticket}
           ticketId={ticket.id}
           isGroup={ticket.isGroup}
-        ></MessagesList>
-        <MessageInput ticketId={ticket.id} ticketStatus={ticket.status} />
+        />
+        <div className={classes.messageInputFooter}>
+          <MessageInput ticketId={ticket.id} ticketStatus={ticket.status} />
+        </div>
       </>
     );
   };
@@ -186,10 +227,14 @@ const Ticket = () => {
         </TicketHeader>
         {ticket?.id && (
           <ErrorBoundary>
-            <Paper>
-              <TagsContainer ticket={ticket} />
-            </Paper>
-            <ReplyMessageProvider>{renderMessagesList()}</ReplyMessageProvider>
+            <div className={classes.chatBody}>
+              <Paper>
+                <TagsContainer ticket={ticket} />
+              </Paper>
+              <ReplyMessageProvider>
+                <div className={classes.chatBodyMain}>{renderMessagesList()}</div>
+              </ReplyMessageProvider>
+            </div>
           </ErrorBoundary>
         )}
       </Paper>

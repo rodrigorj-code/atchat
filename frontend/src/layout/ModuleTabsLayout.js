@@ -1,4 +1,5 @@
 import React from "react";
+import clsx from "clsx";
 import { Link, useLocation } from "react-router-dom";
 import Box from "@material-ui/core/Box";
 import Paper from "@material-ui/core/Paper";
@@ -63,6 +64,24 @@ const useStyles = makeStyles((theme) => ({
     paddingBottom: theme.spacing(2),
     minHeight: 0,
   },
+  /** Rota /tickets: preenche altura útil e confina scroll nos painéis internos */
+  moduleWrapTicketsFill: {
+    flex: 1,
+    minHeight: 0,
+    display: "flex",
+    flexDirection: "column",
+    overflow: "hidden",
+    height: "100%",
+  },
+  contentBelowTicketsFill: {
+    flex: 1,
+    minHeight: 0,
+    display: "flex",
+    flexDirection: "column",
+    overflow: "hidden",
+    paddingTop: theme.spacing(1),
+    paddingBottom: 0,
+  },
 }));
 
 /**
@@ -95,8 +114,16 @@ export default function ModuleTabsLayout({ tabs, children }) {
     return <>{children}</>;
   }
 
+  const isTicketsRoute =
+    pathname === "/tickets" || pathname.startsWith("/tickets/");
+
   return (
-    <Box className={classes.moduleWrap}>
+    <Box
+      className={clsx(
+        classes.moduleWrap,
+        isTicketsRoute && classes.moduleWrapTicketsFill
+      )}
+    >
       <Box className={classes.headerSpacer} aria-hidden />
       <Paper className={classes.tabsPaper} elevation={0} square={false}>
         <Tabs
@@ -113,7 +140,14 @@ export default function ModuleTabsLayout({ tabs, children }) {
           ))}
         </Tabs>
       </Paper>
-      <Box className={classes.contentBelow}>{children}</Box>
+      <Box
+        className={clsx(
+          classes.contentBelow,
+          isTicketsRoute && classes.contentBelowTicketsFill
+        )}
+      >
+        {children}
+      </Box>
     </Box>
   );
 }

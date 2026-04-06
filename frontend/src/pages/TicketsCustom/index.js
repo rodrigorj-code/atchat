@@ -13,27 +13,41 @@ import PersonIcon from "@material-ui/icons/Person";
 const useStyles = makeStyles(theme => ({
 	chatContainer: {
 		flex: 1,
-		padding: theme.spacing(1),
-		height: `calc(100% - 48px)`,
-		overflowY: "hidden",
+		minHeight: 0,
+		width: "100%",
+		padding: theme.spacing(0.5),
+		overflow: "hidden",
+		display: "flex",
+		flexDirection: "column",
 		backgroundColor: "#f4f4f4",
 	},
 
 	chatPapper: {
 		display: "flex",
-		height: "100%",
+		flex: 1,
+		minHeight: 0,
+		width: "100%",
+	},
+
+	gridRoot: {
+		flex: 1,
+		minHeight: 0,
+		width: "100%",
 	},
 
 	contactsWrapper: {
 		display: "flex",
+		minHeight: 0,
 		height: "100%",
 		flexDirection: "column",
-		overflowY: "hidden",
+		overflow: "hidden",
 	},
 	messagesWrapper: {
 		display: "flex",
+		minHeight: 0,
 		height: "100%",
 		flexDirection: "column",
+		overflow: "hidden",
 	},
 	welcomeMsg: {
 		backgroundColor: theme.palette.boxticket || "#fff",
@@ -145,7 +159,7 @@ const TicketsCustom = () => {
 	return (
 		<div className={classes.chatContainer}>
 			<div className={classes.chatPapper}>
-				<Grid container spacing={0}>
+				<Grid container spacing={0} className={classes.gridRoot} wrap="nowrap">
 					<Grid item xs={4} className={classes.contactsWrapper}>
 						<TicketsManager />
 					</Grid>

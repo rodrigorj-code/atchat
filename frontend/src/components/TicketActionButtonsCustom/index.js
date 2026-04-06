@@ -11,7 +11,7 @@ import TicketOptionsMenu from "../TicketOptionsMenu";
 import ButtonWithSpinner from "../ButtonWithSpinner";
 import toastError from "../../errors/toastError";
 import { AuthContext } from "../../context/Auth/AuthContext";
-import { TicketsContext } from "../../context/Tickets/TicketsContext";
+import { TicketsSetContext } from "../../context/Tickets/TicketsContext";
 import CheckCircleIcon from '@material-ui/icons/CheckCircle';
 import UndoRoundedIcon from '@material-ui/icons/UndoRounded';
 import Tooltip from '@material-ui/core/Tooltip';
@@ -37,7 +37,7 @@ const TicketActionButtonsCustom = ({ ticket }) => {
 	const [loading, setLoading] = useState(false);
 	const ticketOptionsMenuOpen = Boolean(anchorEl);
 	const { user } = useContext(AuthContext);
-	const { setCurrentTicket } = useContext(TicketsContext);
+	const setCurrentTicket = useContext(TicketsSetContext);
 
 	const customTheme = createTheme({
 		palette: {

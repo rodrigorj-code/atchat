@@ -40,19 +40,21 @@ const useStyles = makeStyles((theme) => ({
     position: "relative",
     display: "flex",
     flexDirection: "column",
-    flexGrow: 1,
+    flex: 1,
+    minHeight: 0,
     width: "100%",
     minWidth: 300,
-    minHeight: 200,
   },
 
   messagesList: {
     backgroundImage: theme.mode === 'light' ? `url(${whatsBackground})` : `url(${whatsBackgroundDark})`, //DARK MODE PLW DESIGN//
     display: "flex",
     flexDirection: "column",
-    flexGrow: 1,
+    flex: 1,
+    minHeight: 0,
     padding: "20px 20px 20px 20px",
-    overflowY: "scroll",
+    overflowY: "auto",
+    WebkitOverflowScrolling: "touch",
     ...theme.scrollbarStyles,
   },
 
@@ -372,9 +374,14 @@ const MessagesList = ({ ticket, ticketId, isGroup }) => {
     const companyId = localStorage.getItem("companyId");
     const socket = socketManager.getSocket(companyId);
 
-    socket.on("ready", () => socket.emit("joinChatBox", `${ticket.id}`));
+    const joinRoom = () => {
+      const tid = currentTicketId.current;
+      if (tid) socket.emit("joinChatBox", `${tid}`);
+    };
 
-    socket.on(`company-${companyId}-appMessage`, (data) => {
+    socket.on("ready", joinRoom);
+
+    const handleAppMessage = (data) => {
       if (data.action === "create" && data.message.ticketId === currentTicketId.current) {
         dispatch({ type: "ADD_MESSAGE", payload: data.message });
         scrollToBottom();
@@ -383,12 +390,14 @@ const MessagesList = ({ ticket, ticketId, isGroup }) => {
       if (data.action === "update" && data.message.ticketId === currentTicketId.current) {
         dispatch({ type: "UPDATE_MESSAGE", payload: data.message });
       }
-    });
+    };
+
+    socket.on(`company-${companyId}-appMessage`, handleAppMessage);
 
     return () => {
       socket.disconnect();
     };
-  }, [ticketId, ticket, socketManager]);
+  }, [ticketId, socketManager]);
 
   const loadMore = () => {
     setPageNumber((prevPageNumber) => prevPageNumber + 1);
