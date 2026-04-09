@@ -656,16 +656,24 @@ const Dashboard = () => {
           <Grid item xs={12} sm={6} md={4}>
             <Paper className={classes.card} elevation={0}>
               <div className={classes.cardHeader}>
-                <Typography className={classes.cardTitle}>Avaliação Média</Typography>
+                <Typography className={classes.cardTitle}>
+                  {i18n.t("evaluation.dashboard.cardTitle")}
+                </Typography>
                 <div className={`${classes.iconCircle} ${classes.iconRed}`}>
                   <AssessmentOutlinedIcon />
                 </div>
               </div>
               <Typography className={classes.cardValue}>{avgRating}</Typography>
-              <Typography className={classes.cardSub}>Escala: 1 a 3</Typography>
               <Typography className={classes.cardSub}>
-                Status:{" "}
-                {Number(avgRating) >= 2.5 ? "Ótimo" : Number(avgRating) >= 1.5 ? "Bom" : "Melhorar"}
+                {i18n.t("evaluation.dashboard.scaleLine")}
+              </Typography>
+              <Typography className={classes.cardSub}>
+                {i18n.t("evaluation.dashboard.statusPrefix")}{" "}
+                {Number(avgRating) >= 2.5
+                  ? i18n.t("evaluation.dashboard.status.great")
+                  : Number(avgRating) >= 1.5
+                  ? i18n.t("evaluation.dashboard.status.good")
+                  : i18n.t("evaluation.dashboard.status.improve")}
               </Typography>
               <div className={classes.chartWrap}>
                 <ResponsiveContainer width="100%" height="100%">

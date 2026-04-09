@@ -1,12 +1,10 @@
 /* eslint-disable no-unused-vars */
 
 import React, { useState, useEffect, useReducer, useContext } from "react";
-import { toast } from "react-toastify";
 
 import { useHistory } from "react-router-dom";
 
 import { makeStyles } from "@material-ui/core/styles";
-import Button from "@material-ui/core/Button";
 import Table from "@material-ui/core/Table";
 import TableBody from "@material-ui/core/TableBody";
 import TableCell from "@material-ui/core/TableCell";
@@ -25,21 +23,29 @@ import PlayCircleOutlineIcon from "@material-ui/icons/PlayCircleOutline";
 import PauseCircleOutlineIcon from "@material-ui/icons/PauseCircleOutline";
 import ReplayIcon from "@material-ui/icons/Replay";
 
+import Typography from "@material-ui/core/Typography";
 import MainContainer from "../../components/MainContainer";
-import MainHeader from "../../components/MainHeader";
-import Title from "../../components/Title";
 
 import api from "../../services/api";
 import { i18n } from "../../translate/i18n";
-import TableRowSkeleton from "../../components/TableRowSkeleton";
 import CampaignModal from "../../components/CampaignModal";
 import ConfirmationModal from "../../components/ConfirmationModal";
 import toastError from "../../errors/toastError";
-import { Grid, Box, LinearProgress } from "@material-ui/core";
+import { showSuccessToast } from "../../errors/feedbackToasts";
+import { Box, LinearProgress, Tooltip } from "@material-ui/core";
 import { isArray } from "lodash";
 import { useDate } from "../../hooks/useDate";
 import { SocketContext } from "../../context/Socket/SocketContext";
-import { AppSectionCard, AppPrimaryButton } from "../../ui";
+import {
+  AppPageHeader,
+  AppSectionCard,
+  AppPrimaryButton,
+  AppActionBar,
+  AppDangerAction,
+  AppEmptyState,
+  AppLoadingState,
+  AppTableRowSkeleton,
+} from "../../ui";
 
 const STATUS_STYLES = {
   INATIVA: { backgroundColor: "#9e9e9e", color: "#fff" },
@@ -96,8 +102,29 @@ const reducer = (state, action) => {
 };
 
 const useStyles = makeStyles((theme) => ({
+  pageRoot: {
+    display: "flex",
+    flexDirection: "column",
+    gap: theme.spacing(2),
+    flex: 1,
+    minHeight: 0,
+    [theme.breakpoints.up("md")]: {
+      gap: theme.spacing(3),
+    },
+  },
   mainPaper: {
     flex: 1,
+    minHeight: 0,
+  },
+  filtersBar: {
+    flexWrap: "wrap",
+    alignItems: "flex-end",
+    marginBottom: theme.spacing(2),
+  },
+  searchField: {
+    flex: "1 1 260px",
+    minWidth: 200,
+    maxWidth: 420,
   },
 }));
 
@@ -221,6 +248,7 @@ const Campaigns = () => {
       setLoading(false);
     } catch (err) {
       toastError(err);
+      setLoading(false);
     }
   };
 
@@ -246,7 +274,7 @@ const Campaigns = () => {
   const handleDeleteCampaign = async (campaignId) => {
     try {
       await api.delete(`/campaigns/${campaignId}`);
-      toast.success(i18n.t("campaigns.toasts.deleted"));
+      showSuccessToast("campaigns.toasts.deleted");
     } catch (err) {
       toastError(err);
     }
@@ -309,7 +337,7 @@ const Campaigns = () => {
   const cancelCampaign = async (campaign) => {
     try {
       await api.post(`/campaigns/${campaign.id}/cancel`);
-      toast.success(i18n.t("campaigns.toasts.cancel"));
+      showSuccessToast("campaigns.toasts.cancel");
       setPageNumber(1);
       fetchCampaigns();
     } catch (err) {
@@ -320,7 +348,7 @@ const Campaigns = () => {
   const runRestartCampaign = async (campaign) => {
     try {
       await api.post(`/campaigns/${campaign.id}/restart`);
-      toast.success(i18n.t("campaigns.toasts.restart"));
+      showSuccessToast("campaigns.toasts.restart");
       setPageNumber(1);
       fetchCampaigns();
     } catch (err) {
@@ -331,7 +359,7 @@ const Campaigns = () => {
   const runRetryFailed = async (campaign) => {
     try {
       await api.post(`/campaigns/${campaign.id}/retry-failed`);
-      toast.success(i18n.t("campaigns.toasts.retryFailed"));
+      showSuccessToast("campaigns.toasts.retryFailed");
       await fetchProgressForList([campaign]);
       setPageNumber(1);
       fetchCampaigns();
@@ -346,7 +374,7 @@ const Campaigns = () => {
     ["EM_ANDAMENTO", "FINALIZADA", "CANCELADA"].includes(campaign.status);
 
   return (
-    <MainContainer>
+    <MainContainer className={classes.pageRoot}>
       <ConfirmationModal
         title={
           deletingCampaign &&
@@ -356,6 +384,7 @@ const Campaigns = () => {
         }
         open={confirmModalOpen}
         onClose={setConfirmModalOpen}
+        destructive
         onConfirm={() => handleDeleteCampaign(deletingCampaign.id)}
       >
         {i18n.t("campaigns.confirmationModal.deleteMessage")}
@@ -408,41 +437,23 @@ const Campaigns = () => {
         aria-labelledby="form-dialog-title"
         campaignId={selectedCampaign && selectedCampaign.id}
       />
-      <MainHeader>
-        <Grid style={{ width: "99.6%" }} container>
-          <Grid xs={12} sm={8} item>
-            <Title>{i18n.t("campaigns.title")}</Title>
-          </Grid>
-          <Grid xs={12} sm={4} item>
-            <Grid spacing={2} container>
-              <Grid xs={6} sm={6} item>
-                <TextField
-                  fullWidth
-                  placeholder={i18n.t("campaigns.searchPlaceholder")}
-                  type="search"
-                  value={searchParam}
-                  onChange={handleSearch}
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <SearchIcon style={{ color: "gray" }} />
-                      </InputAdornment>
-                    ),
-                  }}
-                />
-              </Grid>
-              <Grid xs={6} sm={6} item>
-                <AppPrimaryButton
-                  fullWidth
-                  onClick={handleOpenCampaignModal}
-                >
-                  {i18n.t("campaigns.buttons.add")}
-                </AppPrimaryButton>
-              </Grid>
-            </Grid>
-          </Grid>
-        </Grid>
-      </MainHeader>
+      <AppPageHeader
+        title={
+          <Typography variant="h5" color="primary" component="h1">
+            {i18n.t("campaigns.title")}
+          </Typography>
+        }
+        subtitle={
+          <Typography variant="body2" color="textSecondary" component="p">
+            {i18n.t("campaigns.pageSubtitle")}
+          </Typography>
+        }
+        actions={
+          <AppPrimaryButton onClick={handleOpenCampaignModal}>
+            {i18n.t("campaigns.buttons.add")}
+          </AppPrimaryButton>
+        }
+      />
       <AppSectionCard
         dense
         scrollable
@@ -450,6 +461,36 @@ const Campaigns = () => {
         variant="outlined"
         onScroll={handleScroll}
       >
+        <AppActionBar className={classes.filtersBar}>
+          <TextField
+            className={classes.searchField}
+            placeholder={i18n.t("campaigns.searchPlaceholder")}
+            type="search"
+            value={searchParam}
+            onChange={handleSearch}
+            variant="outlined"
+            size="small"
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon color="action" fontSize="small" />
+                </InputAdornment>
+              ),
+            }}
+          />
+        </AppActionBar>
+        {loading && campaigns.length === 0 ? (
+          <AppLoadingState message={i18n.t("campaigns.loading")} />
+        ) : !loading && campaigns.length === 0 ? (
+          <AppEmptyState
+            title={i18n.t("campaigns.empty.title")}
+            description={i18n.t("campaigns.empty.subtitle")}
+          >
+            <AppPrimaryButton onClick={handleOpenCampaignModal}>
+              {i18n.t("campaigns.buttons.add")}
+            </AppPrimaryButton>
+          </AppEmptyState>
+        ) : (
         <Table size="small">
           <TableHead>
             <TableRow>
@@ -491,7 +532,7 @@ const Campaigns = () => {
                       )
                     : 0;
                 return (
-                <TableRow key={campaign.id}>
+                <TableRow key={campaign.id} hover>
                   <TableCell align="center">{campaign.name}</TableCell>
                   <TableCell align="center">
                     {renderStatusBadge(campaign.status)}
@@ -549,70 +590,86 @@ const Campaigns = () => {
                   </TableCell>
                   <TableCell align="center">
                     {campaign.status === "EM_ANDAMENTO" && (
-                      <IconButton
-                        onClick={() => cancelCampaign(campaign)}
-                        title={i18n.t("campaigns.table.stopCampaign")}
-                        size="small"
-                      >
-                        <PauseCircleOutlineIcon />
-                      </IconButton>
+                      <Tooltip title={i18n.t("campaigns.table.stopCampaign")}>
+                        <IconButton
+                          onClick={() => cancelCampaign(campaign)}
+                          size="small"
+                          aria-label={i18n.t("campaigns.table.stopCampaign")}
+                        >
+                          <PauseCircleOutlineIcon />
+                        </IconButton>
+                      </Tooltip>
                     )}
                     {campaign.status === "CANCELADA" && (
-                      <IconButton
-                        onClick={() => {
-                          setRestartTarget(campaign);
-                          setRestartModalOpen(true);
-                        }}
-                        title={i18n.t("campaigns.table.stopCampaign")}
-                        size="small"
-                      >
-                        <PlayCircleOutlineIcon />
-                      </IconButton>
+                      <Tooltip title={i18n.t("campaigns.table.resumeCampaign")}>
+                        <IconButton
+                          onClick={() => {
+                            setRestartTarget(campaign);
+                            setRestartModalOpen(true);
+                          }}
+                          size="small"
+                          aria-label={i18n.t("campaigns.table.resumeCampaign")}
+                        >
+                          <PlayCircleOutlineIcon />
+                        </IconButton>
+                      </Tooltip>
                     )}
                     {canShowRetryFailed(campaign, prog) && (
-                      <IconButton
-                        onClick={() => {
-                          setRetryFailedTarget(campaign);
-                          setRetryFailedModalOpen(true);
-                        }}
-                        title={i18n.t("campaigns.table.retryFailed")}
-                        size="small"
-                      >
-                        <ReplayIcon />
-                      </IconButton>
+                      <Tooltip title={i18n.t("campaigns.table.retryFailed")}>
+                        <IconButton
+                          onClick={() => {
+                            setRetryFailedTarget(campaign);
+                            setRetryFailedModalOpen(true);
+                          }}
+                          size="small"
+                          aria-label={i18n.t("campaigns.table.retryFailed")}
+                        >
+                          <ReplayIcon />
+                        </IconButton>
+                      </Tooltip>
                     )}
-                    <IconButton
-                      onClick={() =>
-                        history.push(`/campaign/${campaign.id}/report`)
-                      }
-                      size="small"
-                    >
-                      <DescriptionIcon />
-                    </IconButton>
-                    <IconButton
-                      size="small"
-                      onClick={() => handleEditCampaign(campaign)}
-                    >
-                      <EditIcon />
-                    </IconButton>
+                    <Tooltip title={i18n.t("campaigns.table.report")}>
+                      <IconButton
+                        onClick={() =>
+                          history.push(`/campaign/${campaign.id}/report`)
+                        }
+                        size="small"
+                        aria-label={i18n.t("campaigns.table.report")}
+                      >
+                        <DescriptionIcon />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title={i18n.t("campaigns.table.edit")}>
+                      <IconButton
+                        size="small"
+                        onClick={() => handleEditCampaign(campaign)}
+                        aria-label={i18n.t("campaigns.table.edit")}
+                      >
+                        <EditIcon />
+                      </IconButton>
+                    </Tooltip>
 
-                    <IconButton
-                      size="small"
-                      onClick={(e) => {
-                        setConfirmModalOpen(true);
-                        setDeletingCampaign(campaign);
-                      }}
-                    >
-                      <DeleteOutlineIcon />
-                    </IconButton>
+                    <Tooltip title={i18n.t("campaigns.table.delete")}>
+                      <AppDangerAction
+                        size="small"
+                        onClick={(e) => {
+                          setConfirmModalOpen(true);
+                          setDeletingCampaign(campaign);
+                        }}
+                        aria-label={i18n.t("campaigns.table.delete")}
+                      >
+                        <DeleteOutlineIcon />
+                      </AppDangerAction>
+                    </Tooltip>
                   </TableCell>
                 </TableRow>
               );
               })}
-              {loading && <TableRowSkeleton columns={9} />}
+              {loading && <AppTableRowSkeleton columns={9} />}
             </>
           </TableBody>
         </Table>
+        )}
       </AppSectionCard>
     </MainContainer>
   );

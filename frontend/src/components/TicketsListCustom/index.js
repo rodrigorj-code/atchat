@@ -5,8 +5,7 @@ import { makeStyles } from "@material-ui/core/styles";
 import List from "@material-ui/core/List";
 import Paper from "@material-ui/core/Paper";
 import Box from "@material-ui/core/Box";
-import Typography from "@material-ui/core/Typography";
-import InboxOutlinedIcon from "@material-ui/icons/InboxOutlined";
+import { AppEmptyState } from "../../ui";
 
 /**
  * Lista de tickets usada na tela de Atendimentos (fluxo atual).
@@ -59,50 +58,6 @@ const useStyles = makeStyles((theme) => ({
     color: theme.palette.text.secondary,
     marginLeft: theme.spacing(1),
     fontSize: "0.875rem",
-  },
-
-  emptyState: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    textAlign: "center",
-    padding: theme.spacing(4, 3),
-    minHeight: 220,
-    maxWidth: 360,
-    margin: "0 auto",
-    [theme.breakpoints.down("xs")]: {
-      padding: theme.spacing(3, 2),
-      minHeight: 180,
-    },
-  },
-  emptyIcon: {
-    fontSize: 56,
-    marginBottom: theme.spacing(1.5),
-    color: theme.palette.text.secondary,
-    opacity: 0.45,
-  },
-  emptyTitle: {
-    fontWeight: 700,
-    fontSize: "1.125rem",
-    marginBottom: theme.spacing(1),
-    color: theme.palette.text.primary,
-  },
-  emptyMessage: {
-    color: theme.palette.text.secondary,
-    fontSize: "0.875rem",
-    lineHeight: 1.5,
-    marginBottom: theme.spacing(1.5),
-  },
-  emptyHint: {
-    color: theme.palette.text.secondary,
-    fontSize: "0.8125rem",
-    lineHeight: 1.5,
-    padding: theme.spacing(1.5, 2),
-    borderRadius: theme.shape.borderRadius,
-    backgroundColor:
-      theme.palette.type === "dark" ? "rgba(255,255,255,0.06)" : theme.palette.grey[100],
-    border: `1px dashed ${theme.palette.divider}`,
   },
 }));
 
@@ -448,18 +403,11 @@ const TicketsListCustom = (props) => {
       >
         <List style={{ paddingTop: 0, height: "100%" }}>
           {ticketsList.length === 0 && !loading ? (
-            <Box className={classes.emptyState} aria-live="polite">
-              <InboxOutlinedIcon className={classes.emptyIcon} aria-hidden />
-              <Typography component="h2" className={classes.emptyTitle}>
-                {i18n.t("ticketsList.emptyStateTitle")}
-              </Typography>
-              <Typography className={classes.emptyMessage}>
-                {i18n.t("ticketsList.emptyStateMessage")}
-              </Typography>
-              <Typography component="p" className={classes.emptyHint}>
-                {i18n.t("ticketsList.emptyStateHint")}
-              </Typography>
-            </Box>
+            <AppEmptyState
+              title={i18n.t("ticketsList.emptyStateTitle")}
+              description={i18n.t("ticketsList.emptyStateMessage")}
+              hint={i18n.t("ticketsList.emptyStateHint")}
+            />
           ) : (
             <>
               {ticketsList.map((ticket) => (

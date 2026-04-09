@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useHistory } from "react-router-dom";
 
 import {
+  Box,
   Button,
   Grid,
   makeStyles,
@@ -14,6 +15,7 @@ import {
   TextField,
   Typography,
 } from "@material-ui/core";
+import { alpha } from "@material-ui/core/styles";
 import Alert from "@material-ui/lab/Alert";
 
 import Rating from "@material-ui/lab/Rating";
@@ -22,9 +24,12 @@ import SearchIcon from "@material-ui/icons/Search";
 import InputAdornment from "@material-ui/core/InputAdornment";
 
 import MainContainer from "../../components/MainContainer";
-import MainHeader from "../../components/MainHeader";
-import Title from "../../components/Title";
 import TableRowSkeleton from "../../components/TableRowSkeleton";
+import {
+  AppPageHeader,
+  AppSectionCard,
+  AppActionBar,
+} from "../../ui";
 import toastError from "../../errors/toastError";
 import api from "../../services/api";
 import { i18n } from "../../translate/i18n";
@@ -34,24 +39,65 @@ import TableAttendantsStatus from "../../components/Dashboard/TableAttendantsSta
 const RATING_MAX = 3;
 
 const useStyles = makeStyles((theme) => ({
-  mainPaper: {
+  pageRoot: {
+    display: "flex",
+    flexDirection: "column",
+    gap: theme.spacing(2),
     flex: 1,
-    padding: theme.spacing(2),
-    overflowY: "scroll",
-    ...theme.scrollbarStyles,
+    minHeight: 0,
+    [theme.breakpoints.up("md")]: {
+      gap: theme.spacing(3),
+    },
+  },
+  titleWithIcon: {
+    display: "flex",
+    alignItems: "center",
+    gap: theme.spacing(1),
+  },
+  filtersBar: {
+    flexWrap: "wrap",
+    alignItems: "flex-end",
+  },
+  searchField: {
+    flex: "1 1 260px",
+    minWidth: 200,
+    maxWidth: 400,
+  },
+  dateField: {
+    flex: "0 1 160px",
+  },
+  tableCard: {
+    flex: 1,
+    minHeight: 0,
+  },
+  sectionTitle: {
+    fontWeight: 600,
+  },
+  flowAlert: {
+    marginBottom: theme.spacing(2),
+    width: "100%",
+    "& .MuiAlert-message": {
+      width: "100%",
+    },
+  },
+  flowAlertBody: {
+    display: "flex",
+    flexDirection: "column",
+    gap: theme.spacing(1),
+  },
+  sectionSpacing: {
+    marginBottom: theme.spacing(2),
   },
   summaryCard: {
     padding: theme.spacing(2),
-    borderRadius: 12,
+    borderRadius: theme.shape.borderRadius,
     textAlign: "center",
-    backgroundColor: "#fff",
-    boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
     height: "100%",
   },
   summaryValue: {
     fontSize: "1.75rem",
     fontWeight: 700,
-    color: "#24c776",
+    color: theme.palette.success.main,
   },
   summaryLabel: {
     fontSize: "0.875rem",
@@ -60,8 +106,8 @@ const useStyles = makeStyles((theme) => ({
   },
   tableRowClick: {
     cursor: "pointer",
-    "&:hover": {
-      backgroundColor: "rgba(36, 199, 118, 0.06)",
+    "&.MuiTableRow-hover:hover": {
+      backgroundColor: alpha(theme.palette.success.main, 0.1),
     },
   },
 }));
@@ -163,22 +209,46 @@ const Evaluation = () => {
   };
 
   return (
-    <MainContainer>
-      <MainHeader>
-        <Title>
-          <AssessmentOutlinedIcon style={{ marginRight: 8, verticalAlign: "middle" }} />
-          {i18n.t("evaluation.title", "Avaliação")}
-        </Title>
-      </MainHeader>
+    <MainContainer className={classes.pageRoot}>
+      <AppPageHeader
+        title={
+          <Typography
+            variant="h5"
+            color="primary"
+            component="h1"
+            className={classes.titleWithIcon}
+          >
+            <AssessmentOutlinedIcon fontSize="small" />
+            {i18n.t("evaluation.title", "Avaliação")}
+          </Typography>
+        }
+        subtitle={
+          <Typography variant="body2" color="textSecondary" component="p">
+            {i18n.t("evaluation.pageSubtitle")}
+          </Typography>
+        }
+      />
 
-      <Alert severity="info" style={{ marginBottom: 16 }}>
-        <Typography variant="body2" component="div">
-          {i18n.t("evaluation.flowInfo")}
-        </Typography>
+      <Alert
+        severity="info"
+        variant="outlined"
+        className={classes.flowAlert}
+      >
+        <Box className={classes.flowAlertBody}>
+          <Typography variant="body2" component="p">
+            {i18n.t("evaluation.flowInfo")}
+          </Typography>
+          <Typography variant="body2" color="textSecondary" component="p">
+            {i18n.t("evaluation.scaleHint")}
+          </Typography>
+          <Typography variant="body2" color="textSecondary" component="p">
+            {i18n.t("evaluation.listHint")}
+          </Typography>
+        </Box>
       </Alert>
 
-      <Grid container spacing={2} style={{ marginBottom: 16 }}>
-        <Grid item xs={12} sm={6} md={4}>
+      <Grid container spacing={2} className={classes.sectionSpacing}>
+        <Grid item xs={12} sm={6}>
           <Paper className={classes.summaryCard} variant="outlined">
             <Typography className={classes.summaryValue}>
               {summary.avgRating}
@@ -186,12 +256,9 @@ const Evaluation = () => {
             <Typography className={classes.summaryLabel}>
               {i18n.t("evaluation.avgRating", "Avaliação Média")}
             </Typography>
-            <Typography variant="caption" color="textSecondary" display="block" style={{ marginTop: 8 }}>
-              {i18n.t("evaluation.scaleHint")}
-            </Typography>
           </Paper>
         </Grid>
-        <Grid item xs={12} sm={6} md={4}>
+        <Grid item xs={12} sm={6}>
           <Paper className={classes.summaryCard} variant="outlined">
             <Typography className={classes.summaryValue}>
               {summary.totalRatings}
@@ -201,45 +268,32 @@ const Evaluation = () => {
             </Typography>
           </Paper>
         </Grid>
-        <Grid item xs={12} sm={12} md={4}>
-          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-            <TextField
-              type="date"
-              label={i18n.t("evaluation.dateFrom", "De")}
-              value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
-              InputLabelProps={{ shrink: true }}
-              size="small"
-              variant="outlined"
-            />
-            <TextField
-              type="date"
-              label={i18n.t("evaluation.dateTo", "Até")}
-              value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
-              InputLabelProps={{ shrink: true }}
-              size="small"
-              variant="outlined"
-            />
-          </div>
-        </Grid>
       </Grid>
 
-      <Grid container spacing={2} style={{ marginBottom: 16 }}>
-        <Grid item xs={12} md={6}>
-          <Typography variant="subtitle1" style={{ marginBottom: 8, fontWeight: 600 }}>
-            {i18n.t("evaluation.byAttendant", "Por Atendente")}
-          </Typography>
-          <TableAttendantsStatus loading={loading} attendants={summary.attendants} />
-        </Grid>
-      </Grid>
-
-      <Paper className={classes.mainPaper} variant="outlined">
-        <Typography variant="caption" color="textSecondary" display="block" style={{ marginBottom: 12 }}>
-          {i18n.t("evaluation.listHint")}
-        </Typography>
-        <div style={{ marginBottom: 16, display: "flex", alignItems: "center", gap: 16 }}>
+      <AppSectionCard dense variant="outlined">
+        <AppActionBar className={classes.filtersBar}>
           <TextField
+            className={classes.dateField}
+            type="date"
+            label={i18n.t("evaluation.dateFrom", "De")}
+            value={dateFrom}
+            onChange={(e) => setDateFrom(e.target.value)}
+            InputLabelProps={{ shrink: true }}
+            size="small"
+            variant="outlined"
+          />
+          <TextField
+            className={classes.dateField}
+            type="date"
+            label={i18n.t("evaluation.dateTo", "Até")}
+            value={dateTo}
+            onChange={(e) => setDateTo(e.target.value)}
+            InputLabelProps={{ shrink: true }}
+            size="small"
+            variant="outlined"
+          />
+          <TextField
+            className={classes.searchField}
             placeholder={i18n.t("evaluation.searchPlaceholder", "Buscar por contato ou atendente...")}
             value={searchParam}
             onChange={(e) => setSearchParam(e.target.value)}
@@ -248,14 +302,24 @@ const Evaluation = () => {
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <SearchIcon style={{ color: "gray" }} />
+                  <SearchIcon color="action" fontSize="small" />
                 </InputAdornment>
               ),
             }}
-            style={{ minWidth: 280 }}
           />
-        </div>
+        </AppActionBar>
+      </AppSectionCard>
 
+      <Grid container spacing={2} className={classes.sectionSpacing}>
+        <Grid item xs={12} md={6}>
+          <Typography variant="subtitle1" gutterBottom className={classes.sectionTitle}>
+            {i18n.t("evaluation.byAttendant", "Por Atendente")}
+          </Typography>
+          <TableAttendantsStatus loading={loading} attendants={summary.attendants} />
+        </Grid>
+      </Grid>
+
+      <AppSectionCard scrollable className={classes.tableCard} variant="outlined">
         {loadingList ? (
           <TableRowSkeleton />
         ) : (
@@ -285,6 +349,7 @@ const Evaluation = () => {
                 filteredRatings.map((r) => (
                   <TableRow
                     key={r.id}
+                    hover
                     className={classes.tableRowClick}
                     onClick={() => handleRowClick(r)}
                   >
@@ -325,7 +390,7 @@ const Evaluation = () => {
             </Button>
           </div>
         )}
-      </Paper>
+      </AppSectionCard>
     </MainContainer>
   );
 };

@@ -7,8 +7,10 @@ import CardHeader from '@material-ui/core/CardHeader';
 import Grid from '@material-ui/core/Grid';
 import StarIcon from '@material-ui/icons/StarBorder';
 import Typography from '@material-ui/core/Typography';
-import Paper from '@material-ui/core/Paper';
+import Alert from '@material-ui/lab/Alert';
+import Box from '@material-ui/core/Box';
 import { makeStyles } from '@material-ui/core/styles';
+import useSharedCheckoutStyles from '../styles';
 
 import IconButton from '@material-ui/core/IconButton';
 import MinimizeIcon from '@material-ui/icons/Minimize';
@@ -111,6 +113,7 @@ export default function Pricing(props) {
   const { find } = useCompanies();
 
   const classes = useStyles();
+  const sharedClasses = useSharedCheckoutStyles();
   const [usersPlans, setUsersPlans] = React.useState(3);
   const [companiesPlans, setCompaniesPlans] = useState(0);
   const [connectionsPlans, setConnectionsPlans] = React.useState(3);
@@ -185,27 +188,30 @@ export default function Pricing(props) {
   return (
     <React.Fragment>
       {invoice && (
-        <Paper
+        <Alert
+          severity="info"
           variant="outlined"
-          style={{ padding: 16, marginBottom: 24, width: "100%" }}
+          className={sharedClasses.contextAlert}
         >
-          <Typography variant="subtitle1" color="primary" gutterBottom>
-            {i18n.t("checkoutPage.pix.invoiceHeading")}
-          </Typography>
-          <Typography variant="body2" color="textSecondary" gutterBottom>
-            #{invoice.id} — {invoice.detail}
-          </Typography>
-          <Typography variant="h6" style={{ fontWeight: 700 }}>
-            {i18n.t("checkoutPage.pix.amountCharged")}: {invoiceAmount}
-          </Typography>
-          <Typography variant="caption" color="textSecondary" display="block">
-            {i18n.t("checkoutPage.pix.dueDate")}:{" "}
-            {moment(invoice.dueDate).format("DD/MM/YYYY")}
-          </Typography>
-          <Typography variant="body2" style={{ marginTop: 12 }}>
-            {i18n.t("checkoutPage.pix.amountFromInvoice")}
-          </Typography>
-        </Paper>
+          <Box>
+            <Typography variant="subtitle1" color="primary" gutterBottom>
+              {i18n.t("checkoutPage.pix.invoiceHeading")}
+            </Typography>
+            <Typography variant="body2" color="textSecondary" gutterBottom>
+              #{invoice.id} — {invoice.detail}
+            </Typography>
+            <Typography variant="h6" style={{ fontWeight: 700 }}>
+              {i18n.t("checkoutPage.pix.amountCharged")}: {invoiceAmount}
+            </Typography>
+            <Typography variant="caption" color="textSecondary" display="block">
+              {i18n.t("checkoutPage.pix.dueDate")}:{" "}
+              {moment(invoice.dueDate).format("DD/MM/YYYY")}
+            </Typography>
+            <Typography variant="body2" style={{ marginTop: 12 }}>
+              {i18n.t("checkoutPage.pix.amountFromInvoice")}
+            </Typography>
+          </Box>
+        </Alert>
       )}
       <Grid container spacing={3}>
         {tiers.map((tier) => (

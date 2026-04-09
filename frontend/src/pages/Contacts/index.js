@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useReducer, useContext } from "react";
 
-import { toast } from "react-toastify";
 import { useHistory } from "react-router-dom";
 import { Tooltip } from "@material-ui/core";
 import { alpha, makeStyles } from "@material-ui/core/styles";
@@ -30,7 +29,6 @@ import { formatDistanceToNow, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 import api from "../../services/api";
-import TableRowSkeleton from "../../components/TableRowSkeleton";
 import ContactModal from "../../components/ContactModal";
 import ConfirmationModal from "../../components/ConfirmationModal/";
 
@@ -44,8 +42,12 @@ import {
 	AppActionBar,
 	AppTableContainer,
 	AppDangerAction,
+	AppEmptyState,
+	AppLoadingState,
+	AppTableRowSkeleton,
 } from "../../ui";
 import toastError from "../../errors/toastError";
+import { showSuccessToast } from "../../errors/feedbackToasts";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import { Can } from "../../components/Can";
 import NewTicketModal from "../../components/NewTicketModal";
@@ -114,10 +116,13 @@ const useStyles = makeStyles((theme) => ({
 			width: "100%",
 		},
 	},
-	expectationsBox: {
-		padding: theme.spacing(1.5, 2),
-		borderRadius: theme.shape.borderRadius,
-		backgroundColor: theme.palette.action.hover,
+	pageContextAlert: {
+		width: "100%",
+	},
+	pageContextAlertBody: {
+		display: "flex",
+		flexDirection: "column",
+		gap: theme.spacing(1),
 	},
 	filtersBar: {
 		flexWrap: "wrap",
@@ -355,7 +360,7 @@ const Contacts = () => {
 	const handleDeleteContact = async (contactId) => {
 		try {
 			await api.delete(`/contacts/${contactId}`);
-			toast.success(i18n.t("contacts.toasts.deleted"));
+			showSuccessToast("contacts.toasts.deleted");
 		} catch (err) {
 			toastError(err);
 		}
@@ -510,6 +515,7 @@ const Contacts = () => {
 				}
 				open={confirmOpen}
 				onClose={setConfirmOpen}
+				destructive={Boolean(deletingContact)}
 				onConfirm={(e) =>
 					deletingContact
 						? handleDeleteContact(deletingContact.id)
@@ -559,14 +565,20 @@ const Contacts = () => {
 			/>
 
 			<Box className={classes.alertsBox}>
-				<Alert severity="info" variant="outlined">
-					{i18n.t("contacts.pageBanner")}
+				<Alert
+					severity="info"
+					variant="outlined"
+					className={classes.pageContextAlert}
+				>
+					<Box className={classes.pageContextAlertBody}>
+						<Typography variant="body2" component="p">
+							{i18n.t("contacts.pageBanner")}
+						</Typography>
+						<Typography variant="body2" color="textSecondary" component="p">
+							{i18n.t("contacts.pageExpectations")}
+						</Typography>
+					</Box>
 				</Alert>
-				<Box mt={1.5} className={classes.expectationsBox}>
-					<Typography variant="body2" color="textSecondary">
-						{i18n.t("contacts.pageExpectations")}
-					</Typography>
-				</Box>
 			</Box>
 
 			<AppSectionCard dense variant="outlined">
@@ -646,15 +658,17 @@ const Contacts = () => {
 				variant="outlined"
 				onScroll={handleScroll}
 			>
-				{!loading && contacts.length === 0 ? (
-					<Box py={6} textAlign="center">
-						<Typography variant="h6" color="textSecondary" gutterBottom>
-							{i18n.t("contacts.empty.title")}
-						</Typography>
-						<Typography variant="body2" color="textSecondary">
-							{i18n.t("contacts.empty.subtitle")}
-						</Typography>
-					</Box>
+				{loading && contacts.length === 0 ? (
+					<AppLoadingState message={i18n.t("contacts.loading")} />
+				) : !loading && contacts.length === 0 ? (
+					<AppEmptyState
+						title={i18n.t("contacts.empty.title")}
+						description={i18n.t("contacts.empty.subtitle")}
+					>
+						<AppPrimaryButton onClick={handleOpenContactModal}>
+							{i18n.t("contacts.buttons.add")}
+						</AppPrimaryButton>
+					</AppEmptyState>
 				) : (
 					<AppTableContainer nested>
 						<Table size="small">
@@ -785,7 +799,7 @@ const Contacts = () => {
 											</TableCell>
 										</TableRow>
 									))}
-									{loading && <TableRowSkeleton avatar columns={5} />}
+									{loading && <AppTableRowSkeleton avatar columns={5} />}
 								</>
 							</TableBody>
 						</Table>

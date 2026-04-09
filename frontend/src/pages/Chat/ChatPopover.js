@@ -14,6 +14,7 @@ import {
   List,
   ListItem,
   ListItemText,
+  Tooltip,
   Typography,
 } from "@material-ui/core";
 import NotificationPopoverLayout, { PulsingNotificationBadge } from "../../components/NotificationPopoverLayout";
@@ -32,6 +33,9 @@ const useStyles = makeStyles((theme) => ({
     "& > div": {
       boxShadow: "none",
     },
+  },
+  headerIconButton: {
+    color: theme.palette.action.active,
   },
 }));
 
@@ -225,15 +229,18 @@ export default function ChatPopover() {
 
   return (
     <div>
-      <IconButton
-        aria-describedby={id}
-        onClick={handleClick}
-        style={{ color: "rgba(0, 0, 0, 0.54)" }}
-      >
-        <PulsingNotificationBadge hasNotification={!invisible}>
-          <ForumIcon />
-        </PulsingNotificationBadge>
-      </IconButton>
+      <Tooltip title={i18n.t("chat.popover.openTooltip")}>
+        <IconButton
+          aria-describedby={id}
+          onClick={handleClick}
+          className={classes.headerIconButton}
+          aria-label={i18n.t("chat.popover.openTooltip")}
+        >
+          <PulsingNotificationBadge hasNotification={!invisible}>
+            <ForumIcon />
+          </PulsingNotificationBadge>
+        </IconButton>
+      </Tooltip>
       <Popover
         id={id}
         open={open}
@@ -250,7 +257,7 @@ export default function ChatPopover() {
         classes={{ paper: classes.popoverPaper }}
       >
         <NotificationPopoverLayout
-          title="Mensagens internas"
+          title={i18n.t("chat.popover.title")}
           emptyText={i18n.t("mainDrawer.appBar.notRegister")}
           hasItems={chats.length}
           onScroll={handleScroll}

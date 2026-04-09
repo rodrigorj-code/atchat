@@ -1,46 +1,83 @@
 import React from "react";
+import { makeStyles } from "@material-ui/core/styles";
 import Button from "@material-ui/core/Button";
-import Dialog from "@material-ui/core/Dialog";
-import DialogActions from "@material-ui/core/DialogActions";
-import DialogContent from "@material-ui/core/DialogContent";
-import DialogTitle from "@material-ui/core/DialogTitle";
 import Typography from "@material-ui/core/Typography";
 
 import { i18n } from "../../translate/i18n";
+import {
+  AppDialog,
+  AppDialogTitle,
+  AppDialogContent,
+  AppDialogActions,
+  AppPrimaryButton,
+  AppNeutralButton,
+} from "../../ui";
 
-const ConfirmationModal = ({ title, children, open, onClose, onConfirm, confirmText, cancelText }) => {
-	return (
-		<Dialog
-			open={open}
-			onClose={() => onClose(false)}
-			aria-labelledby="confirm-dialog"
-		>
-			<DialogTitle id="confirm-dialog">{title}</DialogTitle>
-			<DialogContent dividers>
-				<Typography>{children}</Typography>
-			</DialogContent>
-			<DialogActions>
-				<Button
-					variant="contained"
-					onClick={() => onClose(false)}
-					color="default"
-				>
-					{cancelText || i18n.t("confirmationModal.buttons.cancel")}
-				</Button>
-				<Button
-					variant="contained"
-					onClick={() => {
-						onConfirm();
-						onClose(false);
-					}}
-					color="secondary"
-					style={confirmText ? { backgroundColor: "#000", color: "#fff" } : undefined}
-				>
-					{confirmText || i18n.t("confirmationModal.buttons.confirm")}
-				</Button>
-			</DialogActions>
-		</Dialog>
-	);
+const useStyles = makeStyles((theme) => ({
+  confirmDanger: {
+    color: theme.palette.error.contrastText,
+    backgroundColor: theme.palette.error.main,
+    boxShadow: "none",
+    "&:hover": {
+      backgroundColor: theme.palette.error.dark,
+      boxShadow: "none",
+    },
+  },
+}));
+
+const ConfirmationModal = ({
+  title,
+  children,
+  open,
+  onClose,
+  onConfirm,
+  confirmText,
+  cancelText,
+  destructive,
+}) => {
+  const classes = useStyles();
+
+  return (
+    <AppDialog
+      open={open}
+      onClose={() => onClose(false)}
+      aria-labelledby="confirm-dialog"
+      maxWidth="xs"
+    >
+      <AppDialogTitle id="confirm-dialog">{title}</AppDialogTitle>
+      <AppDialogContent dividers>
+        <Typography component="div" variant="body2">
+          {children}
+        </Typography>
+      </AppDialogContent>
+      <AppDialogActions>
+        <AppNeutralButton onClick={() => onClose(false)}>
+          {cancelText || i18n.t("confirmationModal.buttons.cancel")}
+        </AppNeutralButton>
+        {destructive ? (
+          <Button
+            variant="contained"
+            className={classes.confirmDanger}
+            onClick={() => {
+              onConfirm();
+              onClose(false);
+            }}
+          >
+            {confirmText || i18n.t("confirmationModal.buttons.confirm")}
+          </Button>
+        ) : (
+          <AppPrimaryButton
+            onClick={() => {
+              onConfirm();
+              onClose(false);
+            }}
+          >
+            {confirmText || i18n.t("confirmationModal.buttons.confirm")}
+          </AppPrimaryButton>
+        )}
+      </AppDialogActions>
+    </AppDialog>
+  );
 };
 
 export default ConfirmationModal;

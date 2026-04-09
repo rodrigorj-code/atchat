@@ -1,6 +1,8 @@
 import React from "react";
 import { Typography, Grid, Paper } from "@material-ui/core";
+import Alert from "@material-ui/lab/Alert";
 import useStyles from "./styles";
+import useCheckoutStyles from "../styles";
 import { i18n } from "../../../translate/i18n";
 import moment from "moment";
 
@@ -10,6 +12,7 @@ import moment from "moment";
 export default function ShippingDetails(props) {
   const { formValues, invoice } = props;
   const classes = useStyles();
+  const checkoutClasses = useCheckoutStyles();
   const { plan } = formValues;
 
   if (!plan) {
@@ -57,14 +60,20 @@ export default function ShippingDetails(props) {
         <Typography variant="h6" gutterBottom className={classes.title}>
           {i18n.t("checkoutPage.review.planSectionTitle")}
         </Typography>
+        <Alert
+          severity="info"
+          variant="outlined"
+          className={checkoutClasses.contextAlertTight}
+        >
+          <Typography variant="body2" component="p">
+            {i18n.t("checkoutPage.review.planReferenceOnly")}
+          </Typography>
+        </Alert>
         <Typography gutterBottom>
           {i18n.t("checkoutPage.review.users")}: {users}
         </Typography>
         <Typography gutterBottom>
           {i18n.t("checkoutPage.review.whatsapp")}: {connections}
-        </Typography>
-        <Typography variant="body2" color="textSecondary">
-          {i18n.t("checkoutPage.review.planReferenceOnly")}
         </Typography>
       </Grid>
     </Grid>

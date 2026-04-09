@@ -1,5 +1,19 @@
 import { makeStyles } from '@material-ui/core/styles';
 export default makeStyles(theme => ({
+  contextAlert: {
+    width: '100%',
+    marginBottom: theme.spacing(2),
+    '& .MuiAlert-message': {
+      width: '100%',
+    },
+  },
+  contextAlertTight: {
+    width: '100%',
+    marginBottom: theme.spacing(1.5),
+    '& .MuiAlert-message': {
+      width: '100%',
+    },
+  },
   stepper: {
     padding: theme.spacing(3, 0, 5)
   },

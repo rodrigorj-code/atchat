@@ -3,15 +3,9 @@ import React, { useContext, useEffect, useRef, useState } from "react";
 import { useParams, useHistory } from "react-router-dom";
 
 import {
-  Button,
-  CircularProgress,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
+  Box,
   Fab,
   Grid,
-  InputBase,
   makeStyles,
   Paper,
   Tab,
@@ -19,6 +13,7 @@ import {
   TextField,
   Typography,
 } from "@material-ui/core";
+import InputAdornment from "@material-ui/core/InputAdornment";
 import SearchIcon from "@material-ui/icons/Search";
 import AddIcon from "@material-ui/icons/Add";
 import PeopleIcon from "@material-ui/icons/People";
@@ -34,6 +29,17 @@ import { AuthContext } from "../../context/Auth/AuthContext";
 import withWidth, { isWidthUp } from "@material-ui/core/withWidth";
 import { i18n } from "../../translate/i18n";
 import toastError from "../../errors/toastError";
+import {
+  AppPrimaryButton,
+  AppNeutralButton,
+  AppDialog,
+  AppDialogTitle,
+  AppDialogContent,
+  AppDialogActions,
+  AppEmptyState,
+  AppLoadingState,
+  AppActionBar,
+} from "../../ui";
 
 const useStyles = makeStyles((theme) => ({
   mainContainer: {
@@ -74,83 +80,50 @@ const useStyles = makeStyles((theme) => ({
     height: "100%",
     position: "relative",
   },
-  chatHeader: {
-    display: "flex",
-    alignItems: "center",
+  paneHeader: {
     padding: theme.spacing(1.5, 2),
-    borderBottom: "1px solid rgba(0,0,0,0.08)",
+    borderBottom: `1px solid ${theme.palette.divider}`,
+  },
+  paneTitle: {
     fontWeight: 600,
-    fontSize: "1.125rem",
   },
-  searchWrap: {
-    display: "flex",
-    alignItems: "center",
+  searchBar: {
     padding: theme.spacing(1, 2),
-    borderBottom: "1px solid rgba(0,0,0,0.08)",
-    backgroundColor: "#fff",
+    borderBottom: `1px solid ${theme.palette.divider}`,
+    backgroundColor: theme.palette.background.paper,
   },
-  searchInput: {
-    flex: 1,
-    marginLeft: 8,
-    fontSize: "0.9375rem",
+  filtersBar: {
+    flexWrap: "wrap",
+    alignItems: "center",
+    width: "100%",
+    gap: theme.spacing(1),
+  },
+  searchField: {
+    flex: "1 1 160px",
+    minWidth: 0,
   },
   listWrap: {
     flex: 1,
     overflow: "auto",
     minHeight: 0,
   },
-  emptyState: {
+  emptyPaneFill: {
+    flex: 1,
     display: "flex",
-    flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
-    padding: theme.spacing(4),
-    textAlign: "center",
-    color: theme.palette.text.secondary,
-  },
-  emptyIcon: {
-    fontSize: 64,
-    color: "rgba(0,0,0,0.2)",
-    marginBottom: theme.spacing(2),
-  },
-  emptyTitle: {
-    fontWeight: 600,
-    fontSize: "1rem",
-    marginBottom: theme.spacing(0.5),
-    color: theme.palette.text.primary,
-  },
-  emptySub: {
-    fontSize: "0.875rem",
-    marginBottom: theme.spacing(2),
-  },
-  btnNewChat: {
-    backgroundColor: "#1a1a1a",
-    color: "#fff",
-    fontWeight: 600,
-    textTransform: "uppercase",
-    padding: "10px 20px",
-    "&:hover": {
-      backgroundColor: "#333",
-    },
+    minHeight: 0,
+    padding: theme.spacing(2),
   },
   fabNew: {
     position: "absolute",
     bottom: 16,
     right: 16,
-    backgroundColor: "#1a1a1a",
-    color: "#fff",
     zIndex: 10,
-    "&:hover": {
-      backgroundColor: "#333",
-    },
   },
   gridItemTab: {
     height: "92%",
     width: "100%",
-  },
-  btnContainer: {
-    textAlign: "right",
-    padding: 10,
   },
 }));
 
@@ -208,14 +181,15 @@ export function ChatModal({
   };
 
   return (
-    <Dialog
+    <AppDialog
       open={open}
       onClose={handleClose}
       aria-labelledby="alert-dialog-title"
       aria-describedby="alert-dialog-description"
+      maxWidth="sm"
     >
-      <DialogTitle id="alert-dialog-title">{i18n.t("chat.modal.title")}</DialogTitle>
-      <DialogContent>
+      <AppDialogTitle id="alert-dialog-title">{i18n.t("chat.modal.title")}</AppDialogTitle>
+      <AppDialogContent dividers>
         <Grid spacing={2} container>
           <Grid xs={12} style={{ padding: 18 }} item>
             <TextField
@@ -235,16 +209,16 @@ export function ChatModal({
             />
           </Grid>
         </Grid>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={handleClose} color="primary">
+      </AppDialogContent>
+      <AppDialogActions>
+        <AppNeutralButton onClick={handleClose}>
           {i18n.t("chat.buttons.close")}
-        </Button>
-        <Button onClick={handleSave} color="primary" variant="contained">
+        </AppNeutralButton>
+        <AppPrimaryButton onClick={handleSave}>
           {i18n.t("chat.buttons.save")}
-        </Button>
-      </DialogActions>
-    </Dialog>
+        </AppPrimaryButton>
+      </AppDialogActions>
+    </AppDialog>
   );
 }
 
@@ -493,46 +467,59 @@ function Chat(props) {
       <Grid className={classes.gridContainer} container>
         <Grid className={classes.gridItem} md={4} item>
           <div className={classes.leftPane}>
-            <div className={classes.chatHeader}>
-              <Typography component="span" style={{ fontWeight: 600, fontSize: "1.125rem" }}>
+            <Box className={classes.paneHeader}>
+              <Typography
+                variant="h6"
+                color="primary"
+                component="h1"
+                className={classes.paneTitle}
+              >
                 {i18n.t("chat.page.title")}
               </Typography>
-            </div>
-            <div className={classes.searchWrap}>
-              <SearchIcon style={{ color: "rgba(0,0,0,0.4)" }} />
-              <InputBase
-                className={classes.searchInput}
-                placeholder={i18n.t("chat.page.searchPlaceholder")}
-                value={searchChat}
-                onChange={(e) => setSearchChat(e.target.value)}
-                inputProps={{ "aria-label": "buscar conversas" }}
-              />
-            </div>
+              <Typography variant="body2" color="textSecondary" component="p">
+                {i18n.t("chat.page.subtitle")}
+              </Typography>
+            </Box>
+            <Box className={classes.searchBar}>
+              <AppActionBar className={classes.filtersBar}>
+                <TextField
+                  className={classes.searchField}
+                  placeholder={i18n.t("chat.page.searchPlaceholder")}
+                  value={searchChat}
+                  onChange={(e) => setSearchChat(e.target.value)}
+                  variant="outlined"
+                  size="small"
+                  fullWidth
+                  inputProps={{ "aria-label": i18n.t("chat.page.searchPlaceholder") }}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <SearchIcon color="action" fontSize="small" />
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+              </AppActionBar>
+            </Box>
             <div className={classes.listWrap}>
               {chatsLoading ? (
-                <div className={classes.emptyState}>
-                  <CircularProgress size={36} />
-                  <Typography className={classes.emptySub} style={{ marginTop: 16 }}>
-                    {i18n.t("chat.page.loadingConversations")}
-                  </Typography>
-                </div>
+                <AppLoadingState message={i18n.t("chat.page.loadingConversations")} />
               ) : filteredChats.length === 0 ? (
-                <div className={classes.emptyState}>
-                  <PeopleIcon className={classes.emptyIcon} />
-                  <Typography className={classes.emptyTitle}>
-                    {hasSearch && chats.length > 0
+                <AppEmptyState
+                  icon={PeopleIcon}
+                  title={
+                    hasSearch && chats.length > 0
                       ? i18n.t("chat.page.emptyNoSearchTitle")
-                      : i18n.t("chat.page.emptyNoConversationsTitle")}
-                  </Typography>
-                  <Typography className={classes.emptySub}>
-                    {hasSearch && chats.length > 0
+                      : i18n.t("chat.page.emptyNoConversationsTitle")
+                  }
+                  description={
+                    hasSearch && chats.length > 0
                       ? i18n.t("chat.page.emptyNoSearchSub")
-                      : i18n.t("chat.page.emptyNoConversationsSub")}
-                  </Typography>
+                      : i18n.t("chat.page.emptyNoConversationsSub")
+                  }
+                >
                   {!(hasSearch && chats.length > 0) && (
-                    <Button
-                      className={classes.btnNewChat}
-                      variant="contained"
+                    <AppPrimaryButton
                       startIcon={<AddIcon />}
                       onClick={() => {
                         setDialogType("new");
@@ -540,9 +527,9 @@ function Chat(props) {
                       }}
                     >
                       {i18n.t("chat.page.newConversationButton")}
-                    </Button>
+                    </AppPrimaryButton>
                   )}
-                </div>
+                </AppEmptyState>
               ) : (
                 <ChatList
                   chats={filteredChats}
@@ -559,6 +546,7 @@ function Chat(props) {
             </div>
             <Fab
               className={classes.fabNew}
+              color="primary"
               size="medium"
               aria-label="nova conversa"
               onClick={() => {
@@ -582,24 +570,12 @@ function Chat(props) {
               handleLoadMore={loadMoreMessages}
             />
           ) : (
-            <div
-              className={classes.emptyState}
-              style={{
-                flex: 1,
-                justifyContent: "center",
-                minHeight: 0,
-                display: "flex",
-              }}
-            >
-              <div>
-                <PeopleIcon className={classes.emptyIcon} />
-                <Typography className={classes.emptyTitle}>
-                  {i18n.t("chat.page.emptySelectTitle")}
-                </Typography>
-                <Typography className={classes.emptySub}>
-                  {i18n.t("chat.page.emptySelectSub")}
-                </Typography>
-              </div>
+            <div className={classes.emptyPaneFill}>
+              <AppEmptyState
+                icon={PeopleIcon}
+                title={i18n.t("chat.page.emptySelectTitle")}
+                description={i18n.t("chat.page.emptySelectSub")}
+              />
             </div>
           )}
         </Grid>
@@ -613,6 +589,48 @@ function Chat(props) {
     return (
       <Grid className={classes.gridContainer} container>
         <Grid md={12} item>
+          <Box className={classes.paneHeader}>
+            <Typography
+              variant="h6"
+              color="primary"
+              component="h1"
+              className={classes.paneTitle}
+            >
+              {i18n.t("chat.page.title")}
+            </Typography>
+            <Typography variant="body2" color="textSecondary" component="p">
+              {i18n.t("chat.page.subtitle")}
+            </Typography>
+          </Box>
+          <Box className={classes.searchBar}>
+            <AppActionBar className={classes.filtersBar} align="between">
+              <TextField
+                className={classes.searchField}
+                placeholder={i18n.t("chat.page.searchPlaceholder")}
+                value={searchChat}
+                onChange={(e) => setSearchChat(e.target.value)}
+                variant="outlined"
+                size="small"
+                fullWidth
+                inputProps={{ "aria-label": i18n.t("chat.page.searchPlaceholder") }}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchIcon color="action" fontSize="small" />
+                    </InputAdornment>
+                  ),
+                }}
+              />
+              <AppPrimaryButton
+                onClick={() => {
+                  setDialogType("new");
+                  setShowDialog(true);
+                }}
+              >
+                {i18n.t("chat.buttons.newChat")}
+              </AppPrimaryButton>
+            </AppActionBar>
+          </Box>
           <Tabs
             value={tab}
             indicatorColor="primary"
@@ -626,49 +644,22 @@ function Chat(props) {
         </Grid>
         {tab === 0 && (
           <Grid className={classes.gridItemTab} md={12} item>
-            <div className={classes.searchWrap}>
-              <SearchIcon style={{ color: "rgba(0,0,0,0.4)" }} />
-              <InputBase
-                className={classes.searchInput}
-                placeholder={i18n.t("chat.page.searchPlaceholder")}
-                value={searchChat}
-                onChange={(e) => setSearchChat(e.target.value)}
-                inputProps={{ "aria-label": "buscar conversas" }}
-              />
-            </div>
-            <div className={classes.btnContainer}>
-              <Button
-                onClick={() => {
-                  setDialogType("new");
-                  setShowDialog(true);
-                }}
-                color="primary"
-                variant="contained"
-              >
-                {i18n.t("chat.buttons.newChat")}
-              </Button>
-            </div>
             {chatsLoading ? (
-              <div className={classes.emptyState}>
-                <CircularProgress size={32} />
-                <Typography variant="body2" style={{ marginTop: 12 }}>
-                  {i18n.t("chat.page.loadingConversations")}
-                </Typography>
-              </div>
+              <AppLoadingState message={i18n.t("chat.page.loadingConversations")} />
             ) : filteredChats.length === 0 ? (
-              <div className={classes.emptyState}>
-                <PeopleIcon className={classes.emptyIcon} />
-                <Typography className={classes.emptyTitle}>
-                  {hasSearch && chats.length > 0
+              <AppEmptyState
+                icon={PeopleIcon}
+                title={
+                  hasSearch && chats.length > 0
                     ? i18n.t("chat.page.emptyNoSearchTitle")
-                    : i18n.t("chat.page.emptyNoConversationsTitle")}
-                </Typography>
-                <Typography className={classes.emptySub}>
-                  {hasSearch && chats.length > 0
+                    : i18n.t("chat.page.emptyNoConversationsTitle")
+                }
+                description={
+                  hasSearch && chats.length > 0
                     ? i18n.t("chat.page.emptyNoSearchSub")
-                    : i18n.t("chat.page.emptyNoConversationsSub")}
-                </Typography>
-              </div>
+                    : i18n.t("chat.page.emptyNoConversationsSub")
+                }
+              />
             ) : (
               <ChatList
                 chats={filteredChats}
@@ -697,17 +688,12 @@ function Chat(props) {
                 handleLoadMore={loadMoreMessages}
               />
             ) : (
-              <div
-                className={classes.emptyState}
-                style={{ height: "100%", minHeight: 200 }}
-              >
-                <PeopleIcon className={classes.emptyIcon} />
-                <Typography className={classes.emptyTitle}>
-                  {i18n.t("chat.page.emptySelectTitle")}
-                </Typography>
-                <Typography className={classes.emptySub}>
-                  {i18n.t("chat.page.emptySelectSub")}
-                </Typography>
+              <div className={classes.emptyPaneFill}>
+                <AppEmptyState
+                  icon={PeopleIcon}
+                  title={i18n.t("chat.page.emptySelectTitle")}
+                  description={i18n.t("chat.page.emptySelectSub")}
+                />
               </div>
             )}
           </Grid>

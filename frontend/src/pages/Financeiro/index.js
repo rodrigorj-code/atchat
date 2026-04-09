@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo, useContext } from "react";
-import { makeStyles } from "@material-ui/core/styles";
-import Paper from "@material-ui/core/Paper";
+import { alpha, makeStyles } from "@material-ui/core/styles";
 import Button from "@material-ui/core/Button";
 import Table from "@material-ui/core/Table";
 import TableBody from "@material-ui/core/TableBody";
@@ -16,9 +15,8 @@ import SearchIcon from "@material-ui/icons/Search";
 import Alert from "@material-ui/lab/Alert";
 
 import MainContainer from "../../components/MainContainer";
-import MainHeader from "../../components/MainHeader";
-import Title from "../../components/Title";
 import SubscriptionModal from "../../components/SubscriptionModal";
+import { AppPageHeader, AppSectionCard, AppActionBar } from "../../ui";
 import api from "../../services/api";
 import { i18n } from "../../translate/i18n";
 import TableRowSkeleton from "../../components/TableRowSkeleton";
@@ -28,15 +26,47 @@ import { AuthContext } from "../../context/Auth/AuthContext";
 import moment from "moment";
 
 const useStyles = makeStyles((theme) => ({
-  mainPaper: {
+  pageRoot: {
+    display: "flex",
+    flexDirection: "column",
+    gap: theme.spacing(2),
     flex: 1,
-    padding: theme.spacing(2),
-    overflowY: "auto",
-    ...theme.scrollbarStyles,
+    minHeight: 0,
+    [theme.breakpoints.up("md")]: {
+      gap: theme.spacing(3),
+    },
   },
-  search: {
+  tableCard: {
+    flex: 1,
+    minHeight: 0,
+  },
+  filtersBar: {
+    flexWrap: "wrap",
+    alignItems: "flex-end",
+  },
+  searchField: {
+    flex: "1 1 220px",
+    minWidth: 180,
+    maxWidth: 420,
+  },
+  delinquentAlert: {
     marginBottom: theme.spacing(2),
-    maxWidth: 360,
+    width: "100%",
+    "& .MuiAlert-message": {
+      width: "100%",
+    },
+  },
+  rowOverdue: {
+    backgroundColor: alpha(theme.palette.error.main, 0.06),
+    "&.MuiTableRow-hover:hover": {
+      backgroundColor: alpha(theme.palette.error.main, 0.11),
+    },
+  },
+  rowPaid: {
+    backgroundColor: alpha(theme.palette.success.main, 0.06),
+    "&.MuiTableRow-hover:hover": {
+      backgroundColor: alpha(theme.palette.success.main, 0.11),
+    },
   },
   emptyBox: {
     padding: theme.spacing(6),
@@ -129,43 +159,60 @@ const Invoices = () => {
   const finance = user?.finance;
 
   return (
-    <MainContainer>
+    <MainContainer className={classes.pageRoot}>
       <SubscriptionModal
         open={contactModalOpen}
         onClose={handleCloseContactModal}
         Invoice={storagePlans}
       />
-      <MainHeader>
-        <Title>{i18n.t("invoices.title")}</Title>
-      </MainHeader>
+      <AppPageHeader
+        title={
+          <Typography variant="h5" color="primary" component="h1">
+            {i18n.t("invoices.title")}
+          </Typography>
+        }
+        subtitle={
+          <Typography variant="body2" color="textSecondary" component="p">
+            {i18n.t("invoices.pageSubtitle")}
+          </Typography>
+        }
+      />
 
       {finance?.delinquent && (
-        <Alert severity="warning" style={{ marginBottom: 16 }}>
-          <Typography variant="subtitle2" component="span">
+        <Alert
+          severity="warning"
+          variant="outlined"
+          className={classes.delinquentAlert}
+        >
+          <Typography variant="body2" component="p">
             {i18n.t("finance.page.delinquentAlert")}
           </Typography>
         </Alert>
       )}
 
-      <TextField
-        className={classes.search}
-        placeholder={i18n.t("invoices.searchPlaceholder")}
-        type="search"
-        value={searchParam}
-        onChange={(e) => setSearchParam(e.target.value)}
-        InputProps={{
-          startAdornment: (
-            <InputAdornment position="start">
-              <SearchIcon color="action" fontSize="small" />
-            </InputAdornment>
-          ),
-        }}
-        variant="outlined"
-        size="small"
-        fullWidth
-      />
+      <AppSectionCard dense variant="outlined">
+        <AppActionBar className={classes.filtersBar}>
+          <TextField
+            className={classes.searchField}
+            placeholder={i18n.t("invoices.searchPlaceholder")}
+            type="search"
+            value={searchParam}
+            onChange={(e) => setSearchParam(e.target.value)}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon color="action" fontSize="small" />
+                </InputAdornment>
+              ),
+            }}
+            variant="outlined"
+            size="small"
+            fullWidth
+          />
+        </AppActionBar>
+      </AppSectionCard>
 
-      <Paper className={classes.mainPaper} variant="outlined">
+      <AppSectionCard scrollable className={classes.tableCard} variant="outlined">
         {loading && !invoices.length ? (
           <Table size="small">
             <TableHead>
@@ -207,14 +254,14 @@ const Invoices = () => {
             <TableBody>
               {filtered.map((inv) => {
                 const visual = getInvoiceVisualStatus(inv);
-                const rowBg =
+                const rowClass =
                   visual === "overdue"
-                    ? "rgba(244, 67, 54, 0.06)"
+                    ? classes.rowOverdue
                     : visual === "paid"
-                    ? "rgba(36, 199, 118, 0.06)"
-                    : "transparent";
+                    ? classes.rowPaid
+                    : undefined;
                 return (
-                  <TableRow key={inv.id} style={{ backgroundColor: rowBg }}>
+                  <TableRow key={inv.id} hover className={rowClass}>
                     <TableCell align="center" className={classes.idCell}>
                       {inv.id}
                     </TableCell>
@@ -256,7 +303,7 @@ const Invoices = () => {
             </TableBody>
           </Table>
         )}
-      </Paper>
+      </AppSectionCard>
     </MainContainer>
   );
 };

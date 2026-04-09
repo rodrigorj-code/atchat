@@ -1,5 +1,7 @@
 import React, { useContext, useEffect, useMemo, useState } from "react";
 import { Switch, Route, Redirect } from "react-router-dom";
+import Box from "@material-ui/core/Box";
+import CircularProgress from "@material-ui/core/CircularProgress";
 import { AuthContext } from "../context/Auth/AuthContext";
 import { Can } from "../components/Can";
 import usePlans from "../hooks/usePlans";
@@ -54,13 +56,28 @@ function usePlanFlags() {
   });
 
   useEffect(() => {
-    if (!user?.companyId) return;
+    if (!user?.companyId) {
+      setFlags((f) => ({ ...f, loaded: true }));
+      return;
+    }
     let cancelled = false;
     (async () => {
       try {
         const planConfigs = await getPlanCompany(undefined, user.companyId);
-        if (cancelled || !planConfigs?.plan) return;
-        const p = planConfigs.plan;
+        if (cancelled) return;
+        const p = planConfigs?.plan;
+        if (!p) {
+          setFlags({
+            useCampaigns: false,
+            useKanban: false,
+            useOpenAi: false,
+            useIntegrations: false,
+            useSchedules: false,
+            useExternalApi: false,
+            loaded: true,
+          });
+          return;
+        }
         setFlags({
           useCampaigns: !!p.useCampaigns,
           useKanban: !!p.useKanban,
@@ -162,6 +179,14 @@ function AutomacaoModule({ planFlags, isAdmin }) {
     return t;
   }, [planFlags.useCampaigns, planFlags.useIntegrations, planFlags.useOpenAi, isAdmin, i18n.language]);
 
+  if (!planFlags.loaded) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight={240} width="100%">
+        <CircularProgress size={36} />
+      </Box>
+    );
+  }
+
   return (
     <ModuleTabsLayout tabs={tabs}>
       <Switch>
@@ -172,10 +197,24 @@ function AutomacaoModule({ planFlags, isAdmin }) {
             <Route exact path="/flowbuilder/:id?" component={FlowBuilderConfig} />
           </>
         )}
-        {planFlags.useIntegrations && (
-          <Route exact path="/queue-integration" component={QueueIntegration} />
-        )}
-        {planFlags.useOpenAi && <Route exact path="/prompts" component={Prompts} />}
+        <Route
+          exact
+          path="/queue-integration"
+          render={() =>
+            isAdmin && planFlags.useIntegrations ? (
+              <QueueIntegration />
+            ) : (
+              <Redirect to="/quick-messages" />
+            )
+          }
+        />
+        <Route
+          exact
+          path="/prompts"
+          render={() =>
+            isAdmin && planFlags.useOpenAi ? <Prompts /> : <Redirect to="/quick-messages" />
+          }
+        />
         <Route exact path="/quick-messages" component={QuickMessages} />
       </Switch>
     </ModuleTabsLayout>

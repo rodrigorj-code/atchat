@@ -1,59 +1,72 @@
 import { toast } from "react-toastify";
 import { i18n } from "../translate/i18n";
-import { isString } from 'lodash';
+import { isString } from "lodash";
+import { getErrorToastOptions } from "./feedbackToasts";
 
-const toastError = err => {
-    const errorMsg = err.response?.data?.error;
-    if (errorMsg) {
-        if (i18n.exists(`backendErrors.${errorMsg}`)) {
-            console.error(`Error: ${i18n.t(`backendErrors.${errorMsg}`)}`);
-            // Optionally log the error to an external service here
-            
-            toast.error(i18n.t(`backendErrors.${errorMsg}`), {
-                toastId: errorMsg,
-                autoClose: 2000,
-                hideProgressBar: false,
-                closeOnClick: true,
-                pauseOnHover: false,
-                draggable: true,
-                progress: undefined,
-                theme: "light",
-            });
-            
-            return;
-        } else {
-            
-            toast.error(errorMsg, {
-                toastId: errorMsg,
-                autoClose: 2000,
-                hideProgressBar: false,
-                closeOnClick: true,
-                pauseOnHover: false,
-                draggable: true,
-                progress: undefined,
-                theme: "light",
-            });
-            
-            return;
-        }
-    } if (isString(err)) {
-        console.error(`Error: ${err}`);
-        toast.error(err);
-        return;
-    } else {
-        const msg = err?.message || err?.response?.statusText;
-        const isAxios = err?.isAxiosError === true;
-        const isNetworkError =
-            err?.message === "Network Error" ||
-            err?.code === "ERR_NETWORK" ||
-            (isAxios && !err?.response && err?.request);
-        console.error("An error occurred!", err);
-        const displayMsg = isNetworkError
-            ? (i18n.exists("errors.connectionError") ? i18n.t("errors.connectionError") : "Não foi possível conectar ao servidor. Verifique a URL do backend e se o servidor está online.")
-            : (msg || (i18n.exists("errors.generic") ? i18n.t("errors.generic") : "Ocorreu um erro. Tente novamente."));
-        toast.error(displayMsg, { autoClose: 5000 });
-        return;
+/**
+ * Exibe erro amigável: prioriza códigos `backendErrors.*`, rede e mensagem genérica.
+ * Mensagens técnicas sem tradução não são mostradas cruas ao utilizador.
+ */
+const toastError = (err) => {
+  const errOpts = getErrorToastOptions();
+
+  const apiPayload = err?.response?.data;
+  const errorCode = apiPayload?.error;
+  const apiMessage = apiPayload?.message;
+
+  if (errorCode) {
+    if (i18n.exists(`backendErrors.${errorCode}`)) {
+      const text = i18n.t(`backendErrors.${errorCode}`);
+      console.error("[API]", errorCode, text);
+      toast.error(text, {
+        ...errOpts,
+        toastId: `be-${errorCode}`,
+      });
+      return;
     }
+    console.error("[API] código sem tradução:", errorCode);
+    toast.error(i18n.t("errors.operationFailed"), {
+      ...errOpts,
+      toastId: `be-unk-${String(errorCode).slice(0, 40)}`,
+    });
+    return;
+  }
+
+  if (apiMessage && isString(apiMessage)) {
+    const trimmed = apiMessage.trim();
+    if (trimmed && !/^ERR_[A-Z0-9_]+$/.test(trimmed)) {
+      if (i18n.exists(`backendErrors.${trimmed}`)) {
+        toast.error(i18n.t(`backendErrors.${trimmed}`), {
+          ...errOpts,
+          toastId: `be-msg-${trimmed.slice(0, 32)}`,
+        });
+        return;
+      }
+      toast.error(trimmed, { ...errOpts, toastId: trimmed.slice(0, 48) });
+      return;
+    }
+  }
+
+  if (isString(err)) {
+    console.error("[toastError string]", err);
+    toast.error(err, errOpts);
+    return;
+  }
+
+  const msg = err?.message || err?.response?.statusText;
+  const isAxios = err?.isAxiosError === true;
+  const isNetworkError =
+    err?.message === "Network Error" ||
+    err?.code === "ERR_NETWORK" ||
+    (isAxios && !err?.response && err?.request);
+
+  console.error("toastError:", err);
+
+  const displayMsg = isNetworkError
+    ? i18n.t("errors.connectionError")
+    : msg || i18n.t("errors.generic");
+
+  toast.error(displayMsg, errOpts);
 };
 
 export default toastError;

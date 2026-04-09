@@ -2,17 +2,12 @@ import React, { useState, useEffect, useContext, useRef } from "react";
 
 import * as Yup from "yup";
 import { Formik, Form, Field } from "formik";
-import { toast } from "react-toastify";
 import { useHistory } from "react-router-dom";
 
 import { makeStyles } from "@material-ui/core/styles";
 import { green } from "@material-ui/core/colors";
 import Button from "@material-ui/core/Button";
 import TextField from "@material-ui/core/TextField";
-import Dialog from "@material-ui/core/Dialog";
-import DialogActions from "@material-ui/core/DialogActions";
-import DialogContent from "@material-ui/core/DialogContent";
-import DialogTitle from "@material-ui/core/DialogTitle";
 import CircularProgress from "@material-ui/core/CircularProgress";
 import RadioGroup from "@material-ui/core/RadioGroup";
 import FormControlLabel from "@material-ui/core/FormControlLabel";
@@ -25,6 +20,7 @@ import { i18n } from "../../translate/i18n";
 
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
+import { showSuccessToast } from "../../errors/feedbackToasts";
 import { FormControl, Grid, IconButton, MenuItem, Typography } from "@material-ui/core";
 import Autocomplete from "@material-ui/lab/Autocomplete";
 import moment from "moment-timezone";
@@ -35,6 +31,15 @@ import AttachFile from "@material-ui/icons/AttachFile";
 import { head } from "lodash";
 import ConfirmationModal from "../ConfirmationModal";
 import MessageVariablesPicker from "../MessageVariablesPicker";
+import {
+  AppDialog,
+  AppDialogTitle,
+  AppDialogContent,
+  AppDialogActions,
+  AppPrimaryButton,
+  AppSecondaryButton,
+  AppNeutralButton,
+} from "../../ui";
 
 const useStyles = makeStyles(theme => ({
 	root: {
@@ -296,7 +301,7 @@ const ScheduleModal = ({ open, onClose, scheduleId, contactId, cleanContact, rel
 					await api.post(`/schedules/${data.id}/media-upload`, formData);
 				}
 			}
-			toast.success(i18n.t("scheduleModal.success"));
+			showSuccessToast("scheduleModal.success");
 			if (typeof reload === "function") {
 				reload();
 			}
@@ -337,7 +342,7 @@ const ScheduleModal = ({ open, onClose, scheduleId, contactId, cleanContact, rel
 				...prev,
 				mediaPath: null,
 			}));
-			toast.success(i18n.t("scheduleModal.toasts.deleted"));
+			showSuccessToast("scheduleModal.toasts.deleted");
 			if (typeof reload === "function") {
 				reload();
 			}
@@ -353,25 +358,30 @@ const ScheduleModal = ({ open, onClose, scheduleId, contactId, cleanContact, rel
 				open={confirmationOpen}
 				onClose={() => setConfirmationOpen(false)}
 				onConfirm={deleteMedia}
+				destructive
 			>
 				{i18n.t("scheduleModal.confirmationModal.deleteMessage")}
 			</ConfirmationModal>
-			<Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth scroll="paper">
-				<DialogTitle id="form-dialog-title">
-					{i18n.t(`scheduleModal.title.${titleKey}`)}
-					<Typography variant="caption" color="textSecondary" component="div" style={{ marginTop: 6 }}>
-						{i18n.t("scheduleModal.subtitle")}
-					</Typography>
-					<Typography variant="caption" color="textSecondary" component="div" style={{ marginTop: 4 }}>
-						{i18n.t("scheduleModal.form.companyTimezone")}: {companyTz}
-					</Typography>
-					{schedule.lastError &&
-						(schedule.status === "ERRO" || schedule.status === "AGUARDANDO_CONEXAO") && (
-							<Typography variant="body2" color="textSecondary" style={{ marginTop: 8 }}>
-								{schedule.lastError}
-							</Typography>
-						)}
-				</DialogTitle>
+			<AppDialog open={open} onClose={handleClose} maxWidth="sm" fullWidth scroll="paper">
+				<AppDialogTitle disableTypography id="form-dialog-title">
+					<>
+						<Typography component="span" variant="h6" style={{ fontWeight: 600 }}>
+							{i18n.t(`scheduleModal.title.${titleKey}`)}
+						</Typography>
+						<Typography variant="caption" color="textSecondary" component="div" style={{ marginTop: 6 }}>
+							{i18n.t("scheduleModal.subtitle")}
+						</Typography>
+						<Typography variant="caption" color="textSecondary" component="div" style={{ marginTop: 4 }}>
+							{i18n.t("scheduleModal.form.companyTimezone")}: {companyTz}
+						</Typography>
+						{schedule.lastError &&
+							(schedule.status === "ERRO" || schedule.status === "AGUARDANDO_CONEXAO") && (
+								<Typography variant="body2" color="textSecondary" style={{ marginTop: 8 }}>
+									{schedule.lastError}
+								</Typography>
+							)}
+					</>
+				</AppDialogTitle>
 				<div style={{ display: "none" }}>
 					<input
 						type="file"
@@ -398,7 +408,7 @@ const ScheduleModal = ({ open, onClose, scheduleId, contactId, cleanContact, rel
 
 						return (
 							<Form>
-								<DialogContent dividers>
+								<AppDialogContent dividers>
 									<FormControl component="fieldset" fullWidth margin="dense">
 										<FormLabel component="legend">{i18n.t("scheduleModal.form.sendType")}</FormLabel>
 										<RadioGroup
@@ -616,32 +626,23 @@ const ScheduleModal = ({ open, onClose, scheduleId, contactId, cleanContact, rel
 											</IconButton>
 										</Grid>
 									)}
-								</DialogContent>
-								<DialogActions>
+								</AppDialogContent>
+								<AppDialogActions>
 									{!attachment && !schedule.mediaPath && (
-										<Button
-											color="primary"
+										<AppSecondaryButton
 											onClick={() => attachmentFile.current.click()}
 											disabled={isSubmitting}
-											variant="outlined"
 										>
 											{i18n.t("quickMessages.buttons.attach")}
-										</Button>
+										</AppSecondaryButton>
 									)}
-									<Button
-										onClick={handleClose}
-										color="secondary"
-										disabled={isSubmitting}
-										variant="outlined"
-									>
+									<AppNeutralButton onClick={handleClose} disabled={isSubmitting}>
 										{i18n.t("scheduleModal.buttons.cancel")}
-									</Button>
+									</AppNeutralButton>
 									{(schedule.sentAt === null || schedule.sentAt === "") && (
-										<Button
+										<AppPrimaryButton
 											type="submit"
-											color="primary"
 											disabled={isSubmitting}
-											variant="contained"
 											className={classes.btnWrapper}
 										>
 											{scheduleId
@@ -650,14 +651,14 @@ const ScheduleModal = ({ open, onClose, scheduleId, contactId, cleanContact, rel
 											{isSubmitting && (
 												<CircularProgress size={24} className={classes.buttonProgress} />
 											)}
-										</Button>
+										</AppPrimaryButton>
 									)}
-								</DialogActions>
+								</AppDialogActions>
 							</Form>
 						);
 					}}
 				</Formik>
-			</Dialog>
+			</AppDialog>
 		</div>
 	);
 };

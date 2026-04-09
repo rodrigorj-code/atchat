@@ -10,6 +10,18 @@ const useStyles = makeStyles((theme) => ({
     display: "flex",
     flexDirection: "column",
     minHeight: 0,
+    transition: theme.transitions.create(["box-shadow"], {
+      duration: 200,
+      easing: theme.transitions.easing.easeInOut,
+    }),
+    "@media (hover: hover)": {
+      "&:hover": {
+        boxShadow:
+          theme.palette.type === "light"
+            ? "0 2px 12px rgba(15, 23, 42, 0.09)"
+            : "0 2px 12px rgba(0, 0, 0, 0.35)",
+      },
+    },
   },
   dense: {
     padding: theme.spacing(1),

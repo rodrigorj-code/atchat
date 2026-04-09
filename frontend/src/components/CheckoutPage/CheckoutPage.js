@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import {
+  Box,
   Stepper,
   Step,
   StepLabel,
@@ -7,6 +8,7 @@ import {
   Typography,
   CircularProgress,
 } from "@material-ui/core";
+import Alert from "@material-ui/lab/Alert";
 import * as Yup from "yup";
 import { Formik, Form } from "formik";
 
@@ -104,15 +106,17 @@ export default function CheckoutPage(props) {
       <Typography component="h2" variant="h5" align="center" gutterBottom>
         {i18n.t("checkoutPage.pixFlowTitle")}
       </Typography>
-      <Typography
-        component="p"
-        variant="body2"
-        color="textSecondary"
-        align="center"
-        paragraph
-      >
-        {i18n.t("checkoutPage.pixFlowSubtitle")}
-      </Typography>
+      <Box display="flex" justifyContent="center" width="100%">
+        <Alert
+          severity="info"
+          variant="outlined"
+          className={classes.contextAlert}
+        >
+          <Typography variant="body2" component="p" align="center">
+            {i18n.t("checkoutPage.pixFlowSubtitle")}
+          </Typography>
+        </Alert>
+      </Box>
       <Stepper activeStep={activeStep} className={classes.stepper}>
         {steps.map((label) => (
           <Step key={label}>

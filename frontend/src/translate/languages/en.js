@@ -244,6 +244,7 @@ const messages = {
 			},
 			invoices: {
 				title: "Invoices",
+				pageSubtitle: "Invoices and PIX payment.",
 				paid: "Paid",
 				open: "Open",
 				expired: "Expired",
@@ -271,7 +272,7 @@ const messages = {
 				},
 				page: {
 					delinquentAlert:
-						"We have detected a billing issue. The PIX charge always uses the invoice amount below.",
+						"There is a pending payment. PIX always uses the amount of the invoice you select in the list.",
 				},
 				login: {
 					expiringSoon:
@@ -282,10 +283,10 @@ const messages = {
 			},
 			checkoutPage: {
 				modalTitle: "PIX payment",
-				noInvoice: "To pay with PIX, open Billing and click Pay on the desired invoice.",
+				noInvoice: "To pay with PIX, open Billing and tap Pay on the invoice you need.",
 				pixFlowTitle: "Invoice payment — PIX",
 				pixFlowSubtitle:
-					"The amount charged is always the selected invoice. The backend generates the PIX charge.",
+					"PIX is generated with the invoice amount. The plan below shows limits only—not what you pay.",
 				steps: {
 					data: "Data",
 					customize: "Customize",
@@ -304,11 +305,11 @@ const messages = {
 					amountCharged: "Amount (PIX)",
 					dueDate: "Due date",
 					amountFromInvoice:
-						"This amount is the invoice total. It will be sent to the gateway.",
+						"Same as the invoice sent to payment; ignore the plan price as the charge amount.",
 					totalLabel: "PIX total",
 					waitingHint: "Awaiting payment. Charge expires in about {{minutes}} min.",
 					expiredHint:
-						"This PIX charge may have expired. Close and go to Billing to generate a new one.",
+						"This charge may have expired. Close, return to Billing, and generate a new PIX.",
 					paidToast: "Payment confirmed! New date: {{date}}",
 					instructions:
 						"Open your bank app, pay with PIX copy-and-paste or QR code, then wait for automatic confirmation.",
@@ -322,11 +323,11 @@ const messages = {
 					title: "Subscription Summary",
 					titlePix: "Confirm PIX payment",
 					confirmPixHint:
-						"Check the invoice amount and your plan. Continuing will create an immediate PIX charge.",
+						"Check the invoice amount. Continuing will create the PIX charge.",
 					pixSectionTitle: "Charge (invoice)",
 					planSectionTitle: "Plan reference",
 					planReferenceOnly:
-						"Plan limits are informational. The actual charge is the invoice amount above.",
+						"Plan limits are informational; the charge is the invoice amount above.",
 					invoiceId: "Invoice",
 					chargesFromInvoice: "PIX amount:",
 					dueLabel: "Due",
@@ -502,9 +503,9 @@ const messages = {
 				subtitle:
 					"WhatsApp customers and contacts with interaction and ticket history.",
 				pageBanner:
-					"See everyone who talks to your business. Tags shown here come from tickets linked to each contact.",
+					"Tags come from tickets already linked to each contact.",
 				pageExpectations:
-					"This area focuses on service and history — it is not a full sales funnel or commercial pipeline. It is the foundation to organize conversations and can grow over time.",
+					"Built for conversation history — not a full CRM or sales pipeline.",
 				tagsColumnHint:
 					"Tags are derived from tickets associated with this contact.",
 				tagFilterHelp:
@@ -554,6 +555,7 @@ const messages = {
 					subtitle:
 						"Adjust search or filters, import a list, or add a contact to get started.",
 				},
+				loading: "Loading contacts…",
 			},
 			contactImportModal: {
 				title: "Contact Spreadsheet",
@@ -717,7 +719,7 @@ const messages = {
 					edit: "Edit Contact",
 				},
 				expectations:
-					"Service and history — not a sales funnel or pipeline. Ideal for tracking conversations.",
+					"Service history — not a CRM or sales pipeline.",
 				summary: {
 					title: "Activity and history",
 					tickets: "Total tickets",
@@ -928,12 +930,22 @@ const messages = {
 					fillTitle: "Please fill in the conversation title.",
 					fillUser: "Please select at least one user.",
 				},
+				list: {
+					conversationMenu: "Conversation options",
+				},
+				popover: {
+					title: "Internal messages",
+					openTooltip: "Open internal messages",
+				},
 				page: {
 					title: "Internal chat",
+					subtitle: "Team messages—separate from customer WhatsApp.",
 					searchPlaceholder: "Search conversations...",
 					loadingMessages: "Loading messages...",
 					loadingConversations: "Loading conversations...",
 					messagePlaceholder: "Type your message...",
+					sendMessage: "Send message",
+					messageInputAria: "Message",
 					emptyNoSearchTitle: "No matches",
 					emptyNoSearchSub: "Try another term or clear the search.",
 					emptyNoConversationsTitle: "No conversations yet",
@@ -960,6 +972,8 @@ const messages = {
 					save: "Save",
 					new: "New",
 					newChat: "New",
+					edit: "Edit",
+					delete: "Delete",
 				},
 			},
 			uploads: {
@@ -971,6 +985,10 @@ const messages = {
 			ticketsManager: {
 				buttons: {
 					newTicket: "New",
+				},
+				toasts: {
+					bulkAssignSuccess:
+						"{{count}} ticket(s) updated with the selected connection.",
 				},
 			},
 			ticketsQueueSelect: {
@@ -1428,6 +1446,7 @@ const messages = {
 			},
 			campaigns: {
 				title: "Campaigns",
+				pageSubtitle: "Sends by contact list and WhatsApp connection.",
 				searchPlaceholder: "Search",
 				report: {
 					title: "Report of",
@@ -1460,6 +1479,12 @@ const messages = {
 					add: "New Campaign",
 					contactLists: "Contact Lists",
 				},
+				loading: "Loading campaigns…",
+				empty: {
+					title: "No campaigns yet",
+					subtitle:
+						"Create a campaign to send bulk messages to your contact lists.",
+				},
 				status: {
 					inactive: "Inactive",
 					programmed: "Scheduled",
@@ -1485,6 +1510,10 @@ const messages = {
 					notScheduled: "Not scheduled",
 					notConcluded: "Not concluded",
 					stopCampaign: "Stop Campaign",
+					resumeCampaign: "Resume campaign",
+					report: "Report",
+					edit: "Edit",
+					delete: "Delete",
 				},
 				dialog: {
 					new: "New Campaign",
@@ -1742,10 +1771,21 @@ const messages = {
 			},
 			evaluation: {
 				title: "Evaluation",
+				pageSubtitle: "Scores 1–3 after closing, sent via WhatsApp.",
 				flowInfo:
-					"When ratings are enabled in settings, closing a ticket sends the customer a WhatsApp request for a score (scale 1–3). The ticket is only finalized after the customer replies with 1, 2, or 3. Invalid replies are ignored until a valid score is received.",
-				scaleHint: "Scale: 1 — Unsatisfied · 2 — Satisfied · 3 — Very satisfied",
-				listHint: "Each row is a recorded response; the score reflects the option the customer chose on WhatsApp.",
+					"When ratings are enabled, closing a ticket sends a WhatsApp score request (1–3). The ticket only closes after a valid reply.",
+				scaleHint: "1 = unsatisfied · 2 = satisfied · 3 = very satisfied",
+				listHint: "Each row is a WhatsApp response; click to open the ticket.",
+				dashboard: {
+					cardTitle: "Average rating",
+					scaleLine: "Scale 1–3 (WhatsApp)",
+					statusPrefix: "Indicator:",
+					status: {
+						great: "Great",
+						good: "Good",
+						improve: "Needs improvement",
+					},
+				},
 				avgRating: "Average Rating",
 				totalRatings: "Total Ratings",
 				byAttendant: "By Attendant",
@@ -1765,6 +1805,8 @@ const messages = {
 			},
 			schedules: {
 				title: "Schedules",
+				pageSubtitle: "{{count}} schedule(s) loaded.",
+				searchPlaceholder: "Search schedules…",
 				typeSingle: "One-time",
 				typeRecurring: "Recurring",
 				paused: "Paused",
@@ -1779,6 +1821,12 @@ const messages = {
 				},
 				listIntro:
 					"List of schedules (one-time or recurring). Mass campaigns are under Campaigns.",
+				loading: "Loading schedules…",
+				empty: {
+					title: "No schedules yet",
+					subtitle:
+						"Schedule one-time or recurring sends to selected contacts.",
+				},
 				statusLabels: {
 					PENDENTE: "Pending",
 					AGENDADA: "Queued",
@@ -1825,6 +1873,8 @@ const messages = {
 					add: "New Schedule",
 					pause: "Pause",
 					resume: "Resume",
+					edit: "Edit schedule",
+					delete: "Delete schedule",
 				},
 				toasts: {
 					deleted: "Schedule deleted successfully.",
@@ -1865,6 +1915,9 @@ const messages = {
 			settings: {
 				schedulesUpdated: "Schedules updated successfully.",
 				success: "Settings saved successfully.",
+				pageSubtitle: "Timezone, company options, and admin areas.",
+				customPageIntro:
+					"Use the tabs below for options, schedules (when enabled), and other areas according to your permissions.",
 				title: "Settings",
 				tabs: {
 					options: "Options",
@@ -1874,8 +1927,16 @@ const messages = {
 					helps: "Help",
 				},
 				options: {
+					pageIntro:
+						"These options change WhatsApp behavior and flows for all tickets in this company.",
+					expedientCompanyWarning:
+						"Company mode: one business-hours rule applies to the whole company. Queue mode: each queue uses its own.",
 					toasts: {
 						success: "Operation updated successfully.",
+					},
+					integrations: {
+						asaasNotice:
+							"The API token grants access to your Asaas account. Store it securely and limit who can change it.",
 					},
 					fields: {
 						ratings: {
@@ -1890,6 +1951,8 @@ const messages = {
 						},
 						ignoreMessages: {
 							title: "WhatsApp group messages",
+							alertNotice:
+								"Receive: group chats stay under the Groups tab (manual, no automations). Ignore: group messages are not recorded.",
 							helperText:
 								"Receive in the Groups tab: messages create or update conversations only under the Groups tab, in manual mode (no chatbot and no automations).\nIgnore groups: group messages are not saved and do not enter the system.",
 							optionReceive: "Receive in Groups tab (manual, no automations)",
@@ -1897,6 +1960,8 @@ const messages = {
 						},
 						acceptCall: {
 							title: "Accept WhatsApp calls",
+							alertNotice:
+								"Accept: calls behave as usual in WhatsApp. Do not accept: the system rejects calls and may send the message configured below.",
 							helperText:
 								"Yes: voice/video calls behave as usual; the system does not interfere.\nNo: incoming calls are rejected automatically; you can optionally send a message to the contact below.",
 							disabled: "No, do not accept",
@@ -1983,8 +2048,11 @@ const messages = {
 						createdAt: "Created On",
 						timezone: "Company timezone",
 						timezoneHint:
-							"Used for schedule and recurrence times. Stored data remains in UTC.",
-						timezoneFooter: "IANA list (e.g. America/Sao_Paulo).",
+							"Schedules and recurrences use this timezone; data is still stored in UTC.",
+						timezoneFooter:
+							"Choose the timezone for your main office or operation.",
+						timezoneHelperField:
+							"IANA format as in the list below (e.g. America/Sao_Paulo).",
 					},
 					buttons: {
 						clear: "Clear",
@@ -2111,6 +2179,7 @@ const messages = {
 			errors: {
 				connectionError: "Could not connect to server. Check the backend URL and if the server is online.",
 				generic: "An error occurred. Please try again.",
+				operationFailed: "Could not complete the action. Please try again.",
 			},
 			backendErrors: {
 				ERR_INTERNAL_SERVER_ERROR: "An unexpected error occurred. Please try again later",

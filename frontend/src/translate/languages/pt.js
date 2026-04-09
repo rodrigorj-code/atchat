@@ -301,6 +301,7 @@ const messages = {
       },
       invoices: {
         title: "Faturas",
+        pageSubtitle: "Faturas e pagamento via PIX.",
         paid: "Pago",
         open: "Em Aberto",
         expired: "Vencido",
@@ -328,7 +329,7 @@ const messages = {
         },
         page: {
           delinquentAlert:
-            "Identificamos pendência financeira. O valor cobrado no PIX é sempre o da fatura abaixo.",
+            "Há pendência de pagamento. O PIX usa sempre o valor da fatura que escolher na lista.",
         },
         login: {
           expiringSoon:
@@ -340,10 +341,10 @@ const messages = {
       checkoutPage: {
         modalTitle: "Pagamento via PIX",
         noInvoice:
-          "Para pagar com PIX, abra Financeiro e clique em Pagar na fatura desejada.",
+          "Para pagar com PIX, abra Financeiro e use Pagar na fatura pretendida.",
         pixFlowTitle: "Pagamento de fatura — PIX",
         pixFlowSubtitle:
-          "O valor debitado é sempre o da fatura selecionada. O backend gera a cobrança PIX; não utilize valores do plano como referência de pagamento.",
+          "O PIX será gerado com o valor da fatura. O plano abaixo indica só limites — não é o valor cobrado.",
         steps: {
           data: "Dados",
           customize: "Personalizar",
@@ -363,12 +364,12 @@ const messages = {
           amountCharged: "Valor a pagar (PIX)",
           dueDate: "Vencimento",
           amountFromInvoice:
-            "Este valor é o registrado na fatura. Ele será enviado ao gateway — não altere expectativas com base no preço do plano abaixo.",
+            "Valor igual ao da fatura enviado ao pagamento; ignore o preço do plano como referência de cobrança.",
           totalLabel: "Total PIX",
           waitingHint:
             "Aguardando pagamento. Cobrança expira em até {{minutes}} min (aprox.).",
           expiredHint:
-            "O tempo desta cobrança PIX pode ter expirado. Feche e abra novamente em Financeiro para gerar outra.",
+            "Esta cobrança pode ter expirado. Feche, volte a Financeiro e gere um novo PIX.",
           paidToast: "Pagamento confirmado! Nova data: {{date}}",
           instructions:
             "Abra o app do seu banco, pague com PIX copia e cola ou QR Code e aguarde a confirmação automática.",
@@ -382,11 +383,11 @@ const messages = {
           title: "Resumo da assinatura",
           titlePix: "Confirmar pagamento PIX",
           confirmPixHint:
-            "Confira o valor da fatura e o plano contratado. Ao continuar, será gerada uma cobrança imediata via PIX.",
+            "Confira o valor da fatura. Ao continuar, será gerada a cobrança PIX.",
           pixSectionTitle: "Cobrança (fatura)",
           planSectionTitle: "Plano de referência",
           planReferenceOnly:
-            "Limites do plano são informativos. O valor efetivo cobrado é o da fatura acima.",
+            "Limites do plano são informativos; o valor cobrado é o da fatura acima.",
           invoiceId: "Fatura",
           chargesFromInvoice: "Valor cobrado no PIX:",
           dueLabel: "Vencimento",
@@ -569,9 +570,9 @@ const messages = {
         subtitle:
           "Clientes e contatos do WhatsApp com registo de interações e atendimentos.",
         pageBanner:
-          "Centralize quem conversa com a sua empresa. As tags exibidas refletem os atendimentos (tickets) já associados a cada contato.",
+          "As tags vêm dos atendimentos já associados a cada contato.",
         pageExpectations:
-          "Este módulo foca-se em atendimento e histórico — não é um funil de vendas nem um pipeline comercial completo. É a base para organizar conversas e pode evoluir no futuro.",
+          "Foco em histórico de conversas — não substitui um CRM ou um funil de vendas.",
         tagsColumnHint:
           "Tags mostradas a partir dos atendimentos (tickets) deste contato.",
         tagFilterHelp:
@@ -623,6 +624,7 @@ const messages = {
           subtitle:
             "Ajuste a pesquisa ou os filtros, importe uma lista ou adicione um contato para começar.",
         },
+        loading: "Carregando contatos…",
       },
       contactImportModal: {
         title: "Planílha de contatos",
@@ -786,7 +788,7 @@ const messages = {
           edit: "Editar contato",
         },
         expectations:
-          "Atendimento e histórico — não é funil de vendas nem pipeline. Ideal para acompanhar conversas.",
+          "Histórico de atendimento — não é CRM nem funil de vendas.",
         summary: {
           title: "Atividade e histórico",
           tickets: "Total de atendimentos",
@@ -998,12 +1000,22 @@ const messages = {
           fillTitle: "Por favor, preencha o título da conversa.",
           fillUser: "Por favor, selecione pelo menos um usuário.",
         },
+        list: {
+          conversationMenu: "Opções da conversa",
+        },
+        popover: {
+          title: "Mensagens internas",
+          openTooltip: "Abrir mensagens internas",
+        },
         page: {
           title: "Chat interno",
+          subtitle: "Mensagens da equipe, fora do WhatsApp do cliente.",
           searchPlaceholder: "Buscar conversas...",
           loadingMessages: "Carregando mensagens...",
           loadingConversations: "Carregando conversas...",
           messagePlaceholder: "Digite sua mensagem...",
+          sendMessage: "Enviar mensagem",
+          messageInputAria: "Mensagem",
           emptyNoSearchTitle: "Nenhum resultado",
           emptyNoSearchSub: "Tente outro termo ou limpe a busca.",
           emptyNoConversationsTitle: "Nenhuma conversa ainda",
@@ -1030,6 +1042,8 @@ const messages = {
           save: "Salvar",
           new: "Nova",
           newChat: "Novo",
+          edit: "Editar",
+          delete: "Excluir",
         },
       },
       uploads: {
@@ -1041,6 +1055,10 @@ const messages = {
       ticketsManager: {
         buttons: {
           newTicket: "Novo",
+        },
+        toasts: {
+          bulkAssignSuccess:
+            "{{count}} atendimento(s) atualizado(s) com a conexão escolhida.",
         },
       },
       ticketsQueueSelect: {
@@ -1501,6 +1519,8 @@ const messages = {
       },
       campaigns: {
         title: "Campanhas",
+        pageSubtitle:
+          "Disparos por lista de contatos e conexão WhatsApp.",
         searchPlaceholder: "Pesquisa",
         report: {
           title: "Relatório de",
@@ -1533,6 +1553,12 @@ const messages = {
           add: "Nova Campanha",
           contactLists: "Listas de Contatos",
         },
+        loading: "Carregando campanhas…",
+        empty: {
+          title: "Nenhuma campanha cadastrada",
+          subtitle:
+            "Crie uma campanha para enviar mensagens em massa às suas listas de contatos.",
+        },
         status: {
           inactive: "Inativa",
           programmed: "Programada",
@@ -1558,6 +1584,10 @@ const messages = {
           notScheduled: "Sem agendamento",
           notConcluded: "Não concluída",
           stopCampaign: "Parar Campanha",
+          resumeCampaign: "Retomar campanha",
+          report: "Relatório",
+          edit: "Editar",
+          delete: "Excluir",
         },
         dialog: {
           new: "Nova Campanha",
@@ -1817,10 +1847,23 @@ const messages = {
       },
       evaluation: {
         title: "Avaliação",
+        pageSubtitle:
+          "Notas de 1 a 3 após o encerramento, enviadas pelo WhatsApp.",
         flowInfo:
-          "Quando a avaliação está ativa nas configurações, ao encerrar o atendimento o cliente recebe no WhatsApp um pedido de nota (escala 1 a 3). O ticket só é finalizado no sistema depois que o cliente responde com 1, 2 ou 3. Respostas inválidas são ignoradas até vir uma nota válida.",
-        scaleHint: "Escala: 1 — Insatisfeito · 2 — Satisfeito · 3 — Muito satisfeito",
-        listHint: "Cada linha é uma resposta registrada; a nota reflete a opção escolhida pelo cliente no WhatsApp.",
+          "Com a avaliação ativa, ao encerrar o atendimento o cliente recebe no WhatsApp um pedido de nota (1 a 3). O ticket só fecha no sistema depois de uma resposta válida.",
+        scaleHint: "1 = insatisfeito · 2 = satisfeito · 3 = muito satisfeito",
+        listHint:
+          "Cada linha é uma resposta no WhatsApp; clique para abrir o atendimento.",
+        dashboard: {
+          cardTitle: "Avaliação média",
+          scaleLine: "Escala 1–3 (WhatsApp)",
+          statusPrefix: "Indicador:",
+          status: {
+            great: "Ótimo",
+            good: "Bom",
+            improve: "A melhorar",
+          },
+        },
         avgRating: "Avaliação Média",
         totalRatings: "Total de Avaliações",
         byAttendant: "Por Atendente",
@@ -1868,6 +1911,8 @@ const messages = {
       },
       schedules: {
         title: "Agendamentos",
+        pageSubtitle: "{{count}} agendamento(s) carregado(s).",
+        searchPlaceholder: "Buscar agendamentos…",
         typeSingle: "Único",
         typeRecurring: "Recorrente",
         paused: "Pausado",
@@ -1882,6 +1927,12 @@ const messages = {
         },
         listIntro:
           "Lista dos agendamentos (único ou recorrente). Campanhas em massa ficam em Campanhas.",
+        loading: "Carregando agendamentos…",
+        empty: {
+          title: "Ainda não há agendamentos",
+          subtitle:
+            "Agende envios únicos ou recorrentes para os contatos selecionados.",
+        },
         statusLabels: {
           PENDENTE: "Pendente",
           AGENDADA: "Na fila",
@@ -1928,6 +1979,8 @@ const messages = {
           add: "Novo Agendamento",
           pause: "Pausar",
           resume: "Ativar",
+          edit: "Editar agendamento",
+          delete: "Excluir agendamento",
         },
         toasts: {
           deleted: "Agendamento excluído com sucesso.",
@@ -1968,6 +2021,10 @@ const messages = {
       settings: {
         schedulesUpdated: "Horários atualizados com sucesso.",
         success: "Configurações salvas com sucesso.",
+        pageSubtitle:
+          "Fuso horário, opções da empresa e áreas administrativas.",
+        customPageIntro:
+          "Use as abas abaixo para opções, horários (quando ativos) e outras áreas conforme sua permissão.",
         title: "Configurações",
         tabs: {
           options: "Opções",
@@ -1977,8 +2034,16 @@ const messages = {
           helps: "Ajuda",
         },
         options: {
+          pageIntro:
+            "Estas opções alteram o comportamento do WhatsApp e dos fluxos para todos os atendimentos desta empresa.",
+          expedientCompanyWarning:
+            "Modo Empresa: o mesmo expediente vale para toda a empresa. No modo Fila, cada setor usa o seu.",
           toasts: {
             success: "Operação atualizada com sucesso.",
+          },
+          integrations: {
+            asaasNotice:
+              "O token de API concede acesso à sua conta Asaas. Guarde-o com segurança e reveja quem pode alterá-lo.",
           },
           fields: {
             ratings: {
@@ -1993,6 +2058,8 @@ const messages = {
             },
             ignoreMessages: {
               title: "Mensagens de grupos do WhatsApp",
+              alertNotice:
+                "Receber: conversas de grupo ficam na guia Grupos (manual, sem automações). Ignorar: mensagens de grupo não são registradas.",
               helperText:
                 "Receber na guia Grupos: as mensagens criam ou atualizam conversas apenas na aba Grupos, em modo manual (sem chatbot e sem automações).\nIgnorar grupos: as mensagens de grupo não são registradas e não entram no sistema.",
               optionReceive: "Receber na guia Grupos (manual, sem automações)",
@@ -2000,6 +2067,8 @@ const messages = {
             },
             acceptCall: {
               title: "Aceitar chamada (WhatsApp)",
+              alertNotice:
+                "Aceitar: chamadas seguem o comportamento normal do WhatsApp. Não aceitar: o sistema rejeita e pode enviar a mensagem configurada abaixo.",
               helperText:
                 "Sim: chamadas de voz/vídeo seguem o comportamento normal do WhatsApp; o sistema não interfere.\nNão: chamadas recebidas são rejeitadas automaticamente; você pode enviar uma mensagem ao cliente conforme as opções abaixo.",
               disabled: "Não aceitar",
@@ -2088,8 +2157,11 @@ const messages = {
             createdAt: "Criada Em",
             timezone: "Fuso horário da empresa",
             timezoneHint:
-              "Usado para calcular horários de agendamentos e recorrências. Dados no servidor permanecem em UTC.",
-            timezoneFooter: "Lista IANA (ex.: America/Sao_Paulo).",
+              "Agendamentos e recorrências usam este fuso; o armazenamento no servidor continua em UTC.",
+            timezoneFooter:
+              "Escolha o fuso da sede ou da operação principal.",
+            timezoneHelperField:
+              "Formato IANA, como na lista abaixo (ex.: America/Sao_Paulo).",
           },
           buttons: {
             clear: "Limpar",
@@ -2218,6 +2290,7 @@ const messages = {
       errors: {
         connectionError: "Não foi possível conectar ao servidor. Verifique a URL do backend e se o servidor está online.",
         generic: "Ocorreu um erro. Tente novamente.",
+        operationFailed: "Não foi possível concluir a operação. Tente novamente.",
       },
       backendErrors: {
         ERR_INTERNAL_SERVER_ERROR:

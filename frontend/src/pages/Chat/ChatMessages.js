@@ -1,11 +1,11 @@
 import React, { useContext, useEffect, useRef, useState } from "react";
 import {
   Box,
-  CircularProgress,
   IconButton,
   Input,
   makeStyles,
   Paper,
+  Tooltip,
   Typography,
 } from "@material-ui/core";
 import SendIcon from "@material-ui/icons/Send";
@@ -15,6 +15,7 @@ import { useDate } from "../../hooks/useDate";
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
 import { i18n } from "../../translate/i18n";
+import { AppLoadingState } from "../../ui";
 
 const useStyles = makeStyles((theme) => ({
   mainContainer: {
@@ -64,15 +65,6 @@ const useStyles = makeStyles((theme) => ({
     minHeight: 0,
     ...theme.scrollbarStyles,
     backgroundColor: "#fafafa",
-  },
-  loadingWrap: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: theme.spacing(4),
-    color: theme.palette.text.secondary,
-    flexDirection: "column",
-    gap: theme.spacing(1),
   },
   inputBar: {
     display: "flex",
@@ -181,12 +173,7 @@ export default function ChatMessages({
       </div>
       <div onScroll={handleScroll} className={classes.messageList}>
         {loading && (!messages || messages.length === 0) && (
-          <div className={classes.loadingWrap}>
-            <CircularProgress size={28} />
-            <Typography variant="body2">
-              {i18n.t("chat.page.loadingMessages")}
-            </Typography>
-          </div>
+          <AppLoadingState message={i18n.t("chat.page.loadingMessages")} size={32} />
         )}
         {Array.isArray(messages) &&
           messages.map((item, key) => {
@@ -228,20 +215,23 @@ export default function ChatMessages({
           }}
           onChange={(e) => setContentMessage(e.target.value)}
           className={classes.input}
-          inputProps={{ "aria-label": "mensagem" }}
+          inputProps={{ "aria-label": i18n.t("chat.page.messageInputAria") }}
         />
-        <IconButton
-          size="small"
-          aria-label="enviar"
-          onClick={() => {
-            if (contentMessage.trim() !== "") {
-              handleSendMessage(contentMessage);
-              setContentMessage("");
-            }
-          }}
-        >
-          <SendIcon />
-        </IconButton>
+        <Tooltip title={i18n.t("chat.page.sendMessage")}>
+          <IconButton
+            size="small"
+            color="primary"
+            aria-label={i18n.t("chat.page.sendMessage")}
+            onClick={() => {
+              if (contentMessage.trim() !== "") {
+                handleSendMessage(contentMessage);
+                setContentMessage("");
+              }
+            }}
+          >
+            <SendIcon />
+          </IconButton>
+        </Tooltip>
       </div>
     </Paper>
   );

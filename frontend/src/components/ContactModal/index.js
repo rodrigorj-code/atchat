@@ -3,16 +3,10 @@ import { Link as RouterLink } from "react-router-dom";
 
 import * as Yup from "yup";
 import { Formik, FieldArray, Form, Field } from "formik";
-import { toast } from "react-toastify";
 
 import { makeStyles } from "@material-ui/core/styles";
 import { green } from "@material-ui/core/colors";
-import Button from "@material-ui/core/Button";
 import TextField from "@material-ui/core/TextField";
-import Dialog from "@material-ui/core/Dialog";
-import DialogActions from "@material-ui/core/DialogActions";
-import DialogContent from "@material-ui/core/DialogContent";
-import DialogTitle from "@material-ui/core/DialogTitle";
 import Typography from "@material-ui/core/Typography";
 import Grid from "@material-ui/core/Grid";
 import Paper from "@material-ui/core/Paper";
@@ -29,6 +23,16 @@ import { i18n } from "../../translate/i18n";
 
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
+import { showSuccessToast } from "../../errors/feedbackToasts";
+import {
+  AppDialog,
+  AppDialogTitle,
+  AppDialogContent,
+  AppDialogActions,
+  AppPrimaryButton,
+  AppSecondaryButton,
+  AppNeutralButton,
+} from "../../ui";
 
 const useStyles = makeStyles(theme => ({
 	root: {
@@ -93,6 +97,13 @@ const useStyles = makeStyles(theme => ({
 	dialogContent: {
 		maxHeight: "calc(100vh - 200px)",
 		overflowY: "auto",
+	},
+	contextAlert: {
+		marginBottom: theme.spacing(1.5),
+		width: "100%",
+		"& .MuiAlert-message": {
+			width: "100%",
+		},
 	},
 	campaignRow: {
 		display: "flex",
@@ -265,7 +276,7 @@ const ContactModal = ({
 				}
 				handleClose();
 			}
-			toast.success(i18n.t("contactModal.success"));
+			showSuccessToast("contactModal.success");
 		} catch (e) {
 			toastError(e);
 		}
@@ -276,7 +287,7 @@ const ContactModal = ({
 		try {
 			await api.delete(`/contacts/${contactId}/tags/${tag.id}`);
 			setLocalTags(prev => prev.filter(t => t.id !== tag.id));
-			toast.success(i18n.t("contactModal.tags.removed"));
+			showSuccessToast("contactModal.tags.removed");
 		} catch (e) {
 			toastError(e);
 		}
@@ -290,7 +301,7 @@ const ContactModal = ({
 			setLocalTags(prev =>
 				[...prev, tag].sort((a, b) => a.name.localeCompare(b.name))
 			);
-			toast.success(i18n.t("contactModal.tags.added"));
+			showSuccessToast("contactModal.tags.added");
 		} catch (e) {
 			toastError(e);
 		}
@@ -302,12 +313,12 @@ const ContactModal = ({
 
 	return (
 		<div className={classes.root}>
-			<Dialog open={open} onClose={handleClose} maxWidth="lg" scroll="paper">
-				<DialogTitle id="form-dialog-title">
+			<AppDialog open={open} onClose={handleClose} maxWidth="lg" scroll="paper">
+				<AppDialogTitle id="form-dialog-title">
 					{contactId
 						? `${i18n.t("contactModal.title.edit")}`
 						: `${i18n.t("contactModal.title.add")}`}
-				</DialogTitle>
+				</AppDialogTitle>
 				<Formik
 					initialValues={contact}
 					enableReinitialize={true}
@@ -321,14 +332,20 @@ const ContactModal = ({
 				>
 					{({ values, errors, touched, isSubmitting }) => (
 						<Form>
-							<DialogContent dividers className={classes.dialogContent}>
+							<AppDialogContent dividers className={classes.dialogContent}>
 								{contactId && (
 									<Box marginBottom={2}>
 										<Typography variant="subtitle1" gutterBottom>
 											{i18n.t("contactModal.summary.title")}
 										</Typography>
-										<Alert severity="info" variant="outlined" style={{ marginBottom: 12 }}>
-											{i18n.t("contactModal.expectations")}
+										<Alert
+											severity="info"
+											variant="outlined"
+											className={classes.contextAlert}
+										>
+											<Typography variant="body2" component="p">
+												{i18n.t("contactModal.expectations")}
+											</Typography>
 										</Alert>
 										{summaryLoading ? (
 											<CircularProgress size={22} />
@@ -394,15 +411,13 @@ const ContactModal = ({
 														/>
 													))
 												)}
-												<Button
+												<AppSecondaryButton
 													size="small"
-													variant="outlined"
-													color="primary"
 													component={RouterLink}
 													to="/contact-lists"
 												>
 													{i18n.t("contactModal.campaigns.manageLists")}
-												</Button>
+												</AppSecondaryButton>
 											</div>
 										</Box>
 									</Box>
@@ -562,44 +577,36 @@ const ContactModal = ({
 													</div>
 												))}
 											<div className={classes.extraAttr}>
-												<Button
+												<AppSecondaryButton
 													style={{ flex: 1, marginTop: 8 }}
-													variant="outlined"
-													color="primary"
 													onClick={() => push({ name: "", value: "" })}
 												>
 													{`+ ${i18n.t("contactModal.buttons.addExtraInfo")}`}
-												</Button>
+												</AppSecondaryButton>
 											</div>
 										</>
 									)}
 								</FieldArray>
-							</DialogContent>
-							<DialogActions>
-								<Button
+							</AppDialogContent>
+							<AppDialogActions>
+								<AppNeutralButton
 									onClick={handleClose}
-									color="secondary"
 									disabled={isSubmitting}
-									variant="outlined"
 								>
 									{i18n.t("contactModal.buttons.cancel")}
-								</Button>
+								</AppNeutralButton>
 								{contactId && onOpenAttendance && (
-									<Button
+									<AppSecondaryButton
 										type="button"
 										onClick={handleOpenAttendance}
-										color="primary"
 										disabled={isSubmitting}
-										variant="outlined"
 									>
 										{i18n.t("contactModal.buttons.openAttendance")}
-									</Button>
+									</AppSecondaryButton>
 								)}
-								<Button
+								<AppPrimaryButton
 									type="submit"
-									color="primary"
 									disabled={isSubmitting}
-									variant="contained"
 									className={classes.btnWrapper}
 								>
 									{contactId
@@ -611,12 +618,12 @@ const ContactModal = ({
 											className={classes.buttonProgress}
 										/>
 									)}
-								</Button>
-							</DialogActions>
+								</AppPrimaryButton>
+							</AppDialogActions>
 						</Form>
 					)}
 				</Formik>
-			</Dialog>
+			</AppDialog>
 		</div>
 	);
 };

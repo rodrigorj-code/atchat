@@ -2,6 +2,8 @@ import React, { useState, useEffect, useContext, useMemo, useRef } from "react";
 import { useHistory } from "react-router-dom";
 import QRCode from "react-qr-code";
 import { Typography, Box, CircularProgress } from "@material-ui/core";
+import Alert from "@material-ui/lab/Alert";
+import useCheckoutStyles from "../styles";
 import { SuccessContent, Total } from "./style";
 import { CopyToClipboard } from "react-copy-to-clipboard";
 import { FaCopy, FaCheckCircle } from "react-icons/fa";
@@ -32,6 +34,7 @@ function formatPixTotal(pix) {
 
 function CheckoutSuccess(props) {
   const { pix, invoice } = props;
+  const checkoutClasses = useCheckoutStyles();
   const [pixString] = useState(() => pix?.qrcode?.qrcode || "");
   const [copied, setCopied] = useState(false);
   const [paymentState, setPaymentState] = useState("waiting");
@@ -91,10 +94,12 @@ function CheckoutSuccess(props) {
 
   if (!pix?.qrcode?.qrcode) {
     return (
-      <Box py={2}>
-        <Typography color="error">
-          {i18n.t("checkoutPage.pix.missingQr")}
-        </Typography>
+      <Box py={2} width="100%">
+        <Alert severity="error" variant="outlined" className={checkoutClasses.contextAlert}>
+          <Typography variant="body2" component="p">
+            {i18n.t("checkoutPage.pix.missingQr")}
+          </Typography>
+        </Alert>
       </Box>
     );
   }
@@ -116,17 +121,29 @@ function CheckoutSuccess(props) {
       )}
 
       {paymentState === "waiting" && (
-        <Typography variant="body2" align="center" color="textSecondary" paragraph>
-          {i18n.t("checkoutPage.pix.waitingHint", {
-            minutes: Math.ceil(secondsLeft / 60),
-          })}
-        </Typography>
+        <Alert
+          severity="info"
+          variant="outlined"
+          className={checkoutClasses.contextAlertTight}
+        >
+          <Typography variant="body2" component="p" align="center">
+            {i18n.t("checkoutPage.pix.waitingHint", {
+              minutes: Math.ceil(secondsLeft / 60),
+            })}
+          </Typography>
+        </Alert>
       )}
 
       {paymentState === "expired" && (
-        <Typography variant="body1" align="center" color="error" paragraph>
-          {i18n.t("checkoutPage.pix.expiredHint")}
-        </Typography>
+        <Alert
+          severity="warning"
+          variant="outlined"
+          className={checkoutClasses.contextAlert}
+        >
+          <Typography variant="body2" component="p" align="center">
+            {i18n.t("checkoutPage.pix.expiredHint")}
+          </Typography>
+        </Alert>
       )}
 
       {paymentState === "paid" && (

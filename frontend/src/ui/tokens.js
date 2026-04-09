@@ -5,6 +5,9 @@
  * @see App.js — createTheme (tipografia Montserrat, primary #24c776, shape.borderRadius 10)
  */
 
+/** Duração típica de microinterações (hover, tabs) — alinhada a `appThemeOptions.js` */
+export const INTERACTION_DURATION_MS = 200;
+
 /** Espaçamento entre secções de página (px lógicos via theme.spacing) */
 export const SECTION_GAP_UNITS = 2;
 

@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef, useContext } from "react";
 
 import * as Yup from "yup";
 import { Formik, Form, Field, useFormikContext } from "formik";
-import { toast } from "react-toastify";
 import { head } from "lodash";
 
 import { makeStyles } from "@material-ui/core/styles";
@@ -10,10 +9,6 @@ import { green } from "@material-ui/core/colors";
 import Button from "@material-ui/core/Button";
 import IconButton from "@material-ui/core/IconButton";
 import TextField from "@material-ui/core/TextField";
-import Dialog from "@material-ui/core/Dialog";
-import DialogActions from "@material-ui/core/DialogActions";
-import DialogContent from "@material-ui/core/DialogContent";
-import DialogTitle from "@material-ui/core/DialogTitle";
 import CircularProgress from "@material-ui/core/CircularProgress";
 import AttachFileIcon from "@material-ui/icons/AttachFile";
 import DeleteOutlineIcon from "@material-ui/icons/DeleteOutline";
@@ -24,6 +19,7 @@ import moment from "moment";
 
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
+import { showSuccessToast } from "../../errors/feedbackToasts";
 import {
   Box,
   FormControl,
@@ -36,6 +32,15 @@ import {
 } from "@material-ui/core";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import ConfirmationModal from "../ConfirmationModal";
+import {
+  AppDialog,
+  AppDialogTitle,
+  AppDialogContent,
+  AppDialogActions,
+  AppPrimaryButton,
+  AppSecondaryButton,
+  AppNeutralButton,
+} from "../../ui";
 
 const PREVIEW_VARS = {
   nome: "João",
@@ -435,7 +440,7 @@ const CampaignModal = ({
         }
         handleClose();
       }
-      toast.success(i18n.t("campaigns.toasts.success"));
+      showSuccessToast("campaigns.toasts.success");
     } catch (err) {
       console.log(err);
       toastError(err);
@@ -455,7 +460,7 @@ const CampaignModal = ({
     if (campaign.mediaPath) {
       await api.delete(`/campaigns/${campaign.id}/media-upload`);
       setCampaign((prev) => ({ ...prev, mediaPath: null, mediaName: null }));
-      toast.success(i18n.t("campaigns.toasts.deleted"));
+      showSuccessToast("campaigns.toasts.deleted");
     }
   };
 
@@ -480,7 +485,7 @@ const CampaignModal = ({
   const cancelCampaign = async () => {
     try {
       await api.post(`/campaigns/${campaign.id}/cancel`);
-      toast.success(i18n.t("campaigns.toasts.cancel"));
+      showSuccessToast("campaigns.toasts.cancel");
       setCampaign((prev) => ({ ...prev, status: "CANCELADA" }));
       resetPagination();
     } catch (err) {
@@ -491,7 +496,7 @@ const CampaignModal = ({
   const runRestartCampaign = async () => {
     try {
       await api.post(`/campaigns/${campaign.id}/restart`);
-      toast.success(i18n.t("campaigns.toasts.restart"));
+      showSuccessToast("campaigns.toasts.restart");
       setCampaign((prev) => ({ ...prev, status: "EM_ANDAMENTO" }));
       resetPagination();
     } catch (err) {
@@ -554,14 +559,14 @@ const CampaignModal = ({
       >
         {i18n.t("campaigns.dialog.confirmRestart.message")}
       </ConfirmationModal>
-      <Dialog
+      <AppDialog
         open={open}
         onClose={handleClose}
         fullWidth
         maxWidth="md"
         scroll="paper"
       >
-        <DialogTitle id="form-dialog-title">
+        <AppDialogTitle id="form-dialog-title">
           {campaignEditable ? (
             <>
               {campaignId
@@ -571,7 +576,7 @@ const CampaignModal = ({
           ) : (
             <>{`${i18n.t("campaigns.dialog.readonly")}`}</>
           )}
-        </DialogTitle>
+        </AppDialogTitle>
         <div style={{ display: "none" }}>
           <input
             type="file"
@@ -595,7 +600,7 @@ const CampaignModal = ({
                 open={open}
                 setContactStats={setContactStats}
               />
-              <DialogContent dividers>
+              <AppDialogContent dividers>
                 <Grid spacing={2} container>
                   <Grid xs={12} md={9} item>
                     <Field
@@ -861,50 +866,35 @@ const CampaignModal = ({
                     </Grid>
                   )}
                 </Grid>
-              </DialogContent>
-              <DialogActions>
+              </AppDialogContent>
+              <AppDialogActions>
                 {campaign.status === "CANCELADA" && (
-                  <Button
-                    color="primary"
+                  <AppSecondaryButton
                     onClick={() => setRestartConfirmOpen(true)}
-                    variant="outlined"
                   >
                     {i18n.t("campaigns.dialog.buttons.restart")}
-                  </Button>
+                  </AppSecondaryButton>
                 )}
                 {campaign.status === "EM_ANDAMENTO" && (
-                  <Button
-                    color="primary"
-                    onClick={() => cancelCampaign()}
-                    variant="outlined"
-                  >
+                  <AppSecondaryButton onClick={() => cancelCampaign()}>
                     {i18n.t("campaigns.dialog.buttons.cancel")}
-                  </Button>
+                  </AppSecondaryButton>
                 )}
                 {!attachment && !campaign.mediaPath && campaignEditable && (
-                  <Button
-                    color="primary"
+                  <AppSecondaryButton
                     onClick={() => attachmentFile.current.click()}
                     disabled={isSubmitting}
-                    variant="outlined"
                   >
                     {i18n.t("campaigns.dialog.buttons.attach")}
-                  </Button>
+                  </AppSecondaryButton>
                 )}
-                <Button
-                  onClick={handleClose}
-                  color="secondary"
-                  disabled={isSubmitting}
-                  variant="outlined"
-                >
+                <AppNeutralButton onClick={handleClose} disabled={isSubmitting}>
                   {i18n.t("campaigns.dialog.buttons.close")}
-                </Button>
+                </AppNeutralButton>
                 {(campaignEditable || campaign.status === "CANCELADA") && (
-                  <Button
+                  <AppPrimaryButton
                     type="submit"
-                    color="primary"
                     disabled={isSubmitting}
-                    variant="contained"
                     className={classes.btnWrapper}
                   >
                     {campaignId
@@ -916,13 +906,13 @@ const CampaignModal = ({
                         className={classes.buttonProgress}
                       />
                     )}
-                  </Button>
+                  </AppPrimaryButton>
                 )}
-              </DialogActions>
+              </AppDialogActions>
             </Form>
           )}
         </Formik>
-      </Dialog>
+      </AppDialog>
     </div>
   );
 };

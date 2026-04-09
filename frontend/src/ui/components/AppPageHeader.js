@@ -17,6 +17,12 @@ const useStyles = makeStyles((theme) => ({
   titleBlock: {
     flex: "1 1 200px",
     minWidth: 0,
+    "& .MuiTypography-h4, & .MuiTypography-h5, & .MuiTypography-h6": {
+      fontWeight: 600,
+    },
+    "& .MuiTypography-body2": {
+      color: theme.palette.text.secondary,
+    },
   },
   actions: {
     display: "flex",

@@ -10,6 +10,7 @@ import TextField from "@material-ui/core/TextField";
 import Title from "../Title";
 import Paper from "@material-ui/core/Paper";
 import Typography from "@material-ui/core/Typography";
+import Alert from "@material-ui/lab/Alert";
 import useSettings from "../../hooks/useSettings";
 import { ToastContainer, toast } from 'react-toastify';
 import { makeStyles } from "@material-ui/core/styles";
@@ -71,6 +72,18 @@ const useStyles = makeStyles((theme) => ({
   },
   fullWidth: {
     width: "100%",
+  },
+  pageIntroAlert: {
+    width: "100%",
+    "& .MuiAlert-message": {
+      width: "100%",
+    },
+  },
+  sectionAlert: {
+    width: "100%",
+    "& .MuiAlert-message": {
+      width: "100%",
+    },
   },
   selectContainer: {
     width: "100%",
@@ -403,9 +416,17 @@ export default function Options(props) {
   return (
     <>
       <Grid spacing={3} container>
-        {/* <Grid xs={12} item>
-                    <Title>Configurações Gerais</Title>
-                </Grid> */}
+        <Grid item xs={12}>
+          <Alert
+            severity="info"
+            variant="outlined"
+            className={classes.pageIntroAlert}
+          >
+            <Typography variant="body2" component="p">
+              {i18n.t("settings.options.pageIntro")}
+            </Typography>
+          </Alert>
+        </Grid>
         <Grid xs={12} sm={6} md={4} item>
           <FormControl className={classes.selectContainer}>
             <InputLabel id="ratings-label">{i18n.t("settings.options.fields.ratings.title")}</InputLabel>
@@ -445,6 +466,30 @@ export default function Options(props) {
             </FormHelperText>
           </FormControl>
         </Grid>
+        {scheduleType === "company" && (
+          <Grid item xs={12}>
+            <Alert
+              severity="warning"
+              variant="outlined"
+              className={classes.sectionAlert}
+            >
+              <Typography variant="body2" component="p">
+                {i18n.t("settings.options.expedientCompanyWarning")}
+              </Typography>
+            </Alert>
+          </Grid>
+        )}
+        <Grid item xs={12}>
+          <Alert
+            severity="info"
+            variant="outlined"
+            className={classes.sectionAlert}
+          >
+            <Typography variant="body2" component="p">
+              {i18n.t("settings.options.fields.ignoreMessages.alertNotice")}
+            </Typography>
+          </Alert>
+        </Grid>
         <Grid xs={12} sm={12} md={6} item>
           <FormControl className={classes.selectContainer} fullWidth>
             <InputLabel id="group-type-label">
@@ -464,22 +509,21 @@ export default function Options(props) {
                 {i18n.t("settings.options.fields.ignoreMessages.optionIgnore")}
               </MenuItem>
             </Select>
-            <FormHelperText component="div">
-              <Typography
-                variant="caption"
-                component="span"
-                color="textSecondary"
-                style={{ display: "block", whiteSpace: "pre-line", lineHeight: 1.45 }}
-              >
-                {i18n.t("settings.options.fields.ignoreMessages.helperText")}
-              </Typography>
-              {loadingCheckMsgIsGroup && (
-                <Typography variant="caption" display="block" color="textSecondary" style={{ marginTop: 6 }}>
-                  {i18n.t("settings.options.updating")}
-                </Typography>
-              )}
+            <FormHelperText>
+              {loadingCheckMsgIsGroup && i18n.t("settings.options.updating")}
             </FormHelperText>
           </FormControl>
+        </Grid>
+        <Grid item xs={12}>
+          <Alert
+            severity="info"
+            variant="outlined"
+            className={classes.sectionAlert}
+          >
+            <Typography variant="body2" component="p">
+              {i18n.t("settings.options.fields.acceptCall.alertNotice")}
+            </Typography>
+          </Alert>
         </Grid>
         <Grid xs={12} sm={6} md={4} item>
           <FormControl className={classes.selectContainer} fullWidth>
@@ -496,20 +540,8 @@ export default function Options(props) {
               <MenuItem value={"enabled"}>{i18n.t("settings.options.fields.acceptCall.enabled")}</MenuItem>
               <MenuItem value={"disabled"}>{i18n.t("settings.options.fields.acceptCall.disabled")}</MenuItem>
             </Select>
-            <FormHelperText component="div">
-              <Typography
-                variant="caption"
-                component="span"
-                color="textSecondary"
-                style={{ display: "block", whiteSpace: "pre-line", lineHeight: 1.45 }}
-              >
-                {i18n.t("settings.options.fields.acceptCall.helperText")}
-              </Typography>
-              {loadingCallType && (
-                <Typography variant="caption" display="block" color="textSecondary" style={{ marginTop: 6 }}>
-                  {i18n.t("settings.options.updating")}
-                </Typography>
-              )}
+            <FormHelperText>
+              {loadingCallType && i18n.t("settings.options.updating")}
             </FormHelperText>
           </FormControl>
         </Grid>
@@ -802,6 +834,17 @@ export default function Options(props) {
           <Tab label="ASAAS" />
 
         </Tabs>
+        <Grid item xs={12}>
+          <Alert
+            severity="warning"
+            variant="outlined"
+            className={classes.sectionAlert}
+          >
+            <Typography variant="body2" component="p">
+              {i18n.t("settings.options.integrations.asaasNotice")}
+            </Typography>
+          </Alert>
+        </Grid>
         <Grid xs={12} sm={12} md={12} item>
           <FormControl className={classes.selectContainer}>
             <TextField

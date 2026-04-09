@@ -1,4 +1,13 @@
-import { Button, Dialog, DialogActions, DialogContent, DialogTitle, Grid, IconButton, makeStyles, Modal, Typography } from "@material-ui/core";
+import { Box, Grid, IconButton, makeStyles, Typography } from "@material-ui/core";
+import Alert from "@material-ui/lab/Alert";
+import {
+  AppDialog,
+  AppDialogTitle,
+  AppDialogContent,
+  AppDialogActions,
+  AppPrimaryButton,
+  AppSecondaryButton,
+} from "../../ui";
 import { CloseOutlined, FontDownload, ImportContacts } from "@material-ui/icons";
 import React, { useState } from "react";
 import { FaDownload } from "react-icons/fa";
@@ -49,20 +58,23 @@ const useStyles = makeStyles((theme) => ({
         paddingTop: 50,
         paddingBottom: 50
     },
-    cSuccessContacts: {
-        backgroundColor: "#AAEE9C80",
-        padding: 10,
-        borderRadius: 8,
-        marginTop:30
+    importResultAlert: {
+        marginTop: theme.spacing(3),
+        width: "100%",
+        "& .MuiAlert-message": {
+            width: "100%",
+        },
     },
-    cErrorContacts: {
-        backgroundColor: "#DD011B40",
-        padding: 10,
-        borderRadius: 8,
-        marginTop:30
+    resultLine: {
+        marginTop: theme.spacing(0.5),
+    },
+    errorList: {
+        margin: 0,
+        paddingLeft: theme.spacing(2.5),
     },
     titleResult: {
-        fontWeight: "bolder"
+        fontWeight: theme.typography.fontWeightMedium,
+        marginBottom: theme.spacing(0.5),
     },
     cCloseModal: {
         textAlign: "end"
@@ -134,20 +146,20 @@ const ImportContactsModal = ( props ) => {
 
     return (
         <div >
-            <Dialog open={open} maxWidth="sm" fullWidth scroll="paper" >
-                <DialogTitle>
+            <AppDialog open={open} onClose={onClose} maxWidth="sm" fullWidth scroll="paper">
+                <AppDialogTitle disableTypography>
                     <Grid container alignItems="center">
                         <Grid item xs={6}>
                             {i18n.t("contactImportModal.title")}
                         </Grid>
                         <Grid item xs={6} className={classes.cCloseModal}>
-                            <IconButton onClick={onClose}>
+                            <IconButton onClick={onClose} aria-label="close">
                                 <CloseOutlined />  
                             </IconButton>                                                                          
                         </Grid>
                     </Grid>
-                </DialogTitle>
-                <DialogContent dividers className={classes.cModal}>
+                </AppDialogTitle>
+                <AppDialogContent dividers className={classes.cModal}>
                     <div className={classes.cLbFile}>
                         <label className={classes.lbFile} htmlFor="i-import-contacts">
                             <FaDownload className={classes.iconDownload} />
@@ -163,53 +175,67 @@ const ImportContactsModal = ( props ) => {
                         <input onChange={handleNewFile} className={classes.iFile} type="file" accept=".xlsx" id="i-import-contacts"/>
                     </div>
                     {successUpload.length > 0 && (
-                        <div className={classes.cSuccessContacts}>
-                            <Typography className={classes.titleResult}>
-                                {i18n.t("contactImportModal.labels.added")}:
+                        <Alert
+                            severity="success"
+                            variant="outlined"
+                            className={classes.importResultAlert}
+                        >
+                            <Typography variant="subtitle2" className={classes.titleResult} component="div">
+                                {i18n.t("contactImportModal.labels.added")}
                             </Typography>
-                            {successUpload.map((contact) => (
-                                <div>
-                                    {contact.contactId} | {contact.contactName} - {i18n.t("contactImportModal.labels.savedContact")}
-                                </div>
+                            {successUpload.map((contact, idx) => (
+                                <Typography
+                                    key={contact.contactId != null ? String(contact.contactId) : `ok-${idx}`}
+                                    variant="body2"
+                                    display="block"
+                                    className={classes.resultLine}
+                                >
+                                    {contact.contactId} · {contact.contactName} — {i18n.t("contactImportModal.labels.savedContact")}
+                                </Typography>
                             ))}
-                        </div>
-                    )}                    
+                        </Alert>
+                    )}
                     {errorUpload.length > 0 && (
-                        <div className={classes.cErrorContacts}>
-                            <Typography className={classes.titleResult}>
-                                {i18n.t("contactImportModal.labels.errors")}:
+                        <Alert
+                            severity="error"
+                            variant="outlined"
+                            className={classes.importResultAlert}
+                        >
+                            <Typography variant="subtitle2" className={classes.titleResult} component="div">
+                                {i18n.t("contactImportModal.labels.errors")}
                             </Typography>
-                            <ul>
-                                {errorUpload.map((contact) => (
-                                    <li>
-                                        {contact.contactName} - {contact.error.message} 
-                                    </li>
+                            <Box component="ul" className={classes.errorList}>
+                                {errorUpload.map((contact, idx) => (
+                                    <Typography
+                                        key={idx}
+                                        component="li"
+                                        variant="body2"
+                                        className={classes.resultLine}
+                                    >
+                                        {contact.contactName} — {contact.error && contact.error.message}
+                                    </Typography>
                                 ))}
-                            </ul>
-                        </div>
-                    )}                    
-                </DialogContent>
-                <DialogActions>
-                    <Button
-                        color="primary"
+                            </Box>
+                        </Alert>
+                    )}
+                </AppDialogContent>
+                <AppDialogActions>
+                    <AppSecondaryButton
                         disabled={isSubmitting}
-                        variant="outlined"
                         onClick={handleDownloadModel}
                     >
                         <ImportContacts className={classes.iconPlanilha} />
                         {i18n.t("contactImportModal.buttons.download")}
-                    </Button>
-                    <Button
-                        color="primary"
+                    </AppSecondaryButton>
+                    <AppPrimaryButton
                         disabled={isSubmitting}
-                        variant="contained"
                         className={classes.btnWrapper}
                         onClick={handleSaveListContacts}
                     >
                         {i18n.t("contactImportModal.buttons.import")}
-                    </Button>
-                </DialogActions>
-            </Dialog>
+                    </AppPrimaryButton>
+                </AppDialogActions>
+            </AppDialog>
         </div>
     );
 }

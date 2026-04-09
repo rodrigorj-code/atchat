@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import MainContainer from "../../components/MainContainer";
-import MainHeader from "../../components/MainHeader";
-import Title from "../../components/Title";
-import { makeStyles, Paper, Tabs, Tab } from "@material-ui/core";
+import { Box, makeStyles, Paper, Tabs, Tab, Typography } from "@material-ui/core";
+import { AppPageHeader } from "../../ui";
+import Alert from "@material-ui/lab/Alert";
 
 import TabPanel from "../../components/TabPanel";
 
@@ -25,7 +25,14 @@ import CompanyTimezoneSettings from "../../components/CompanyTimezoneSettings";
 const useStyles = makeStyles((theme) => ({
   root: {
     flex: 1,
+    minHeight: 0,
+    display: "flex",
+    flexDirection: "column",
+    gap: theme.spacing(2),
     backgroundColor: theme.palette.background.paper,
+    [theme.breakpoints.up("md")]: {
+      gap: theme.spacing(3),
+    },
   },
   mainPaper: {
     ...theme.scrollbarStyles,
@@ -53,6 +60,18 @@ const useStyles = makeStyles((theme) => ({
   },
   textfield: {
     width: "100%",
+  },
+  pageContextWrap: {
+    paddingLeft: theme.spacing(2),
+    paddingRight: theme.spacing(2),
+    paddingTop: theme.spacing(1),
+    width: "100%",
+  },
+  pageContextAlert: {
+    width: "100%",
+    "& .MuiAlert-message": {
+      width: "100%",
+    },
   },
 }));
 
@@ -152,14 +171,34 @@ const SettingsCustom = () => {
 
   return (
     <MainContainer className={classes.root}>
-      <MainHeader>
-        <Title>{i18n.t("settings.title")}</Title>
-      </MainHeader>
+      <AppPageHeader
+        title={
+          <Typography variant="h5" color="primary" component="h1">
+            {i18n.t("settings.title")}
+          </Typography>
+        }
+        subtitle={
+          <Typography variant="body2" color="textSecondary" component="p">
+            {i18n.t("settings.pageSubtitle")}
+          </Typography>
+        }
+      />
       <Paper className={classes.mainPaper} elevation={1}>
         <CompanyTimezoneSettings
           company={company}
           onSaved={(c) => setCompany(c)}
         />
+        <Box className={classes.pageContextWrap}>
+          <Alert
+            severity="info"
+            variant="outlined"
+            className={classes.pageContextAlert}
+          >
+            <Typography variant="body2" component="p">
+              {i18n.t("settings.customPageIntro")}
+            </Typography>
+          </Alert>
+        </Box>
         <Tabs
           value={tab}
           indicatorColor="primary"

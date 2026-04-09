@@ -1,20 +1,25 @@
 import React, { useState, useEffect, useReducer, useCallback, useContext } from "react";
-import { toast } from "react-toastify";
 import { useHistory } from "react-router-dom";
 import { makeStyles } from "@material-ui/core/styles";
-import Button from "@material-ui/core/Button";
 import TextField from "@material-ui/core/TextField";
 import InputAdornment from "@material-ui/core/InputAdornment";
+import Box from "@material-ui/core/Box";
 import MainContainer from "../../components/MainContainer";
-import MainHeader from "../../components/MainHeader";
-import Title from "../../components/Title";
 import api from "../../services/api";
 import { i18n } from "../../translate/i18n";
-import MainHeaderButtonsWrapper from "../../components/MainHeaderButtonsWrapper";
-import { AppSectionCard } from "../../ui";
+import {
+  AppPageHeader,
+  AppSectionCard,
+  AppPrimaryButton,
+  AppActionBar,
+  AppDangerAction,
+  AppEmptyState,
+  AppLoadingState,
+} from "../../ui";
 import ScheduleModal from "../../components/ScheduleModal";
 import ConfirmationModal from "../../components/ConfirmationModal";
 import toastError from "../../errors/toastError";
+import { showSuccessToast } from "../../errors/feedbackToasts";
 import moment from "moment-timezone";
 import { SocketContext } from "../../context/Socket/SocketContext";
 import { AuthContext } from "../../context/Auth/AuthContext";
@@ -103,8 +108,32 @@ const reducer = (state, action) => {
 };
 
 const useStyles = makeStyles((theme) => ({
+  pageRoot: {
+    display: "flex",
+    flexDirection: "column",
+    gap: theme.spacing(2),
+    flex: 1,
+    minHeight: 0,
+    [theme.breakpoints.up("md")]: {
+      gap: theme.spacing(3),
+    },
+  },
   mainPaper: {
     flex: 1,
+    minHeight: 0,
+  },
+  filtersBar: {
+    flexWrap: "wrap",
+    alignItems: "flex-end",
+    marginBottom: theme.spacing(1.5),
+  },
+  searchField: {
+    flex: "1 1 280px",
+    minWidth: 200,
+    maxWidth: 400,
+  },
+  listIntro: {
+    marginBottom: theme.spacing(2),
   },
 }));
 
@@ -151,6 +180,7 @@ const Schedules = () => {
       setLoading(false);
     } catch (err) {
       toastError(err);
+      setLoading(false);
     }
   }, [searchParam, pageNumber]);
 
@@ -228,7 +258,7 @@ const Schedules = () => {
   const handleDeleteSchedule = async (scheduleId) => {
     try {
       await api.delete(`/schedules/${scheduleId}`);
-      toast.success(i18n.t("schedules.toasts.deleted"));
+      showSuccessToast("schedules.toasts.deleted");
     } catch (err) {
       toastError(err);
     }
@@ -289,7 +319,7 @@ const Schedules = () => {
       await api.put(`/schedules/${schedule.id}`, {
         isActive: !active,
       });
-      toast.success(i18n.t("scheduleModal.success"));
+      showSuccessToast("scheduleModal.success");
       await fetchSchedules();
     } catch (err) {
       toastError(err);
@@ -297,7 +327,7 @@ const Schedules = () => {
   };
 
   return (
-    <MainContainer>
+    <MainContainer className={classes.pageRoot}>
       <ConfirmationModal
         title={
           deletingSchedule &&
@@ -305,6 +335,7 @@ const Schedules = () => {
         }
         open={confirmModalOpen}
         onClose={() => setConfirmModalOpen(false)}
+        destructive
         onConfirm={() => handleDeleteSchedule(deletingSchedule.id)}
       >
         {i18n.t("schedules.confirmationModal.deleteMessage")}
@@ -318,31 +349,25 @@ const Schedules = () => {
         contactId={contactId}
         cleanContact={cleanContact}
       />
-      <MainHeader>
-        <Title>{i18n.t("schedules.title")} ({schedules.length})</Title>
-        <MainHeaderButtonsWrapper>
-          <TextField
-            placeholder={i18n.t("contacts.searchPlaceholder")}
-            type="search"
-            value={searchParam}
-            onChange={handleSearch}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon style={{ color: "gray" }} />
-                </InputAdornment>
-              ),
-            }}
-          />
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={handleOpenScheduleModal}
-          >
+      <AppPageHeader
+        title={
+          <Typography variant="h5" color="primary" component="h1">
+            {i18n.t("schedules.title")}
+          </Typography>
+        }
+        subtitle={
+          <Typography variant="body2" color="textSecondary" component="p">
+            {i18n.t("schedules.pageSubtitle", {
+              count: schedules.length,
+            })}
+          </Typography>
+        }
+        actions={
+          <AppPrimaryButton onClick={handleOpenScheduleModal}>
             {i18n.t("schedules.buttons.add")}
-          </Button>
-        </MainHeaderButtonsWrapper>
-      </MainHeader>
+          </AppPrimaryButton>
+        }
+      />
       <AppSectionCard
         dense
         scrollable
@@ -350,12 +375,43 @@ const Schedules = () => {
         variant="outlined"
         onScroll={handleScroll}
       >
-        <Typography variant="body2" color="textSecondary" style={{ padding: "8px 4px" }}>
+        <AppActionBar className={classes.filtersBar}>
+          <TextField
+            className={classes.searchField}
+            placeholder={i18n.t("schedules.searchPlaceholder")}
+            type="search"
+            value={searchParam}
+            onChange={handleSearch}
+            variant="outlined"
+            size="small"
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon color="action" fontSize="small" />
+                </InputAdornment>
+              ),
+            }}
+          />
+        </AppActionBar>
+        <Typography variant="body2" color="textSecondary" className={classes.listIntro}>
           {i18n.t("schedules.listIntro")}{" "}
-          <span style={{ whiteSpace: "nowrap" }}>
+          <Box component="span" style={{ whiteSpace: "nowrap" }}>
             ({i18n.t("schedules.companyTimezoneShort")}: {companyTz})
-          </span>
+          </Box>
         </Typography>
+        {loading && schedules.length === 0 ? (
+          <AppLoadingState message={i18n.t("schedules.loading")} />
+        ) : !loading && schedules.length === 0 ? (
+          <AppEmptyState
+            title={i18n.t("schedules.empty.title")}
+            description={i18n.t("schedules.empty.subtitle")}
+          >
+            <AppPrimaryButton onClick={handleOpenScheduleModal}>
+              {i18n.t("schedules.buttons.add")}
+            </AppPrimaryButton>
+          </AppEmptyState>
+        ) : (
+          <>
         <Calendar
           messages={defaultMessages}
           formats={{
@@ -430,7 +486,7 @@ const Schedules = () => {
                   ? i18n.t(`schedules.frequencyShort.${row.recurrenceType}`)
                   : "—";
               return (
-                <TableRow key={row.id}>
+                <TableRow key={row.id} hover>
                   <TableCell>
                     {row.scheduleType === "recurring"
                       ? i18n.t("schedules.typeRecurring")
@@ -468,24 +524,34 @@ const Schedules = () => {
                           </IconButton>
                         </Tooltip>
                       )}
-                    <IconButton size="small" onClick={() => handleEditSchedule(row)}>
-                      <EditIcon fontSize="small" />
-                    </IconButton>
-                    <IconButton
-                      size="small"
-                      onClick={() => {
-                        setDeletingSchedule(row);
-                        setConfirmModalOpen(true);
-                      }}
-                    >
-                      <DeleteOutlineIcon fontSize="small" />
-                    </IconButton>
+                    <Tooltip title={i18n.t("schedules.buttons.edit")}>
+                      <IconButton
+                        size="small"
+                        onClick={() => handleEditSchedule(row)}
+                        aria-label={i18n.t("schedules.buttons.edit")}
+                      >
+                        <EditIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title={i18n.t("schedules.buttons.delete")}>
+                      <AppDangerAction
+                        onClick={() => {
+                          setDeletingSchedule(row);
+                          setConfirmModalOpen(true);
+                        }}
+                        aria-label={i18n.t("schedules.buttons.delete")}
+                      >
+                        <DeleteOutlineIcon fontSize="small" />
+                      </AppDangerAction>
+                    </Tooltip>
                   </TableCell>
                 </TableRow>
               );
             })}
           </TableBody>
         </Table>
+          </>
+        )}
       </AppSectionCard>
     </MainContainer>
   );

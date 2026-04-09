@@ -9,14 +9,13 @@ import {
   makeStyles,
   Menu,
   MenuItem,
+  Tooltip,
 } from "@material-ui/core";
 
 import { useHistory, useParams } from "react-router-dom";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import { useDate } from "../../hooks/useDate";
 
-import DeleteIcon from "@material-ui/icons/Delete";
-import EditIcon from "@material-ui/icons/Edit";
 import MoreVertIcon from "@material-ui/icons/MoreVert";
 import PersonIcon from "@material-ui/icons/Person";
 
@@ -71,6 +70,12 @@ const useStyles = makeStyles((theme) => ({
     fontSize: "0.75rem",
     color: theme.palette.text.secondary,
   },
+  unreadChip: {
+    marginLeft: theme.spacing(0.625),
+  },
+  menuItemDelete: {
+    color: theme.palette.error.main,
+  },
 }));
 
 export default function ChatList({
@@ -124,7 +129,7 @@ export default function ChatList({
         {unreads > 0 && (
           <Chip
             size="small"
-            style={{ marginLeft: 5 }}
+            className={classes.unreadChip}
             label={unreads}
             color="secondary"
           />
@@ -193,6 +198,7 @@ export default function ChatList({
         title={i18n.t("chat.confirm.title")}
         open={confirmationModal}
         onClose={setConfirmModalOpen}
+        destructive
         onConfirm={handleDelete}
       >
         {i18n.t("chat.confirm.message")}
@@ -205,7 +211,9 @@ export default function ChatList({
         transformOrigin={{ vertical: "top", horizontal: "right" }}
       >
         <MenuItem onClick={handleMenuEdit}>{i18n.t("chat.buttons.edit")}</MenuItem>
-        <MenuItem onClick={handleMenuDelete}>{i18n.t("chat.buttons.delete")}</MenuItem>
+        <MenuItem onClick={handleMenuDelete} className={classes.menuItemDelete}>
+          {i18n.t("chat.buttons.delete")}
+        </MenuItem>
       </Menu>
       <div className={classes.mainContainer}>
         <div className={classes.chatList}>
@@ -242,13 +250,15 @@ export default function ChatList({
                   <div className={classes.timeBlock}>
                     <span className={classes.timeText}>{getTimeShort(chat.updatedAt)}</span>
                     {chat.ownerId === user.id && (
-                      <IconButton
-                        size="small"
-                        onClick={(e) => openMenu(e, chat)}
-                        aria-label="menu"
-                      >
-                        <MoreVertIcon fontSize="small" />
-                      </IconButton>
+                      <Tooltip title={i18n.t("chat.list.conversationMenu")}>
+                        <IconButton
+                          size="small"
+                          onClick={(e) => openMenu(e, chat)}
+                          aria-label={i18n.t("chat.list.conversationMenu")}
+                        >
+                          <MoreVertIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
                     )}
                   </div>
                 </ListItem>

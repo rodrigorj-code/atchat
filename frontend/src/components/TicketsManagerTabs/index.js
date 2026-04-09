@@ -17,9 +17,6 @@ import FormControlLabel from "@material-ui/core/FormControlLabel";
 import Switch from "@material-ui/core/Switch";
 import IconButton from "@material-ui/core/IconButton";
 import Tooltip from "@material-ui/core/Tooltip";
-import Dialog from "@material-ui/core/Dialog";
-import DialogTitle from "@material-ui/core/DialogTitle";
-import DialogContent from "@material-ui/core/DialogContent";
 import FormControl from "@material-ui/core/FormControl";
 import InputLabel from "@material-ui/core/InputLabel";
 import Select from "@material-ui/core/Select";
@@ -38,10 +35,18 @@ import { AuthContext } from "../../context/Auth/AuthContext";
 import { WhatsAppsContext } from "../../context/WhatsApp/WhatsAppsContext";
 import { Can } from "../Can";
 import api from "../../services/api";
-import { toast } from "react-toastify";
 import toastError from "../../errors/toastError";
+import { showSuccessToast } from "../../errors/feedbackToasts";
 import TicketsQueueSelect from "../TicketsQueueSelect";
-import { Button, ButtonBase } from "@material-ui/core";
+import { ButtonBase } from "@material-ui/core";
+import {
+  AppPrimaryButton,
+  AppNeutralButton,
+  AppDialog,
+  AppDialogTitle,
+  AppDialogContent,
+  AppDialogActions,
+} from "../../ui";
 import { TagsFilter } from "../TagsFilter";
 import { UsersFilter } from "../UsersFilter";
 
@@ -367,11 +372,8 @@ const useStyles = makeStyles(theme => ({
 		"50%": { boxShadow: theme.shadows[8] },
 	},
 	// Modal Ações em massa
-	bulkModalTitle: {
-		fontSize: "1.125rem",
-		fontWeight: 600,
-		padding: theme.spacing(2, 3),
-		borderBottom: "1px solid rgba(0,0,0,0.08)",
+	bulkDialogContent: {
+		padding: 0,
 	},
 	bulkSection: {
 		padding: theme.spacing(2, 3),
@@ -398,12 +400,6 @@ const useStyles = makeStyles(theme => ({
 	bulkSelect: {
 		width: "100%",
 		marginBottom: theme.spacing(1.5),
-	},
-	bulkFooter: {
-		padding: theme.spacing(2, 3),
-		borderTop: "1px solid rgba(0,0,0,0.08)",
-		display: "flex",
-		justifyContent: "flex-end",
 	},
 	groupsPlaceholder: {
 		padding: theme.spacing(4, 2),
@@ -551,7 +547,9 @@ const TicketsManagerTabs = () => {
         whatsappId: Number(bulkSelectedConnection),
         ticketIds: bulkTicketIds
       });
-      toast.success(`${data.updated || 0} ticket(s) atribuído(s) à conexão.`);
+      showSuccessToast("ticketsManager.toasts.bulkAssignSuccess", {
+        count: data.updated || 0,
+      });
       setBulkActionsModalOpen(false);
       setBulkSelectedConnection("");
       setBulkTicketIds([]);
@@ -568,17 +566,14 @@ const TicketsManagerTabs = () => {
         onClose={(ticket) => handleCloseOrOpenTicket(ticket)}
       />
 
-      <Dialog
+      <AppDialog
         open={bulkActionsModalOpen}
         onClose={() => setBulkActionsModalOpen(false)}
         maxWidth="sm"
         fullWidth
-        PaperProps={{ style: { borderRadius: 12 } }}
       >
-        <DialogTitle className={classes.bulkModalTitle}>
-          Ações em massa - Tickets
-        </DialogTitle>
-        <DialogContent style={{ padding: 0 }}>
+        <AppDialogTitle>Ações em massa - Tickets</AppDialogTitle>
+        <AppDialogContent dividers className={classes.bulkDialogContent}>
           <div className={`${classes.bulkSection} ${classes.bulkAssignRow}`}>
             <Typography className={classes.bulkSectionTitle}>
               ATRIBUIR TODOS TICKETS SEM CONEXÃO:
@@ -610,29 +605,26 @@ const TicketsManagerTabs = () => {
                     ))}
                   </Select>
                 </FormControl>
-                <Button
-                  variant="contained"
-                  color="primary"
+                <AppPrimaryButton
                   fullWidth
                   disabled={!bulkSelectedConnection || bulkTicketIds.length === 0 || bulkAssigning}
                   onClick={handleBulkAssign}
                 >
                   {bulkAssigning ? "Atribuindo…" : "Atribuir"}
-                </Button>
+                </AppPrimaryButton>
               </>
             )}
           </div>
-        </DialogContent>
-        <div className={classes.bulkFooter}>
-          <Button
+        </AppDialogContent>
+        <AppDialogActions>
+          <AppNeutralButton
             onClick={() => setBulkActionsModalOpen(false)}
-            color="default"
             className={classes.bulkButton}
           >
             CANCELAR
-          </Button>
-        </div>
-      </Dialog>
+          </AppNeutralButton>
+        </AppDialogActions>
+      </AppDialog>
       <Paper elevation={0} className={classes.tabsHeader}>
         <AppTabs
           value={tab}

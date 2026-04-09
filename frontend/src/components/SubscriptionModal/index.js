@@ -7,6 +7,7 @@ import Dialog from "@material-ui/core/Dialog";
 import DialogTitle from "@material-ui/core/DialogTitle";
 import DialogContent from "@material-ui/core/DialogContent";
 import Typography from "@material-ui/core/Typography";
+import Alert from "@material-ui/lab/Alert";
 import CheckoutPage from "../CheckoutPage/";
 import { i18n } from "../../translate/i18n";
 
@@ -24,6 +25,12 @@ const useStyles = makeStyles((theme) => ({
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
+  },
+  emptyAlert: {
+    width: "100%",
+    "& .MuiAlert-message": {
+      width: "100%",
+    },
   },
 
   btnWrapper: {
@@ -67,9 +74,11 @@ const ContactModal = ({ open, onClose, Invoice }) => {
           {Invoice && Invoice.id ? (
             <CheckoutPage Invoice={Invoice} />
           ) : (
-            <Typography color="textSecondary" component="p">
-              {i18n.t("checkoutPage.noInvoice")}
-            </Typography>
+            <Alert severity="info" variant="outlined" className={classes.emptyAlert}>
+              <Typography variant="body2" component="p">
+                {i18n.t("checkoutPage.noInvoice")}
+              </Typography>
+            </Alert>
           )}
         </DialogContent>
       </Dialog>

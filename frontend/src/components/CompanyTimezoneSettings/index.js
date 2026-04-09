@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import {
+  Box,
   Paper,
   Typography,
   FormControl,
@@ -9,6 +10,7 @@ import {
   Button,
   FormHelperText,
 } from "@material-ui/core";
+import Alert from "@material-ui/lab/Alert";
 import { makeStyles } from "@material-ui/core/styles";
 import { toast } from "react-toastify";
 import { i18n } from "../../translate/i18n";
@@ -20,6 +22,21 @@ const useStyles = makeStyles((theme) => ({
   root: {
     padding: theme.spacing(2),
     marginBottom: theme.spacing(2),
+  },
+  contextAlert: {
+    marginBottom: theme.spacing(2),
+    width: "100%",
+    "& .MuiAlert-message": {
+      width: "100%",
+    },
+  },
+  contextAlertBody: {
+    display: "flex",
+    flexDirection: "column",
+    gap: theme.spacing(1),
+  },
+  saveButton: {
+    marginTop: theme.spacing(1.5),
   },
 }));
 
@@ -60,9 +77,16 @@ export default function CompanyTimezoneSettings({ company, onSaved }) {
       <Typography variant="subtitle1" gutterBottom>
         {i18n.t("settings.company.form.timezone")}
       </Typography>
-      <Typography variant="body2" color="textSecondary" paragraph>
-        {i18n.t("settings.company.form.timezoneHint")}
-      </Typography>
+      <Alert severity="info" variant="outlined" className={classes.contextAlert}>
+        <Box className={classes.contextAlertBody}>
+          <Typography variant="body2" component="p">
+            {i18n.t("settings.company.form.timezoneHint")}
+          </Typography>
+          <Typography variant="body2" color="textSecondary" component="p">
+            {i18n.t("settings.company.form.timezoneFooter")}
+          </Typography>
+        </Box>
+      </Alert>
       <FormControl variant="outlined" fullWidth margin="dense">
         <InputLabel id="company-timezone-label">
           {i18n.t("settings.company.form.timezone")}
@@ -79,14 +103,16 @@ export default function CompanyTimezoneSettings({ company, onSaved }) {
             </MenuItem>
           ))}
         </Select>
-        <FormHelperText>{i18n.t("settings.company.form.timezoneFooter")}</FormHelperText>
+        <FormHelperText>
+          {i18n.t("settings.company.form.timezoneHelperField")}
+        </FormHelperText>
       </FormControl>
       <Button
         variant="contained"
         color="primary"
         disabled={saving}
         onClick={handleSave}
-        style={{ marginTop: 12 }}
+        className={classes.saveButton}
       >
         {i18n.t("settings.company.buttons.saveTimezone")}
       </Button>
