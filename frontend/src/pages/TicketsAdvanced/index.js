@@ -11,7 +11,7 @@ import ChatIcon from '@material-ui/icons/Chat';
 import TicketsManagerTabs from "../../components/TicketsManagerTabs/";
 import Ticket from "../../components/Ticket/";
 import TicketAdvancedLayout from "../../components/TicketAdvancedLayout";
-import logo from "../../assets/logo.png"; //PLW DESIGN LOGO//
+import { useBranding } from "../../context/Branding/BrandingContext";
 import { TicketsContext } from "../../context/Tickets/TicketsContext";
 
 import { i18n } from "../../translate/i18n";
@@ -38,7 +38,8 @@ const TicketAdvanced = (props) => {
 	const classes = useStyles();
 	const { ticketId } = useParams();
 	const [option, setOption] = useState(0);
-    const { currentTicket, setCurrentTicket } = useContext(TicketsContext)
+    const { currentTicket, setCurrentTicket } = useContext(TicketsContext);
+	const { branding, resolveMenuLogo } = useBranding();
 
     useEffect(() => {
         if(currentTicket.id !== null) {
@@ -61,12 +62,9 @@ const TicketAdvanced = (props) => {
 
 	const renderPlaceholder = () => {
 		return <Box className={classes.placeholderContainer}>
-             {/*<div className={classes.placeholderItem}>{i18n.t("chat.noTicketMessage")}</div>*/}
-			//PLW DESIGN LOGO//
 			<div>
-			<center><img style={{ margin: "0 auto", width: "70%" }} src={logo} alt="logologin" /></center>
+			<center><img style={{ margin: "0 auto", width: "70%" }} src={resolveMenuLogo()} alt={branding.systemName || ""} /></center>
 			</div>
-			//PLW DESIGN LOGO//
 			<br />
             <Button onClick={() => setOption(1)} variant="contained" color="primary">
                 {i18n.t("ticketAdvanced.selectTicket")}

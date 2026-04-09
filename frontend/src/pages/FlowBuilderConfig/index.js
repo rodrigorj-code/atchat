@@ -50,7 +50,7 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
-import { useParams } from "react-router-dom/cjs/react-router-dom.min";
+import { useParams } from "react-router-dom";
 import { CircularProgress } from "@material-ui/core";
 
 import "reactflow/dist/style.css";

@@ -14,6 +14,9 @@ import {
   TableRow,
   IconButton,
   Select,
+  FormControlLabel,
+  Switch,
+  Typography,
 } from "@material-ui/core";
 import { Formik, Form, Field } from "formik";
 import ButtonWithSpinner from "../ButtonWithSpinner";
@@ -32,6 +35,33 @@ import { useDate } from "../../hooks/useDate";
 import moment from "moment";
 import { i18n } from "../../translate/i18n";
 import { getIanaTimezones } from "../../utils/ianaTimezones";
+
+const defaultModulePermissions = () => ({
+  useKanban: true,
+  useCampaigns: true,
+  useFlowbuilders: true,
+  useOpenAi: true,
+  useSchedules: true,
+  useExternalApi: true,
+  useIntegrations: true,
+  useGroups: true,
+});
+
+const mergeModulePermissions = (raw) => ({
+  ...defaultModulePermissions(),
+  ...(raw && typeof raw === "object" ? raw : {}),
+});
+
+const MODULE_TOGGLE_KEYS = [
+  "useKanban",
+  "useCampaigns",
+  "useFlowbuilders",
+  "useOpenAi",
+  "useSchedules",
+  "useExternalApi",
+  "useIntegrations",
+  "useGroups",
+];
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -77,7 +107,7 @@ export function CompanyForm(props) {
   const [modalUser, setModalUser] = useState(false);
   const [firstUser, setFirstUser] = useState({});
 
-  const [record, setRecord] = useState({
+  const [record, setRecord] = useState(() => ({
     name: "",
     email: "",
     phone: "",
@@ -88,7 +118,8 @@ export function CompanyForm(props) {
     recurrence: "",
     timezone: "America/Sao_Paulo",
     ...initialValue,
-  });
+    modulePermissions: mergeModulePermissions(initialValue?.modulePermissions),
+  }));
 
   const { list: listPlans } = usePlans();
 
@@ -111,6 +142,7 @@ export function CompanyForm(props) {
       return {
         ...prev,
         ...initialValue,
+        modulePermissions: mergeModulePermissions(initialValue?.modulePermissions),
       };
     });
   }, [initialValue]);
@@ -344,6 +376,52 @@ export function CompanyForm(props) {
                 </FormControl>
               </Grid>
               <Grid xs={12} item>
+                <Paper variant="outlined" style={{ padding: 16 }}>
+                  <Typography variant="h6" gutterBottom>
+                    {i18n.t("settings.company.form.modulesSectionTitle")}
+                  </Typography>
+                  <Typography variant="body2" color="textSecondary" paragraph>
+                    {i18n.t("settings.company.form.modulesSectionHint")}
+                  </Typography>
+                  <Grid container spacing={2}>
+                    {MODULE_TOGGLE_KEYS.map((key) => (
+                      <Grid item xs={12} sm={6} md={4} key={key}>
+                        <Field name={`modulePermissions.${key}`}>
+                          {({ field, form }) => (
+                            <FormControlLabel
+                              style={{ alignItems: "flex-start", margin: 0 }}
+                              control={
+                                <Switch
+                                  color="primary"
+                                  checked={field.value !== false}
+                                  onChange={(e) =>
+                                    form.setFieldValue(field.name, e.target.checked)
+                                  }
+                                />
+                              }
+                              label={
+                                <div>
+                                  <Typography variant="body2" component="span" display="block">
+                                    {i18n.t(`settings.company.form.modules.${key}`)}
+                                  </Typography>
+                                  <Typography
+                                    variant="caption"
+                                    color="textSecondary"
+                                    display="block"
+                                  >
+                                    {i18n.t(`settings.company.form.modules.${key}Help`)}
+                                  </Typography>
+                                </div>
+                              }
+                            />
+                          )}
+                        </Field>
+                      </Grid>
+                    ))}
+                  </Grid>
+                </Paper>
+              </Grid>
+              <Grid xs={12} item>
                 <Grid justifyContent="flex-end" spacing={1} container>
                   <Grid xs={4} md={1} item>
                     <ButtonWithSpinner
@@ -476,6 +554,7 @@ export function CompaniesManagerGrid(props) {
               #
             </TableCell>
             <TableCell align="left">{i18n.t("settings.company.form.name")}</TableCell>
+            <TableCell align="left">{i18n.t("settings.company.form.primaryAdmin")}</TableCell>
             <TableCell align="left">{i18n.t("settings.company.form.email")}</TableCell>
             <TableCell align="left">{i18n.t("settings.company.form.phone")}</TableCell>
             <TableCell align="left">{i18n.t("settings.company.form.plan")}</TableCell>
@@ -494,6 +573,11 @@ export function CompaniesManagerGrid(props) {
                 </IconButton>
               </TableCell>
               <TableCell align="left">{row.name || "-"}</TableCell>
+              <TableCell align="left">
+                {row.primaryAdmin
+                  ? `${row.primaryAdmin.name || "-"} (${row.primaryAdmin.email || "-"})`
+                  : "-"}
+              </TableCell>
               <TableCell align="left">{row.email || "-"}</TableCell>
               <TableCell align="left">{row.phone || "-"}</TableCell>
               <TableCell align="left">{renderPlan(row)}</TableCell>
@@ -530,6 +614,7 @@ export default function CompaniesManager() {
     dueDate: "",
     recurrence: "",
     timezone: "America/Sao_Paulo",
+    modulePermissions: defaultModulePermissions(),
   });
 
   useEffect(() => {
@@ -598,6 +683,7 @@ export default function CompaniesManager() {
       dueDate: "",
       recurrence: "",
       timezone: "America/Sao_Paulo",
+      modulePermissions: defaultModulePermissions(),
     }));
   };
 
@@ -624,6 +710,7 @@ export default function CompaniesManager() {
       dueDate: data.dueDate || "",
       recurrence: data.recurrence || "",
       timezone: data.timezone || "America/Sao_Paulo",
+      modulePermissions: mergeModulePermissions(data.modulePermissions),
     }));
   };
 

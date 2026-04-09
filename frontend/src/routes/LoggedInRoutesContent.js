@@ -41,17 +41,20 @@ import FlowBuilder from "../pages/FlowBuilder";
 import FlowBuilderConfig from "../pages/FlowBuilderConfig";
 import Evaluation from "../pages/Evaluation";
 import Reports from "../pages/Reports";
+import PlatformModule from "../pages/Platform/PlatformModule";
 
 function usePlanFlags() {
   const { user } = useContext(AuthContext);
   const { getPlanCompany } = usePlans();
   const [flags, setFlags] = useState({
     useCampaigns: false,
+    useFlowbuilders: false,
     useKanban: false,
     useOpenAi: false,
     useIntegrations: false,
     useSchedules: false,
     useExternalApi: false,
+    useGroups: true,
     loaded: false,
   });
 
@@ -66,27 +69,46 @@ function usePlanFlags() {
         const planConfigs = await getPlanCompany(undefined, user.companyId);
         if (cancelled) return;
         const p = planConfigs?.plan;
+        const eff = planConfigs?.effectiveModules;
         if (!p) {
           setFlags({
             useCampaigns: false,
+            useFlowbuilders: false,
             useKanban: false,
             useOpenAi: false,
             useIntegrations: false,
             useSchedules: false,
             useExternalApi: false,
+            useGroups: true,
             loaded: true,
           });
           return;
         }
-        setFlags({
-          useCampaigns: !!p.useCampaigns,
-          useKanban: !!p.useKanban,
-          useOpenAi: !!p.useOpenAi,
-          useIntegrations: !!p.useIntegrations,
-          useSchedules: !!p.useSchedules,
-          useExternalApi: !!p.useExternalApi,
-          loaded: true,
-        });
+        if (eff) {
+          setFlags({
+            useCampaigns: !!eff.useCampaigns,
+            useFlowbuilders: !!eff.useFlowbuilders,
+            useKanban: !!eff.useKanban,
+            useOpenAi: !!eff.useOpenAi,
+            useIntegrations: !!eff.useIntegrations,
+            useSchedules: !!eff.useSchedules,
+            useExternalApi: !!eff.useExternalApi,
+            useGroups: eff.useGroups !== false,
+            loaded: true,
+          });
+        } else {
+          setFlags({
+            useCampaigns: !!p.useCampaigns,
+            useFlowbuilders: !!p.useCampaigns,
+            useKanban: !!p.useKanban,
+            useOpenAi: !!p.useOpenAi,
+            useIntegrations: !!p.useIntegrations,
+            useSchedules: !!p.useSchedules,
+            useExternalApi: !!p.useExternalApi,
+            useGroups: true,
+            loaded: true,
+          });
+        }
       } catch {
         if (!cancelled) setFlags((f) => ({ ...f, loaded: true }));
       }
@@ -98,7 +120,7 @@ function usePlanFlags() {
 
   useEffect(() => {
     if (localStorage.getItem("cshow")) {
-      setFlags((f) => ({ ...f, useCampaigns: true }));
+      setFlags((f) => ({ ...f, useCampaigns: true, useFlowbuilders: true }));
     }
   }, []);
 
@@ -142,19 +164,49 @@ function AtendimentoModule({ planFlags, isAdmin }) {
       t.push({ path: "/kanban", label: i18n.t("mainDrawer.listItems.kanban") });
     }
     t.push({ path: "/contacts", label: i18n.t("mainDrawer.listItems.contacts") });
-    if (isAdmin) {
+    if (isAdmin && planFlags.useGroups) {
       t.push({ path: "/group-manager", label: i18n.t("mainDrawer.listItems.groups") });
     }
     return t;
-  }, [planFlags.useKanban, isAdmin, i18n.language]);
+  }, [planFlags.useKanban, planFlags.useGroups, isAdmin, i18n.language]);
 
   return (
     <ModuleTabsLayout tabs={tabs}>
       <Switch>
         <Route exact path="/tickets/:ticketId?" component={TicketResponsiveContainer} />
-        <Route exact path="/kanban" component={Kanban} />
+        <Route
+          exact
+          path="/kanban"
+          render={() => {
+            if (!planFlags.loaded) {
+              return (
+                <Box display="flex" justifyContent="center" alignItems="center" minHeight={240} width="100%">
+                  <CircularProgress size={36} />
+                </Box>
+              );
+            }
+            return planFlags.useKanban ? <Kanban /> : <Redirect to="/tickets" />;
+          }}
+        />
         <Route exact path="/contacts" component={Contacts} />
-        <Route exact path="/group-manager" component={GroupManager} />
+        <Route
+          exact
+          path="/group-manager"
+          render={() => {
+            if (!planFlags.loaded) {
+              return (
+                <Box display="flex" justifyContent="center" alignItems="center" minHeight={240} width="100%">
+                  <CircularProgress size={36} />
+                </Box>
+              );
+            }
+            return isAdmin && planFlags.useGroups ? (
+              <GroupManager />
+            ) : (
+              <Redirect to="/tickets" />
+            );
+          }}
+        />
       </Switch>
     </ModuleTabsLayout>
   );
@@ -163,7 +215,7 @@ function AtendimentoModule({ planFlags, isAdmin }) {
 function AutomacaoModule({ planFlags, isAdmin }) {
   const tabs = useMemo(() => {
     const t = [];
-    if (isAdmin && planFlags.useCampaigns) {
+    if (isAdmin && planFlags.useFlowbuilders) {
       t.push(
         { path: "/flowbuilders", label: i18n.t("mainDrawer.listItems.flowsChatbot") },
         { path: "/phrase-lists", label: i18n.t("mainDrawer.listItems.keywordsTrigger") }
@@ -177,7 +229,7 @@ function AutomacaoModule({ planFlags, isAdmin }) {
     }
     t.push({ path: "/quick-messages", label: i18n.t("mainDrawer.listItems.quickMessages") });
     return t;
-  }, [planFlags.useCampaigns, planFlags.useIntegrations, planFlags.useOpenAi, isAdmin, i18n.language]);
+  }, [planFlags.useFlowbuilders, planFlags.useIntegrations, planFlags.useOpenAi, isAdmin, i18n.language]);
 
   if (!planFlags.loaded) {
     return (
@@ -190,12 +242,14 @@ function AutomacaoModule({ planFlags, isAdmin }) {
   return (
     <ModuleTabsLayout tabs={tabs}>
       <Switch>
-        {planFlags.useCampaigns && (
-          <>
-            <Route exact path="/phrase-lists" component={CampaignsPhrase} />
-            <Route exact path="/flowbuilders" component={FlowBuilder} />
-            <Route exact path="/flowbuilder/:id?" component={FlowBuilderConfig} />
-          </>
+        {planFlags.useFlowbuilders && (
+          <Route exact path="/phrase-lists" component={CampaignsPhrase} />
+        )}
+        {planFlags.useFlowbuilders && (
+          <Route exact path="/flowbuilders" component={FlowBuilder} />
+        )}
+        {planFlags.useFlowbuilders && (
+          <Route exact path="/flowbuilder/:id?" component={FlowBuilderConfig} />
         )}
         <Route
           exact
@@ -279,7 +333,13 @@ function ConfiguracoesModule({ showExternalApi }) {
     <ModuleTabsLayout tabs={tabs}>
       <Switch>
         <Route exact path="/connections" component={Connections} />
-        <Route exact path="/messages-api" component={MessagesAPI} />
+        <Route
+          exact
+          path="/messages-api"
+          render={() =>
+            showExternalApi ? <MessagesAPI /> : <Redirect to="/settings" />
+          }
+        />
         <Route exact path="/settings" component={SettingsCustom} />
       </Switch>
     </ModuleTabsLayout>
@@ -294,7 +354,7 @@ export default function LoggedInRoutesContent() {
   const atendimentoPaths = ["/tickets/:ticketId?", "/kanban", "/contacts", "/group-manager"];
 
   const automacaoPathsBase = ["/queue-integration", "/prompts", "/quick-messages"];
-  const automacaoPaths = planFlags.useCampaigns
+  const automacaoPaths = planFlags.useFlowbuilders
     ? ["/phrase-lists", "/flowbuilders", "/flowbuilder/:id?", ...automacaoPathsBase]
     : automacaoPathsBase;
 
@@ -310,9 +370,13 @@ export default function LoggedInRoutesContent() {
 
   const configPaths = ["/connections", "/messages-api", "/settings"];
 
+  const platformPaths = ["/platform", "/platform/companies", "/platform/branding"];
+
   return (
     <Switch>
       <Route exact path={["/", "/relatorios"]} component={DashboardRouteGuard} />
+
+      <Route exact path={platformPaths} component={PlatformModule} />
 
       <Route
         path={atendimentoPaths}
@@ -323,9 +387,22 @@ export default function LoggedInRoutesContent() {
       <Route exact path="/chats/:id" component={Chat} />
 
       <Route exact path="/todolist" component={ToDoList} />
-      <Route exact path="/schedules" component={Schedules} />
+      <Route
+        exact
+        path="/schedules"
+        render={() => {
+          if (!planFlags.loaded) {
+            return (
+              <Box display="flex" justifyContent="center" alignItems="center" minHeight={240} width="100%">
+                <CircularProgress size={36} />
+              </Box>
+            );
+          }
+          return planFlags.useSchedules ? <Schedules /> : <Redirect to="/tickets" />;
+        }}
+      />
 
-      {!planFlags.useCampaigns && (
+      {!planFlags.useFlowbuilders && (
         <>
           <Route exact path="/flowbuilders" render={() => <Redirect to="/quick-messages" />} />
           <Route exact path="/flowbuilder/:id?" render={() => <Redirect to="/quick-messages" />} />

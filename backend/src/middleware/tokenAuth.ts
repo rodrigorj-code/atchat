@@ -30,7 +30,7 @@ const tokenAuth = async (
       include: [
         {
           model: Company,
-          include: [{ model: Plan }]
+          include: [{ model: Plan, as: "plan" }]
         }
       ]
     });

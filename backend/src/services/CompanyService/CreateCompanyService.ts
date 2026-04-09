@@ -15,6 +15,7 @@ interface CompanyData {
   campaignsEnabled?: boolean;
   dueDate?: string;
   recurrence?: string;
+  modulePermissions?: Record<string, boolean> | null;
 }
 
 const CreateCompanyService = async (
@@ -29,7 +30,8 @@ const CreateCompanyService = async (
     campaignsEnabled,
     dueDate,
     recurrence,
-    password
+    password,
+    modulePermissions
   } = companyData;
 
   const companySchema = Yup.object().shape({
@@ -65,7 +67,10 @@ const CreateCompanyService = async (
     status,
     planId,
     dueDate,
-    recurrence
+    recurrence,
+    ...(modulePermissions && typeof modulePermissions === "object"
+      ? { modulePermissions }
+      : {})
   });
 
   const passwordHash = await hash(password || "123456", 8);

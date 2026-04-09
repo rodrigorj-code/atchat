@@ -29,7 +29,7 @@ import { toast } from "react-toastify";
 import ConfirmationModal from "../../components/ConfirmationModal";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import usePlans from "../../hooks/usePlans";
-import { useHistory } from "react-router-dom/cjs/react-router-dom.min";
+import { useHistory } from "react-router-dom";
 import { SocketContext } from "../../context/Socket/SocketContext";
 
 const useStyles = makeStyles((theme) => ({
@@ -111,7 +111,10 @@ const Prompts = () => {
   useEffect(() => {
     async function fetchData() {
       const planConfigs = await getPlanCompany(undefined, companyId);
-      if (!planConfigs.plan.useOpenAi) {
+      const openOk = planConfigs.effectiveModules
+        ? planConfigs.effectiveModules.useOpenAi
+        : planConfigs.plan?.useOpenAi;
+      if (!openOk) {
         toast.error("Esta empresa não possui permissão para acessar essa página! Estamos lhe redirecionando.");
         setTimeout(() => {
           history.push(`/`)

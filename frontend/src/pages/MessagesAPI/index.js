@@ -125,7 +125,10 @@ const MessagesAPI = () => {
     async function fetchData() {
       const companyId = localStorage.getItem("companyId");
       const planConfigs = await getPlanCompany(undefined, companyId);
-      if (!planConfigs.plan.useExternalApi) {
+      const extOk = planConfigs.effectiveModules
+        ? planConfigs.effectiveModules.useExternalApi
+        : planConfigs.plan?.useExternalApi;
+      if (!extOk) {
         toast.error(i18n.t("messagesAPI.toasts.unauthorized"));
         setTimeout(() => {
           history.push(`/`);

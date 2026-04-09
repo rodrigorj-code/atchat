@@ -1091,6 +1091,7 @@ const messages = {
         },
         listItems: {
           dashboard: "Dashboard",
+          platform: "Plataforma",
           connections: "Conexiones",
           tickets: "Atenciones",
           quickMessages: "Respuestas rápidas",
@@ -1141,6 +1142,43 @@ const messages = {
             profile: "Perfil",
             logout: "Salir",
           },
+        },
+        drawerFooter: {
+          roleSuperAdmin: "Super Admin",
+          roleAdmin: "Administrador",
+          roleUser: "Usuario",
+        },
+      },
+      platform: {
+        shell: {
+          eyebrow: "Super Admin · Plataforma",
+        },
+        tabs: {
+          dashboard: "Panel de la plataforma",
+          companies: "Empresas",
+          branding: "Marca",
+        },
+        dashboard: {
+          title: "Panel de la plataforma",
+          subtitle: "Visión general del sistema para el dueño de la plataforma.",
+          companiesTotal: "Total de empresas",
+        },
+        companies: {
+          title: "Empresas",
+          subtitle:
+            "Lista y edición de empresas registradas. Los cambios aquí son globales.",
+        },
+        branding: {
+          title: "Marca global",
+          subtitle:
+            "Nombre y logos mostrados en el login y en el menú interno para todos los usuarios.",
+          systemName: "Nombre del sistema",
+          loginLogoUrl: "URL del logo (login)",
+          menuLogoUrl: "URL del logo (menú interno)",
+          urlHelp:
+            "URL absoluta (https://...) de la imagen; déjelo en blanco para el predeterminado.",
+          saved: "Marca actualizada correctamente.",
+          save: "Guardar",
         },
       },
       queueIntegration: {
@@ -1953,6 +1991,27 @@ const messages = {
               "Elija la zona de la sede o de la operación principal.",
             timezoneHelperField:
               "Formato IANA como en la lista (ej.: America/Sao_Paulo).",
+            modulesSectionTitle: "Módulos habilitados (empresa)",
+            modulesSectionHint:
+              "Complementa el plan: desactivar aquí oculta el módulo y bloquea el uso cuando el plan permita el recurso.",
+            modules: {
+              useKanban: "Kanban",
+              useKanbanHelp: "Tablero kanban en la atención.",
+              useCampaigns: "Campañas",
+              useCampaignsHelp: "Listas, envíos e informes de campaña.",
+              useFlowbuilders: "Flujos (chatbot)",
+              useFlowbuildersHelp: "Flowbuilder, disparadores y flujos vinculados a WhatsApp.",
+              useOpenAi: "OpenAI / Prompts",
+              useOpenAiHelp: "Prompts y funciones de IA.",
+              useSchedules: "Agendamientos",
+              useSchedulesHelp: "Mensajes programados y recurrencia.",
+              useExternalApi: "API WhatsApp (envío externo)",
+              useExternalApiHelp: "Token HTTP para envío de mensajes por API.",
+              useIntegrations: "Integraciones por sector",
+              useIntegrationsHelp: "Webhooks, N8N, Typebot y automatizaciones.",
+              useGroups: "Grupos WhatsApp",
+              useGroupsHelp: "Gestión de grupos en la atención.",
+            },
           },
           buttons: {
             clear: "Limpiar",
@@ -2097,6 +2156,8 @@ const messages = {
         ERR_SESSION_EXPIRED: "Sesión expirada. Por favor inicie sesión.",
         ERR_USER_CREATION_DISABLED: "La creación de usuarios fue deshabilitada por el administrador.",
         ERR_NO_PERMISSION: "No tiene permiso para acceder a este recurso.",
+        ERR_MODULE_NOT_ALLOWED:
+          "Este módulo no está habilitado para su empresa (plan o configuración de la plataforma).",
         ERR_DUPLICATED_CONTACT: "Ya existe un contacto con este número.",
         ERR_NO_SETTING_FOUND: "No se encontró ninguna configuración con este ID.",
         ERR_NO_CONTACT_FOUND: "No se encontró ningún contacto con este ID.",

@@ -19,7 +19,7 @@ import AttachFile from "@material-ui/icons/AttachFile";
 import LocalOfferIcon from "@material-ui/icons/LocalOffer";
 import HelpOutlineIcon from "@material-ui/icons/HelpOutline";
 import AssessmentOutlinedIcon from "@material-ui/icons/AssessmentOutlined";
-import { AccountTree } from "@material-ui/icons";
+import { AccountTree, BusinessCenter } from "@material-ui/icons";
 import { i18n } from "../translate/i18n";
 import { WhatsAppsContext } from "../context/WhatsApp/WhatsAppsContext";
 import { AuthContext } from "../context/Auth/AuthContext";
@@ -147,7 +147,7 @@ const reducer = (state, action) => {
 
 function defaultAutomacaoPath(flags, isAdmin) {
   if (!isAdmin) return "/quick-messages";
-  if (flags.useCampaigns) return "/flowbuilders";
+  if (flags.useFlowbuilders) return "/flowbuilders";
   if (flags.useIntegrations) return "/queue-integration";
   if (flags.useOpenAi) return "/prompts";
   return "/quick-messages";
@@ -160,11 +160,13 @@ const MainListItems = (props) => {
   const { user } = useContext(AuthContext);
   const [connectionWarning, setConnectionWarning] = useState(false);
   const [showCampaigns, setShowCampaigns] = useState(false);
+  const [showFlowbuilders, setShowFlowbuilders] = useState(false);
   const [showKanban, setShowKanban] = useState(false);
   const [showOpenAi, setShowOpenAi] = useState(false);
   const [showIntegrations, setShowIntegrations] = useState(false);
   const [showSchedules, setShowSchedules] = useState(false);
   const [showExternalApi, setShowExternalApi] = useState(false);
+  const [showGroups, setShowGroups] = useState(true);
 
   const [invisible, setInvisible] = useState(true);
   const [pageNumber, setPageNumber] = useState(1);
@@ -178,11 +180,13 @@ const MainListItems = (props) => {
   const isAdmin = user?.profile === "admin";
   const planFlags = {
     useCampaigns: showCampaigns,
+    useFlowbuilders: showFlowbuilders,
     useKanban: showKanban,
     useOpenAi: showOpenAi,
     useIntegrations: showIntegrations,
     useSchedules: showSchedules,
     useExternalApi: showExternalApi,
+    useGroups: showGroups,
   };
 
   useEffect(() => {
@@ -196,12 +200,26 @@ const MainListItems = (props) => {
       try {
         const planConfigs = await getPlanCompany(undefined, companyId);
         const plan = planConfigs?.plan;
-        setShowCampaigns(!!plan?.useCampaigns);
-        setShowKanban(!!plan?.useKanban);
-        setShowOpenAi(!!plan?.useOpenAi);
-        setShowIntegrations(!!plan?.useIntegrations);
-        setShowSchedules(!!plan?.useSchedules);
-        setShowExternalApi(!!plan?.useExternalApi);
+        const eff = planConfigs?.effectiveModules;
+        if (eff) {
+          setShowCampaigns(!!eff.useCampaigns);
+          setShowFlowbuilders(!!eff.useFlowbuilders);
+          setShowKanban(!!eff.useKanban);
+          setShowOpenAi(!!eff.useOpenAi);
+          setShowIntegrations(!!eff.useIntegrations);
+          setShowSchedules(!!eff.useSchedules);
+          setShowExternalApi(!!eff.useExternalApi);
+          setShowGroups(eff.useGroups !== false);
+        } else if (plan) {
+          setShowCampaigns(!!plan.useCampaigns);
+          setShowFlowbuilders(!!plan.useCampaigns);
+          setShowKanban(!!plan.useKanban);
+          setShowOpenAi(!!plan.useOpenAi);
+          setShowIntegrations(!!plan.useIntegrations);
+          setShowSchedules(!!plan.useSchedules);
+          setShowExternalApi(!!plan.useExternalApi);
+          setShowGroups(true);
+        }
       } catch (e) {
         toastError(e);
       }
@@ -248,6 +266,7 @@ const MainListItems = (props) => {
   useEffect(() => {
     if (localStorage.getItem("cshow")) {
       setShowCampaigns(true);
+      setShowFlowbuilders(true);
     }
   }, []);
 
@@ -316,6 +335,7 @@ const MainListItems = (props) => {
   const selArquivos = path === "/files";
   const selTags = path === "/tags";
   const selAjuda = path === "/helps";
+  const selPlatform = path.startsWith("/platform");
 
   const toAutomacao = defaultAutomacaoPath(planFlags, isAdmin);
 
@@ -408,6 +428,18 @@ const MainListItems = (props) => {
           />
         )}
       />
+
+      {user.super && (
+        <ListItemLink
+          to="/platform"
+          primary={i18n.t("mainDrawer.listItems.platform")}
+          icon={<BusinessCenter />}
+          listItemClassName={classes.listItem}
+          listItemIconClassName={classes.listItemIcon}
+          listItemTextClassName={classes.listItemText}
+          selected={selPlatform}
+        />
+      )}
 
       <ListItemLink
         to="/tickets"

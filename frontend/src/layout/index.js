@@ -35,7 +35,7 @@ import { i18n } from "../translate/i18n";
 import toastError from "../errors/toastError";
 import AnnouncementsPopover from "../components/AnnouncementsPopover";
 
-import logo from "../assets/logo.png";
+import { useBranding } from "../context/Branding/BrandingContext";
 import { SocketContext } from "../context/Socket/SocketContext";
 import ChatPopover from "../pages/Chat/ChatPopover";
 
@@ -265,6 +265,8 @@ const LoggedInLayout = ({ children, themeToggle }) => {
   const [drawerVariant, setDrawerVariant] = useState("permanent");
   // const [dueDate, setDueDate] = useState("");
   const { user } = useContext(AuthContext);
+  const { branding, resolveMenuLogo } = useBranding();
+  const menuLogoSrc = resolveMenuLogo();
 
   const theme = useTheme();
   const { colorMode } = useContext(ColorModeContext);
@@ -435,7 +437,11 @@ const LoggedInLayout = ({ children, themeToggle }) => {
       >
         <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0 }}>
           <div className={clsx(classes.toolbarIcon, classes.drawerToolbar)}>
-            <img src={logo} className={classes.logo} alt="logo" />
+            <img
+              src={menuLogoSrc}
+              className={classes.logo}
+              alt={branding.systemName || "logo"}
+            />
           </div>
           <Divider />
           <List className={classes.containerWithScroll}>
@@ -452,7 +458,13 @@ const LoggedInLayout = ({ children, themeToggle }) => {
                 </Typography>
               </div>
               <Typography className={classes.drawerFooterRole}>
-                {user?.profile === "admin" ? "Administrador" : user?.profile === "user" ? "Usuário" : user?.profile || "-"}
+                {user?.super
+                  ? i18n.t("mainDrawer.drawerFooter.roleSuperAdmin")
+                  : user?.profile === "admin"
+                    ? i18n.t("mainDrawer.drawerFooter.roleAdmin")
+                    : user?.profile === "user"
+                      ? i18n.t("mainDrawer.drawerFooter.roleUser")
+                      : user?.profile || "-"}
               </Typography>
               <Typography className={classes.drawerFooterVersion} component="div">
                 v{versionSystem}

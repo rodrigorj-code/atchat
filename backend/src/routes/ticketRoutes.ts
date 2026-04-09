@@ -1,5 +1,6 @@
 import express from "express";
 import isAuth from "../middleware/isAuth";
+import requireEffectiveModule from "../middleware/requireEffectiveModule";
 
 import * as TicketController from "../controllers/TicketController";
 import * as FlowExecutionLogController from "../controllers/FlowExecutionLogController";
@@ -18,7 +19,12 @@ ticketRoutes.get(
   FlowExecutionLogController.indexByTicket
 );
 
-ticketRoutes.get("/ticket/kanban", isAuth, TicketController.kanban);
+ticketRoutes.get(
+  "/ticket/kanban",
+  isAuth,
+  requireEffectiveModule("useKanban"),
+  TicketController.kanban
+);
 
 ticketRoutes.get("/tickets/u/:uuid", isAuth, TicketController.showFromUUID);
 

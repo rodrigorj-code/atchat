@@ -12,6 +12,7 @@ import { SocketContext, SocketManager } from "./context/Socket/SocketContext";
 import { getThemeOptions } from "./theme/appThemeOptions";
 
 import Routes from "./routes";
+import { BrandingProvider } from "./context/Branding/BrandingContext";
 
 const queryClient = new QueryClient();
 
@@ -56,7 +57,9 @@ const App = () => {
         <CssBaseline />
         <QueryClientProvider client={queryClient}>
           <SocketContext.Provider value={SocketManager}>
-            <Routes />
+            <BrandingProvider>
+              <Routes />
+            </BrandingProvider>
           </SocketContext.Provider>
         </QueryClientProvider>
       </ThemeProvider>

@@ -1,5 +1,6 @@
 import express from "express";
 import isAuth from "../middleware/isAuth";
+import requireEffectiveModule from "../middleware/requireEffectiveModule";
 import requireCompanyNotDelinquent from "../middleware/requireCompanyNotDelinquent";
 import multer from "multer";
 import uploadConfig from "../config/uploadExt";
@@ -13,6 +14,7 @@ const flowBuilder = express.Router();
 flowBuilder.post(
   "/flowbuilder",
   isAuth,
+  requireEffectiveModule("useFlowbuilders"),
   requireCompanyNotDelinquent,
   FlowBuilderController.createFlow
 );
@@ -20,6 +22,7 @@ flowBuilder.post(
 flowBuilder.put(
   "/flowbuilder",
   isAuth,
+  requireEffectiveModule("useFlowbuilders"),
   requireCompanyNotDelinquent,
   FlowBuilderController.updateFlow
 );
@@ -27,16 +30,20 @@ flowBuilder.put(
 flowBuilder.delete(
   "/flowbuilder/:idFlow",
   isAuth,
+  requireEffectiveModule("useFlowbuilders"),
   FlowBuilderController.deleteFlow
 );
 
-flowBuilder.get("/flowbuilder", isAuth, FlowBuilderController.myFlows);
+flowBuilder.get("/flowbuilder", isAuth,
+  requireEffectiveModule("useFlowbuilders"), FlowBuilderController.myFlows);
 
-flowBuilder.get("/flowbuilder/:idFlow", isAuth, FlowBuilderController.flowOne);
+flowBuilder.get("/flowbuilder/:idFlow", isAuth,
+  requireEffectiveModule("useFlowbuilders"), FlowBuilderController.flowOne);
 
 flowBuilder.post(
   "/flowbuilder/flow",
   isAuth,
+  requireEffectiveModule("useFlowbuilders"),
   requireCompanyNotDelinquent,
   FlowBuilderController.FlowDataUpdate
 );
@@ -44,6 +51,7 @@ flowBuilder.post(
 flowBuilder.post(
   "/flowbuilder/duplicate",
   isAuth,
+  requireEffectiveModule("useFlowbuilders"),
   requireCompanyNotDelinquent,
   FlowBuilderController.FlowDuplicate
 );
@@ -51,12 +59,14 @@ flowBuilder.post(
 flowBuilder.get(
   "/flowbuilder/flow/:idFlow",
   isAuth,
+  requireEffectiveModule("useFlowbuilders"),
   FlowBuilderController.FlowDataGetOne
 );
 
 flowBuilder.post(
   "/flowbuilder/img",
   isAuth,
+  requireEffectiveModule("useFlowbuilders"),
   requireCompanyNotDelinquent,
   upload.array("medias"),
   FlowBuilderController.FlowUploadImg
@@ -65,6 +75,7 @@ flowBuilder.post(
 flowBuilder.post(
   "/flowbuilder/audio",
   isAuth,
+  requireEffectiveModule("useFlowbuilders"),
   requireCompanyNotDelinquent,
   upload.array("medias"),
   FlowBuilderController.FlowUploadAudio
@@ -73,6 +84,7 @@ flowBuilder.post(
 flowBuilder.post(
   "/flowbuilder/content",
   isAuth,
+  requireEffectiveModule("useFlowbuilders"),
   requireCompanyNotDelinquent,
   upload.array('medias'),
   FlowBuilderController.FlowUploadAll

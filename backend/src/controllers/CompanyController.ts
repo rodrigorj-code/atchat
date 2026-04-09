@@ -1,5 +1,6 @@
 import * as Yup from "yup";
 import { Request, Response } from "express";
+import { Op } from "sequelize";
 // import { getIO } from "../libs/socket";
 import AppError from "../errors/AppError";
 import Company from "../models/Company";
@@ -17,6 +18,7 @@ import { verify } from "jsonwebtoken";
 import User from "../models/User";
 import ShowPlanCompanyService from "../services/CompanyService/ShowPlanCompanyService";
 import ListCompaniesPlanService from "../services/CompanyService/ListCompaniesPlanService";
+import GetEffectiveModuleFlags from "../services/CompanyService/GetEffectiveModuleFlagsService";
 
 type IndexQuery = {
   searchParam: string;
@@ -42,7 +44,8 @@ type CompanyData = {
   campaignsEnabled?: boolean;
   dueDate?: string;
   recurrence?: string;
-  password: string;
+  password?: string;
+  modulePermissions?: Record<string, boolean> | null;
 };
 
 type SchedulesData = {
@@ -57,7 +60,38 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
     pageNumber
   });
 
-  return res.json({ companies, count, hasMore });
+  const ids = companies.map((c) => c.id);
+  let primaryByCompany: Record<number, { id: number; name: string; email: string }> = {};
+  if (ids.length) {
+    const admins = await User.findAll({
+      where: {
+        companyId: { [Op.in]: ids },
+        profile: "admin"
+      },
+      attributes: ["id", "name", "email", "companyId"],
+      order: [["id", "ASC"]]
+    });
+    for (const u of admins) {
+      const cid = u.companyId;
+      if (primaryByCompany[cid] === undefined) {
+        primaryByCompany[cid] = {
+          id: u.id,
+          name: u.name,
+          email: u.email
+        };
+      }
+    }
+  }
+
+  const enriched = companies.map((c) => {
+    const row = typeof (c as any).toJSON === "function" ? (c as any).toJSON() : c;
+    return {
+      ...row,
+      primaryAdmin: primaryByCompany[row.id] ?? null
+    };
+  });
+
+  return res.json({ companies: enriched, count, hasMore });
 };
 
 export const store = async (req: Request, res: Response): Promise<Response> => {
@@ -80,6 +114,14 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
 
 export const show = async (req: Request, res: Response): Promise<Response> => {
   const { id } = req.params;
+  const companyId = Number(id);
+
+  if (companyId !== req.user.companyId) {
+    const requestUser = await User.findByPk(req.user.id, { attributes: ["super"] });
+    if (!requestUser?.super) {
+      throw new AppError("ERR_NO_PERMISSION", 403);
+    }
+  }
 
   const company = await ShowCompanyService(id);
 
@@ -145,6 +187,14 @@ export const updateSchedules = async (
 ): Promise<Response> => {
   const { schedules }: SchedulesData = req.body;
   const { id } = req.params;
+  const companyId = Number(id);
+
+  if (companyId !== req.user.companyId) {
+    const requestUser = await User.findByPk(req.user.id, { attributes: ["super"] });
+    if (!requestUser?.super) {
+      throw new AppError("ERR_NO_PERMISSION", 403);
+    }
+  }
 
   const company = await UpdateSchedulesService({
     id,
@@ -174,16 +224,35 @@ export const listPlan = async (req: Request, res: Response): Promise<Response> =
   const { id: requestUserId, profile, companyId } = decoded as TokenPayload;
   const requestUser = await User.findByPk(requestUserId);
 
-  if (requestUser.super === true) {
-    const company = await ShowPlanCompanyService(id);
-    return res.status(200).json(company);
-  } else if (companyId.toString() !== id) {
-    return res.status(400).json({ error: "Você não possui permissão para acessar este recurso!" });
-  } else {
-    const company = await ShowPlanCompanyService(id);
-    return res.status(200).json(company);
+  const company = await ShowPlanCompanyService(id);
+  if (!company) {
+    return res.status(404).json({ error: "Empresa não encontrada" });
   }
 
+  if (requestUser?.super === true) {
+    const j = company.toJSON() as Record<string, unknown> & {
+      plan?: unknown;
+      modulePermissions?: Record<string, boolean>;
+    };
+    const effectiveModules = GetEffectiveModuleFlags(
+      j.plan as any,
+      j.modulePermissions
+    );
+    return res.status(200).json({ ...j, effectiveModules });
+  }
+  if (companyId.toString() !== id) {
+    return res.status(400).json({ error: "Você não possui permissão para acessar este recurso!" });
+  }
+
+  const j = company.toJSON() as Record<string, unknown> & {
+    plan?: unknown;
+    modulePermissions?: Record<string, boolean>;
+  };
+  const effectiveModules = GetEffectiveModuleFlags(
+    j.plan as any,
+    j.modulePermissions
+  );
+  return res.status(200).json({ ...j, effectiveModules });
 };
 
 export const indexPlan = async (req: Request, res: Response): Promise<Response> => {

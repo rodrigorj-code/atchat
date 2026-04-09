@@ -37,7 +37,10 @@ import flowCampaignRoutes from "./flowCampaignRoutes";
 import userRatingRoutes from "./userRatingRoutes";
 import ratingTemplateRoutes from "./ratingTemplateRoutes";
 import groupRoutes from "./groupRoutes";
+import systemSettingRoutes from "./systemSettingRoutes";
 const routes = Router();
+
+routes.use(systemSettingRoutes);
 
 routes.use(userRoutes);
 routes.use("/auth", authRoutes);

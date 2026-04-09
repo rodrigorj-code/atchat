@@ -9,9 +9,8 @@ import Typography from "@material-ui/core/Typography";
 import { makeStyles } from "@material-ui/core/styles";
 import { versionSystem } from "../../../package.json";
 import { i18n } from "../../translate/i18n";
-import { nomeEmpresa } from "../../../package.json";
 import { AuthContext } from "../../context/Auth/AuthContext";
-import logo from "../../assets/logo.png";
+import { useBranding } from "../../context/Branding/BrandingContext";
 import {
 	LanguageOutlined,
 	Visibility,
@@ -30,12 +29,12 @@ import {
 import LanguageControl from "../../components/LanguageControl";
 
 
-const Copyright = () => {
+const Copyright = ({ brandName }) => {
 	return (
 		<Typography variant="body2" style={{ color: "rgba(0,0,0,0.55)" }} align="center">
 			{"Copyright "}
 			<Link style={{ color: "rgba(0,0,0,0.7)" }} href="#">
-				{nomeEmpresa} - v {versionSystem}
+				{brandName} - v {versionSystem}
 			</Link>{" "}
 			{new Date().getFullYear()}
 			{"."}
@@ -216,6 +215,9 @@ const Login = () => {
 	const [menuLanguageOpen, setMenuLanguageOpen] = useState(false);
 
 	const { handleLogin } = useContext(AuthContext);
+	const { branding, resolveLoginLogo } = useBranding();
+	const displayName = branding.systemName;
+	const loginLogoSrc = resolveLoginLogo();
 
 	useEffect(() => {
 		try {
@@ -286,7 +288,7 @@ const Login = () => {
 
 			<div className={classes.card}>
 				<div className={classes.logoWrap}>
-					<img className={classes.logo} src={logo} alt={nomeEmpresa} />
+					<img className={classes.logo} src={loginLogoSrc} alt={displayName} />
 				</div>
 
 				<form className={classes.form} noValidate onSubmit={handlSubmit}>
@@ -381,7 +383,7 @@ const Login = () => {
 						Termos de Uso
 					</a>
 				</div>
-				<Copyright />
+				<Copyright brandName={displayName} />
 			</div>
 
 			<div className={classes.supportWrap}>

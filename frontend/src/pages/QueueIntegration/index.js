@@ -47,7 +47,7 @@ import { i18n } from "../../translate/i18n";
 import toastError from "../../errors/toastError";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import usePlans from "../../hooks/usePlans";
-import { useHistory } from "react-router-dom/cjs/react-router-dom.min";
+import { useHistory } from "react-router-dom";
 
 const reducer = (state, action) => {
   if (action.type === "LOAD_INTEGRATIONS") {
@@ -154,7 +154,10 @@ const QueueIntegration = () => {
   useEffect(() => {
     async function fetchData() {
       const planConfigs = await getPlanCompany(undefined, companyId);
-      if (!planConfigs.plan.useIntegrations) {
+      const intOk = planConfigs.effectiveModules
+        ? planConfigs.effectiveModules.useIntegrations
+        : planConfigs.plan?.useIntegrations;
+      if (!intOk) {
         toast.error("Esta empresa não possui permissão para acessar essa página! Estamos lhe redirecionando.");
         setTimeout(() => {
           history.push(`/`)

@@ -1,9 +1,10 @@
 import { Request, Response, NextFunction } from "express";
 
 import AppError from "../errors/AppError";
+import GetEffectiveModuleFlags from "../services/CompanyService/GetEffectiveModuleFlagsService";
 
 /**
- * Exige plano com useExternalApi após tokenAuth (req.apiWhatsapp preenchido).
+ * Exige plano + overrides com API externa liberada (após tokenAuth).
  */
 const externalApiPlanAuth = (
   req: Request,
@@ -15,8 +16,10 @@ const externalApiPlanAuth = (
     return next(new AppError("ERR_INVALID_API_TOKEN", 401));
   }
 
-  const plan = whatsapp.company?.plan;
-  if (!plan || !plan.useExternalApi) {
+  const company = whatsapp.company;
+  const plan = company?.plan;
+  const eff = GetEffectiveModuleFlags(plan as any, company?.modulePermissions);
+  if (!eff.useExternalApi) {
     return next(new AppError("ERR_EXTERNAL_API_NOT_ALLOWED", 403));
   }
 

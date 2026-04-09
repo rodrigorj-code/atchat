@@ -1091,6 +1091,7 @@ const messages = {
 				},
 				listItems: {
 					dashboard: "Dashboard",
+					platform: "Platform",
 					connections: "Connections",
 					tickets: "Tickets",
 					quickMessages: "Quick replies",
@@ -1141,6 +1142,43 @@ const messages = {
 						profile: "Profile",
 						logout: "Logout",
 					},
+				},
+				drawerFooter: {
+					roleSuperAdmin: "Super Admin",
+					roleAdmin: "Administrator",
+					roleUser: "User",
+				},
+			},
+			platform: {
+				shell: {
+					eyebrow: "Super Admin · Platform",
+				},
+				tabs: {
+					dashboard: "Platform dashboard",
+					companies: "Companies",
+					branding: "Branding",
+				},
+				dashboard: {
+					title: "Platform dashboard",
+					subtitle: "System overview for the platform owner.",
+					companiesTotal: "Total companies",
+				},
+				companies: {
+					title: "Companies",
+					subtitle:
+						"List and edit registered companies. Changes here are global.",
+				},
+				branding: {
+					title: "Global branding",
+					subtitle:
+						"Name and logos shown on login and in the internal menu for all users.",
+					systemName: "System name",
+					loginLogoUrl: "Logo URL (login)",
+					menuLogoUrl: "Logo URL (internal menu)",
+					urlHelp:
+						"Absolute image URL (https://...); leave empty for the default.",
+					saved: "Branding updated successfully.",
+					save: "Save",
 				},
 			},
 			queueIntegration: {
@@ -2053,6 +2091,27 @@ const messages = {
 							"Choose the timezone for your main office or operation.",
 						timezoneHelperField:
 							"IANA format as in the list below (e.g. America/Sao_Paulo).",
+						modulesSectionTitle: "Enabled modules (company)",
+						modulesSectionHint:
+							"Complements the plan: turning off hides the module and blocks use when the plan allows the feature.",
+						modules: {
+							useKanban: "Kanban",
+							useKanbanHelp: "Kanban board in customer service.",
+							useCampaigns: "Campaigns",
+							useCampaignsHelp: "Lists, broadcasts and campaign reports.",
+							useFlowbuilders: "Flows (chatbot)",
+							useFlowbuildersHelp: "Flow builder, triggers and WhatsApp-linked flows.",
+							useOpenAi: "OpenAI / Prompts",
+							useOpenAiHelp: "Prompts and AI features.",
+							useSchedules: "Schedules",
+							useSchedulesHelp: "Scheduled messages and recurrence.",
+							useExternalApi: "WhatsApp API (external send)",
+							useExternalApiHelp: "HTTP token for sending messages via API.",
+							useIntegrations: "Queue integrations",
+							useIntegrationsHelp: "Webhooks, N8N, Typebot and queue automations.",
+							useGroups: "WhatsApp groups",
+							useGroupsHelp: "Group management in customer service.",
+						},
 					},
 					buttons: {
 						clear: "Clear",
@@ -2197,6 +2256,8 @@ const messages = {
 				ERR_SESSION_EXPIRED: "Session expired. Please log in.",
 				ERR_USER_CREATION_DISABLED: "User creation has been disabled by the administrator.",
 				ERR_NO_PERMISSION: "You don't have permission to access this resource.",
+				ERR_MODULE_NOT_ALLOWED:
+					"This module is not enabled for your company (plan or platform settings).",
 				ERR_DUPLICATED_CONTACT: "A contact with this number already exists.",
 				ERR_NO_SETTING_FOUND: "No settings found with this ID.",
 				ERR_NO_CONTACT_FOUND: "No contact found with this ID.",

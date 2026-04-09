@@ -1,5 +1,6 @@
 import express from "express";
 import isAuth from "../middleware/isAuth";
+import requireEffectiveModule from "../middleware/requireEffectiveModule";
 
 import * as TagController from "../controllers/TagController";
 
@@ -9,7 +10,12 @@ tagRoutes.get("/tags/list", isAuth, TagController.list);
 
 tagRoutes.get("/tags", isAuth, TagController.index);
 
-tagRoutes.get("/tags/kanban", isAuth, TagController.kanban);
+tagRoutes.get(
+  "/tags/kanban",
+  isAuth,
+  requireEffectiveModule("useKanban"),
+  TagController.kanban
+);
 
 tagRoutes.post("/tags", isAuth, TagController.store);
 

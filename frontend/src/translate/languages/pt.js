@@ -1163,6 +1163,7 @@ const messages = {
         },
         listItems: {
           dashboard: "Dashboard",
+          platform: "Plataforma",
           connections: "Conexões",
           tickets: "Atendimentos",
           quickMessages: "Respostas rápidas",
@@ -1213,6 +1214,42 @@ const messages = {
             profile: "Perfil",
             logout: "Sair",
           },
+        },
+        drawerFooter: {
+          roleSuperAdmin: "Super Admin",
+          roleAdmin: "Administrador",
+          roleUser: "Usuário",
+        },
+      },
+      platform: {
+        shell: {
+          eyebrow: "Super Admin · Plataforma",
+        },
+        tabs: {
+          dashboard: "Dashboard da plataforma",
+          companies: "Empresas",
+          branding: "Branding",
+        },
+        dashboard: {
+          title: "Dashboard da plataforma",
+          subtitle: "Visão geral do sistema para o dono da plataforma.",
+          companiesTotal: "Total de empresas",
+        },
+        companies: {
+          title: "Empresas",
+          subtitle:
+            "Lista e edição de empresas cadastradas. Alterações aqui são globais.",
+        },
+        branding: {
+          title: "Branding global",
+          subtitle:
+            "Nome e logos exibidos no login e no menu interno para todos os utilizadores.",
+          systemName: "Nome do sistema",
+          loginLogoUrl: "URL do logo (login)",
+          menuLogoUrl: "URL do logo (menu interno)",
+          urlHelp: "URL absoluta (https://...) da imagem; deixe em branco para o padrão.",
+          saved: "Branding atualizado com sucesso.",
+          save: "Salvar",
         },
       },
       queueIntegration: {
@@ -2162,6 +2199,27 @@ const messages = {
               "Escolha o fuso da sede ou da operação principal.",
             timezoneHelperField:
               "Formato IANA, como na lista abaixo (ex.: America/Sao_Paulo).",
+            modulesSectionTitle: "Módulos liberados (empresa)",
+            modulesSectionHint:
+              "Complementa o plano: desligar aqui oculta o módulo e bloqueia o uso, quando o plano permitir o recurso.",
+            modules: {
+              useKanban: "Kanban",
+              useKanbanHelp: "Quadro kanban no atendimento.",
+              useCampaigns: "Campanhas",
+              useCampaignsHelp: "Listas, disparos e relatórios de campanha.",
+              useFlowbuilders: "Fluxos (chatbot)",
+              useFlowbuildersHelp: "Flowbuilder, gatilhos e fluxos vinculados ao WhatsApp.",
+              useOpenAi: "OpenAI / Prompts",
+              useOpenAiHelp: "Prompts e recursos de IA configurados no sistema.",
+              useSchedules: "Agendamentos",
+              useSchedulesHelp: "Agendamento de mensagens e recorrências.",
+              useExternalApi: "API WhatsApp (envio externo)",
+              useExternalApiHelp: "Token HTTP para envio de mensagens por API.",
+              useIntegrations: "Integrações por setor",
+              useIntegrationsHelp: "Webhooks, N8N, Typebot e automações por setor.",
+              useGroups: "Grupos WhatsApp",
+              useGroupsHelp: "Gestão de grupos no atendimento.",
+            },
           },
           buttons: {
             clear: "Limpar",
@@ -2317,6 +2375,8 @@ const messages = {
         ERR_USER_CREATION_DISABLED:
             "A criação do usuário foi desabilitada pelo administrador.",
         ERR_NO_PERMISSION: "Você não tem permissão para acessar este recurso.",
+        ERR_MODULE_NOT_ALLOWED:
+          "Este módulo não está liberado para a sua empresa (plano ou configuração da plataforma).",
         ERR_DUPLICATED_CONTACT: "Já existe um contato com este número.",
         ERR_NO_SETTING_FOUND: "Nenhuma configuração encontrada com este ID.",
         ERR_NO_CONTACT_FOUND: "Nenhum contato encontrado com este ID.",

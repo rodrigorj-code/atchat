@@ -60,6 +60,14 @@ class Company extends Model<Company> {
   })
   schedules: [];
 
+  /** Overrides de módulos por empresa (Super Admin). {} = seguir apenas o plano. */
+  @Column({
+    type: DataType.JSONB,
+    allowNull: true,
+    defaultValue: {}
+  })
+  modulePermissions: Record<string, boolean>;
+
   @ForeignKey(() => Plan)
   @Column
   planId: number;

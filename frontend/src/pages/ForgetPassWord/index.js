@@ -20,7 +20,7 @@ import Container from "@material-ui/core/Container";
 import api from "../../services/api";
 import { i18n } from "../../translate/i18n";
 import moment from "moment";
-import logo from "../../assets/logo.png";
+import { useBranding } from "../../context/Branding/BrandingContext";
 import { toast } from 'react-toastify'; 
 import toastError from '../../errors/toastError';
 import { getBackendBaseURL } from "../../config/backendUrl";
@@ -70,6 +70,7 @@ const passwordRegex = /^(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}$/;
 const ForgetPassword = () => {
   const classes = useStyles();
   const history = useHistory();
+  const { branding, resolveLoginLogo } = useBranding();
   let companyId = null;
   const [showAdditionalFields, setShowAdditionalFields] = useState(false);
   const [showResetPasswordButton, setShowResetPasswordButton] = useState(false);
@@ -171,8 +172,8 @@ const handleSendEmail = async (values) => {
           <div>
             <img
               style={{ margin: "0 auto", height: "80px", width: "100%" }}
-              src={logo}
-              alt="Whats"
+              src={resolveLoginLogo()}
+              alt={branding.systemName || ""}
             />
           </div>
           <Typography component="h1" variant="h5">

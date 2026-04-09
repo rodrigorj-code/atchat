@@ -14,6 +14,8 @@ interface CompanyData {
   dueDate?: string;
   recurrence?: string;
   timezone?: string;
+  /** Overrides de módulos (apenas Super Admin via API de empresas) */
+  modulePermissions?: Record<string, boolean> | null;
 }
 
 const UpdateCompanyService = async (
@@ -29,7 +31,8 @@ const UpdateCompanyService = async (
     campaignsEnabled,
     dueDate,
     recurrence,
-    timezone
+    timezone,
+    modulePermissions
   } = companyData;
 
   if (!company) {
@@ -51,7 +54,15 @@ const UpdateCompanyService = async (
     planId,
     dueDate,
     recurrence,
-    ...(timezone !== undefined ? { timezone: String(timezone).trim() } : {})
+    ...(timezone !== undefined ? { timezone: String(timezone).trim() } : {}),
+    ...(modulePermissions !== undefined
+      ? {
+          modulePermissions:
+            modulePermissions && typeof modulePermissions === "object"
+              ? modulePermissions
+              : {}
+        }
+      : {})
   });
 
   if (companyData.campaignsEnabled !== undefined) {
