@@ -370,7 +370,13 @@ export default function LoggedInRoutesContent() {
 
   const configPaths = ["/connections", "/messages-api", "/settings"];
 
-  const platformPaths = ["/platform", "/platform/companies", "/platform/branding"];
+  const platformPaths = [
+    "/platform",
+    "/platform/companies",
+    "/platform/branding",
+    "/platform/super-admins",
+    "/platform/account",
+  ];
 
   return (
     <Switch>

@@ -1198,6 +1198,7 @@ const messages = {
           subtitle:
             "Gestione empresas, permisos y configuración de la plataforma.",
           registeredListTitle: "Empresas registradas",
+          newCompany: "Nueva empresa",
           searchPlaceholder: "Buscar por nombre o correo…",
           sortByName: "Nombre (A–Z)",
           sortByDate: "Fecha de registro",
@@ -1206,9 +1207,10 @@ const messages = {
           actionsColumn: "Acciones",
           statusActive: "Activo",
           statusInactive: "Inactivo",
-          listRowHint: "Pulse una fila o Editar para cargarla en el formulario superior.",
+          listRowHint:
+            "Pulse una fila o Editar para cargar el formulario abajo. Use Nueva empresa para crear.",
           registeredListSubtitle:
-            "Vista global de empresas: busque, ordene y seleccione para editar arriba.",
+            "Lista principal: busque, ordene y elija una fila para editar, o cree una cuenta nueva.",
         },
         branding: {
           title: "Marca global",

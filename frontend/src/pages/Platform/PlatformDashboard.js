@@ -11,6 +11,7 @@ import moment from "moment";
 
 import MainContainer from "../../components/MainContainer";
 import useCompanies from "../../hooks/useCompanies";
+import toastError from "../../errors/toastError";
 import { useDate } from "../../hooks/useDate";
 import { i18n } from "../../translate/i18n";
 import {
@@ -189,8 +190,9 @@ export default function PlatformDashboard() {
     try {
       const data = await list();
       setCompanies(Array.isArray(data) ? data : []);
-    } catch {
+    } catch (e) {
       setCompanies([]);
+      toastError(e);
     } finally {
       setLoading(false);
     }

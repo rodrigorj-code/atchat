@@ -1198,6 +1198,7 @@ const messages = {
 					subtitle:
 						"Manage companies, permissions, and platform settings.",
 					registeredListTitle: "Registered companies",
+					newCompany: "New company",
 					searchPlaceholder: "Search by name or email…",
 					sortByName: "Name (A–Z)",
 					sortByDate: "Created date",
@@ -1206,9 +1207,10 @@ const messages = {
 					actionsColumn: "Actions",
 					statusActive: "Active",
 					statusInactive: "Inactive",
-					listRowHint: "Click a row or Edit to load it in the form above.",
+					listRowHint:
+						"Click a row or Edit to load the form below. Use New company to create.",
 					registeredListSubtitle:
-						"Global view — search, sort, and select a company to edit above.",
+						"Main list — search, sort, and pick a row to edit, or add a new account.",
 				},
 				branding: {
 					title: "Global branding",

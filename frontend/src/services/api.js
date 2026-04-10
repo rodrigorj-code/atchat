@@ -1,5 +1,5 @@
 import axios from "axios";
-import { getBackendBaseURL } from "../config/backendUrl";
+import { resolveBackendBaseURL } from "../config/backendUrl";
 
 let warnedEmptyBackend = false;
 
@@ -9,7 +9,7 @@ function attachBackendInterceptor(client) {
 		if (rawUrl.startsWith("http://") || rawUrl.startsWith("https://")) {
 			return config;
 		}
-		const base = getBackendBaseURL();
+		const base = resolveBackendBaseURL();
 		if (base) {
 			config.baseURL = base;
 		} else if (process.env.NODE_ENV === "production" && !warnedEmptyBackend) {

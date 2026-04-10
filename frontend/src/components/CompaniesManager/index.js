@@ -826,7 +826,7 @@ export function CompanyForm(props) {
 }
 
 export function CompaniesManagerGrid(props) {
-  const { records, onSelect, selectedId } = props;
+  const { records, onSelect, selectedId, onNewCompany } = props;
   const classes = useStyles();
   const theme = useTheme();
   const { dateToClient } = useDate();
@@ -909,6 +909,15 @@ export function CompaniesManagerGrid(props) {
         {i18n.t("platform.companies.listRowHint")}
       </Typography>
       <Box className={classes.tableToolbar}>
+        {typeof onNewCompany === "function" ? (
+          <AppPrimaryButton
+            type="button"
+            onClick={onNewCompany}
+            style={{ flexShrink: 0 }}
+          >
+            {i18n.t("platform.companies.newCompany")}
+          </AppPrimaryButton>
+        ) : null}
         <TextField
           size="small"
           variant="outlined"
@@ -1054,6 +1063,7 @@ export default function CompaniesManager() {
   const { list, save, update, remove } = useCompanies();
 
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [formOpen, setFormOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [records, setRecords] = useState([]);
   const [record, setRecord] = useState({
@@ -1124,6 +1134,7 @@ export default function CompaniesManager() {
   };
 
   const handleCancel = () => {
+    setFormOpen(false);
     setRecord((prev) => ({
       ...prev,
       id: undefined,
@@ -1139,6 +1150,23 @@ export default function CompaniesManager() {
       modulePermissions: defaultModulePermissions(),
       primaryAdmin: null,
     }));
+  };
+
+  const handleNewCompany = () => {
+    setRecord({
+      name: "",
+      email: "",
+      phone: "",
+      planId: "",
+      status: true,
+      campaignsEnabled: false,
+      dueDate: "",
+      recurrence: "",
+      timezone: "America/Sao_Paulo",
+      modulePermissions: defaultModulePermissions(),
+      primaryAdmin: null,
+    });
+    setFormOpen(true);
   };
 
   const handleSelect = (data) => {
@@ -1167,37 +1195,43 @@ export default function CompaniesManager() {
       modulePermissions: mergeModulePermissions(data.modulePermissions),
       primaryAdmin: data.primaryAdmin ?? null,
     }));
+    setFormOpen(true);
   };
 
   return (
     <Box className={classes.pageStack}>
-      {record.id !== undefined ? (
-        <Box className={classes.editingBanner}>
-          <Typography className={classes.editingBannerTitle} component="p">
-            {i18n.t("settings.company.form.editingBanner", { name: record.name || "—" })}
-          </Typography>
-          <Typography
-            variant="body2"
-            color="textSecondary"
-            className={classes.editingBannerHint}
-            component="p"
-          >
-            {i18n.t("settings.company.form.editingContextHint")}
-          </Typography>
-        </Box>
-      ) : null}
-      <CompanyForm
-        initialValue={record}
-        onDelete={handleOpenDeleteDialog}
-        onSubmit={handleSubmit}
-        onCancel={handleCancel}
-        loading={loading}
-      />
       <CompaniesManagerGrid
         records={records}
         onSelect={handleSelect}
         selectedId={record.id}
+        onNewCompany={handleNewCompany}
       />
+      {formOpen ? (
+        <>
+          {record.id !== undefined ? (
+            <Box className={classes.editingBanner}>
+              <Typography className={classes.editingBannerTitle} component="p">
+                {i18n.t("settings.company.form.editingBanner", { name: record.name || "—" })}
+              </Typography>
+              <Typography
+                variant="body2"
+                color="textSecondary"
+                className={classes.editingBannerHint}
+                component="p"
+              >
+                {i18n.t("settings.company.form.editingContextHint")}
+              </Typography>
+            </Box>
+          ) : null}
+          <CompanyForm
+            initialValue={record}
+            onDelete={handleOpenDeleteDialog}
+            onSubmit={handleSubmit}
+            onCancel={handleCancel}
+            loading={loading}
+          />
+        </>
+      ) : null}
       <ConfirmationModal
         title={i18n.t("settings.company.confirmModal.title")}
         open={showConfirmDialog}
