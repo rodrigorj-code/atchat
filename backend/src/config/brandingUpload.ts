@@ -34,10 +34,33 @@ const storage = multer.diskStorage({
 const imageMime =
   /^image\/(jpeg|pjpeg|png|gif|webp|svg\+xml)$/i;
 
+const faviconMime =
+  /^image\/(jpeg|pjpeg|png|svg\+xml|x-icon|vnd\.microsoft\.icon)$/i;
+
+function isFaviconFile(file: Express.Multer.File): boolean {
+  return file.fieldname === "favicon";
+}
+
 export const brandingUpload = multer({
   storage,
   limits: { fileSize: 2 * 1024 * 1024 },
   fileFilter(_req, file, cb) {
+    if (isFaviconFile(file)) {
+      const nameOk = /\.(ico|png|jpe?g|svg)$/i.test(file.originalname);
+      const mimeOk =
+        faviconMime.test(file.mimetype) ||
+        (file.mimetype === "application/octet-stream" && /\.ico$/i.test(file.originalname));
+      if (nameOk || mimeOk) {
+        return cb(null, true);
+      }
+      return cb(
+        new AppError(
+          "INVALID_FAVICON_TYPE",
+          400,
+          "Favicon: use PNG, JPG, ICO ou SVG (máx. 1 MB)."
+        ) as unknown as Error
+      );
+    }
     if (
       imageMime.test(file.mimetype) ||
       /\.(jpe?g|png|gif|webp|svg)$/i.test(file.originalname)
@@ -53,3 +76,6 @@ export const brandingUpload = multer({
     );
   }
 });
+
+/** Limite em bytes para o campo favicon (validado no controller após upload). */
+export const FAVICON_MAX_BYTES = 1 * 1024 * 1024;

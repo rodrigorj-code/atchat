@@ -12,6 +12,18 @@ const UpsertBrandingService = async (data: Partial<PublicBranding>): Promise<voi
   if (data.menuLogoUrl !== undefined) {
     entries.push([BRANDING_KEYS.menuLogoUrl, String(data.menuLogoUrl).trim()]);
   }
+  if (data.faviconUrl !== undefined) {
+    entries.push([BRANDING_KEYS.faviconUrl, String(data.faviconUrl).trim()]);
+  }
+  if (data.publicWhatsAppNumber !== undefined) {
+    entries.push([
+      BRANDING_KEYS.publicWhatsAppNumber,
+      String(data.publicWhatsAppNumber).replace(/\D/g, "")
+    ]);
+  }
+  if (data.publicWhatsAppMessage !== undefined) {
+    entries.push([BRANDING_KEYS.publicWhatsAppMessage, String(data.publicWhatsAppMessage).trim()]);
+  }
 
   for (const [key, value] of entries) {
     await SystemSetting.upsert({ key, value });

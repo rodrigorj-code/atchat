@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import { useLocation } from "react-router-dom";
 import MainContainer from "../../components/MainContainer";
 import { Box, makeStyles, Paper, Tabs, Tab, Typography } from "@material-ui/core";
@@ -17,7 +17,7 @@ import { i18n } from "../../translate/i18n.js";
 import { toast } from "react-toastify";
 
 import useCompanies from "../../hooks/useCompanies";
-import useAuth from "../../hooks/useAuth.js";
+import { AuthContext } from "../../context/Auth/AuthContext";
 import useSettings from "../../hooks/useSettings";
 
 import OnlyForSuperUser from "../../components/OnlyForSuperUser";
@@ -87,7 +87,7 @@ const SettingsCustom = () => {
   const [settings, setSettings] = useState({});
   const [schedulesEnabled, setSchedulesEnabled] = useState(false);
 
-  const { getCurrentUserInfo } = useAuth();
+  const { getCurrentUserInfo } = useContext(AuthContext);
   const { find, updateSchedules } = useCompanies();
   const { getAll: getAllSettings } = useSettings();
 

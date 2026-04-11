@@ -376,6 +376,8 @@ export default function LoggedInRoutesContent() {
     "/platform/branding",
     "/platform/super-admins",
     "/platform/account",
+    "/platform/financeiro",
+    "/platform/backup",
   ];
 
   return (

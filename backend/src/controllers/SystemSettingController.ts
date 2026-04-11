@@ -3,6 +3,7 @@ import fs from "fs";
 import { Request, Response } from "express";
 
 import uploadConfig from "../config/upload";
+import { FAVICON_MAX_BYTES } from "../config/brandingUpload";
 import GetPublicBrandingService, {
   PublicBranding
 } from "../services/SystemSettingService/GetPublicBrandingService";
@@ -67,8 +68,24 @@ export const updateBrandingMultipart = async (
     partial.systemName = systemName;
   }
 
+  const publicWhatsAppNumberRaw = req.body?.publicWhatsAppNumber;
+  const publicWhatsAppMessageRaw = req.body?.publicWhatsAppMessage;
+  if (publicWhatsAppNumberRaw !== undefined) {
+    partial.publicWhatsAppNumber =
+      typeof publicWhatsAppNumberRaw === "string"
+        ? publicWhatsAppNumberRaw.replace(/\D/g, "")
+        : "";
+  }
+  if (publicWhatsAppMessageRaw !== undefined) {
+    partial.publicWhatsAppMessage =
+      typeof publicWhatsAppMessageRaw === "string"
+        ? publicWhatsAppMessageRaw.trim()
+        : "";
+  }
+
   const login = files?.loginLogo?.[0];
   const menu = files?.menuLogo?.[0];
+  const favicon = files?.favicon?.[0];
 
   const before = await GetPublicBrandingService();
 
@@ -83,6 +100,23 @@ export const updateBrandingMultipart = async (
       unlinkPublicAsset(before.menuLogoUrl);
     }
     partial.menuLogoUrl = `/public/branding/${menu.filename}`;
+  }
+  if (favicon) {
+    if (favicon.size > FAVICON_MAX_BYTES) {
+      try {
+        if (favicon.path && fs.existsSync(favicon.path)) fs.unlinkSync(favicon.path);
+      } catch {
+        /* ignore */
+      }
+      return res.status(400).json({
+        error: "FAVICON_TOO_LARGE",
+        message: "Favicon: tamanho máximo 1 MB."
+      });
+    }
+    if (before.faviconUrl?.startsWith("/public/branding/")) {
+      unlinkPublicAsset(before.faviconUrl);
+    }
+    partial.faviconUrl = `/public/branding/${favicon.filename}`;
   }
 
   if (Object.keys(partial).length === 0) {

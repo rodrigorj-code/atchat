@@ -15,6 +15,9 @@ interface SerializedUser {
   queues: Queue[];
   allTicket: string;
   finance: CompanyFinanceFlags;
+  /** Modo suporte: sessão atua no tenant `companyId`; casa em `supportHomeCompanyId`. */
+  supportMode?: boolean;
+  supportHomeCompanyId?: number;
 }
 
 export const SerializeUser = async (user: User): Promise<SerializedUser> => {
@@ -36,5 +39,32 @@ export const SerializeUser = async (user: User): Promise<SerializedUser> => {
           dueDate: null,
           daysPastDue: null
         }
+  };
+};
+
+/**
+ * Serialização quando o JWT usa empresa efetiva diferente da do utilizador (modo suporte).
+ */
+export const serializeUserForSession = async (
+  user: User,
+  effectiveCompanyId: number
+): Promise<SerializedUser> => {
+  const base = await SerializeUser(user);
+  if (effectiveCompanyId === user.companyId) {
+    return base;
+  }
+  const target = await Company.findByPk(effectiveCompanyId, {
+    attributes: ["id", "name", "dueDate"]
+  });
+  if (!target) {
+    return base;
+  }
+  return {
+    ...base,
+    companyId: effectiveCompanyId,
+    company: target,
+    finance: getCompanyFinanceFlags(target),
+    supportMode: true,
+    supportHomeCompanyId: user.companyId
   };
 };

@@ -219,6 +219,15 @@ const Login = () => {
 	const displayName = branding.systemName;
 	const loginLogoSrc = resolveLoginLogo();
 
+	const whatsAppHref = useMemo(() => {
+		const n = String(branding.publicWhatsAppNumber || "").replace(/\D/g, "");
+		if (!n) return null;
+		const base = `https://wa.me/${n}`;
+		const msg = String(branding.publicWhatsAppMessage || "").trim();
+		if (!msg) return base;
+		return `${base}?text=${encodeURIComponent(msg)}`;
+	}, [branding.publicWhatsAppNumber, branding.publicWhatsAppMessage]);
+
 	useEffect(() => {
 		try {
 			const savedEmail = localStorage.getItem("login_email") || "";
@@ -262,11 +271,6 @@ const Login = () => {
 		setMenuLanguageOpen(false);
 	}
 
-	const supportNumber = useMemo(() => {
-		const raw = process.env.REACT_APP_NUMBER_SUPPORT || "5551997058551";
-		return String(raw).replace(/\D/g, "");
-	}, []);
-	
 	return (
 		<div className={classes.root}>
 			<div className={classes.languageControl}>
@@ -386,20 +390,22 @@ const Login = () => {
 				<Copyright brandName={displayName} />
 			</div>
 
-			<div className={classes.supportWrap}>
-				<div className={classes.supportBadge}>Suporte disponível</div>
-				<Fab
-					size="medium"
-					className={classes.whatsFab}
-					component="a"
-					href={`https://wa.me/${supportNumber}`}
-					target="_blank"
-					rel="noopener noreferrer"
-					aria-label="WhatsApp"
-				>
-					<WhatsApp />
-				</Fab>
-			</div>
+			{whatsAppHref ? (
+				<div className={classes.supportWrap}>
+					<div className={classes.supportBadge}>{i18n.t("login.whatsApp.badge")}</div>
+					<Fab
+						size="medium"
+						className={classes.whatsFab}
+						component="a"
+						href={whatsAppHref}
+						target="_blank"
+						rel="noopener noreferrer"
+						aria-label={i18n.t("login.whatsApp.ariaLabel")}
+					>
+						<WhatsApp />
+					</Fab>
+				</div>
+			) : null}
 		</div>
 	);
 };

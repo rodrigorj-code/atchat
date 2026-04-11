@@ -30,6 +30,8 @@
     "@types/mime-types": "^2.1.4",
     "@types/multer": "^1.4.7",
     "@whiskeysockets/baileys": "7.0.0-rc.9",
+    "adm-zip": "^0.5.17",
+    "archiver": "^7.0.1",
     "axios": "^1.13.6",
     "bcryptjs": "^2.4.3",
     "body-parser": "^1.20.2",
@@ -71,6 +73,8 @@
     "yup": "^0.32.11"
   },
   "devDependencies": {
+    "@types/adm-zip": "^0.5.8",
+    "@types/archiver": "^7.0.0",
     "@types/bcryptjs": "^2.4.2",
     "@types/bluebird": "^3.5.36",
     "@types/chance": "^1.1.3",

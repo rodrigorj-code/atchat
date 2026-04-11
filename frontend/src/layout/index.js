@@ -85,15 +85,30 @@ const useStyles = makeStyles((theme) => ({
       backgroundColor: "rgba(0, 0, 0, 0.04)",
     },
   },
-  toolbarIcon: {
+  /** Topo do drawer: logo centrada, altura fixa, sem empurrar a lista */
+  drawerLogoContainer: {
     display: "flex",
+    justifyContent: "center",
     alignItems: "center",
-    justifyContent: "space-between",
-    padding: "0 8px",
-    minHeight: 50,
+    width: "100%",
+    minHeight: 68,
+    maxHeight: 72,
+    boxSizing: "border-box",
+    padding: theme.spacing(1.25, 1.5),
+    flexShrink: 0,
     [theme.breakpoints.down("sm")]: {
-      height: 50
-    }
+      minHeight: 64,
+      maxHeight: 68,
+      padding: theme.spacing(1, 1),
+    },
+  },
+  menuLogoImage: {
+    maxHeight: 40,
+    width: "auto",
+    maxWidth: "100%",
+    height: "auto",
+    objectFit: "contain",
+    display: "block",
   },
   appBar: {
     zIndex: theme.zIndex.drawer + 1,
@@ -235,17 +250,6 @@ const useStyles = makeStyles((theme) => ({
   NotificationsPopOver: {
     // color: theme.barraSuperior.secondary.main,
   },
-  logo: {
-    width: "80%",
-    height: "auto",
-    maxWidth: 180,
-    [theme.breakpoints.down("sm")]: {
-      width: "auto",
-      height: "80%",
-      maxWidth: 180,
-    },
-    logo: theme.logo
-  },
 }));
 
 const LoggedInLayout = ({ children, themeToggle }) => {
@@ -256,7 +260,7 @@ const LoggedInLayout = ({ children, themeToggle }) => {
   const [userModalOpen, setUserModalOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
-  const { handleLogout, loading } = useContext(AuthContext);
+  const { handleLogout, loading, user, exitSupportMode } = useContext(AuthContext);
   const [drawerOpen, setDrawerOpen] = useState(() => {
     const saved = localStorage.getItem("drawerOpen");
     if (saved !== null) return saved === "true";
@@ -264,7 +268,6 @@ const LoggedInLayout = ({ children, themeToggle }) => {
   });
   const [drawerVariant, setDrawerVariant] = useState("permanent");
   // const [dueDate, setDueDate] = useState("");
-  const { user } = useContext(AuthContext);
   const { branding, resolveMenuLogo } = useBranding();
   const menuLogoSrc = resolveMenuLogo();
 
@@ -436,10 +439,10 @@ const LoggedInLayout = ({ children, themeToggle }) => {
         open={drawerOpen}
       >
         <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0 }}>
-          <div className={clsx(classes.toolbarIcon, classes.drawerToolbar)}>
+          <div className={classes.drawerLogoContainer}>
             <img
               src={menuLogoSrc}
-              className={classes.logo}
+              className={classes.menuLogoImage}
               alt={branding.systemName || "logo"}
             />
           </div>
@@ -578,6 +581,43 @@ const LoggedInLayout = ({ children, themeToggle }) => {
         className={clsx(classes.content, isTicketsPage && classes.contentTicketsFocus)}
       >
         <div className={classes.appBarSpacer} />
+
+        {user?.supportMode && user?.company?.name ? (
+          <Alert
+            severity="info"
+            variant="filled"
+            style={{
+              margin: "0 16px 16px",
+              alignItems: "center",
+              backgroundColor: "#0d47a1",
+              color: "#fff",
+            }}
+            icon={false}
+          >
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                alignItems: "center",
+                gap: 12,
+                width: "100%",
+              }}
+            >
+              <span style={{ flex: 1, minWidth: 200, fontWeight: 500 }}>
+                {i18n.t("platform.support.banner", { name: user.company.name })}
+              </span>
+              <Button
+                type="button"
+                variant="contained"
+                size="small"
+                onClick={() => exitSupportMode()}
+                style={{ backgroundColor: "#fff", color: "#0d47a1", fontWeight: 600 }}
+              >
+                {i18n.t("platform.support.exitButton")}
+              </Button>
+            </div>
+          </Alert>
+        ) : null}
 
         {user?.finance?.delinquent && (
           <Alert

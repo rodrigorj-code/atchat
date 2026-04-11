@@ -269,6 +269,42 @@ const useAuth = () => {
     }
   };
 
+  const enterSupportMode = async (companyId) => {
+    setLoading(true);
+    try {
+      const { data } = await api.post("/auth/support/start", { companyId });
+      localStorage.setItem("token", JSON.stringify(data.token));
+      localStorage.setItem("companyId", data.user.companyId);
+      api.defaults.headers.Authorization = `Bearer ${data.token}`;
+      setUser(data.user);
+      setIsAuth(true);
+      toast.success(i18n.t("platform.support.entered"));
+      history.push("/tickets");
+    } catch (err) {
+      toastError(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const exitSupportMode = async () => {
+    setLoading(true);
+    try {
+      const { data } = await api.post("/auth/support/stop");
+      localStorage.setItem("token", JSON.stringify(data.token));
+      localStorage.setItem("companyId", data.user.companyId);
+      api.defaults.headers.Authorization = `Bearer ${data.token}`;
+      setUser(data.user);
+      setIsAuth(true);
+      toast.success(i18n.t("platform.support.exited"));
+      history.push("/platform");
+    } catch (err) {
+      toastError(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return {
     isAuth,
     user,
@@ -276,6 +312,8 @@ const useAuth = () => {
     handleLogin,
     handleLogout,
     getCurrentUserInfo,
+    enterSupportMode,
+    exitSupportMode,
   };
 };
 

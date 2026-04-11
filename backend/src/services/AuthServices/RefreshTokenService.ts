@@ -1,7 +1,6 @@
 import { verify } from "jsonwebtoken";
 import { Response as Res } from "express";
 
-import User from "../../models/User";
 import AppError from "../../errors/AppError";
 import ShowUserService from "../UserServices/ShowUserService";
 import authConfig from "../../config/auth";
@@ -9,17 +8,19 @@ import {
   createAccessToken,
   createRefreshToken
 } from "../../helpers/CreateTokens";
+import { serializeUserForSession } from "../../helpers/SerializeUser";
 
 interface RefreshTokenPayload {
   id: string;
   tokenVersion: number;
   companyId: number;
+  supportTargetCompanyId?: number;
 }
 
 interface Response {
-  user: User;
   newToken: string;
   refreshToken: string;
+  serializedUser: Awaited<ReturnType<typeof serializeUserForSession>>;
 }
 
 export const RefreshTokenService = async (
@@ -28,7 +29,8 @@ export const RefreshTokenService = async (
 ): Promise<Response> => {
   try {
     const decoded = verify(token, authConfig.refreshSecret);
-    const { id, tokenVersion, companyId } = decoded as RefreshTokenPayload;
+    const { id, tokenVersion, companyId: homeInToken, supportTargetCompanyId } =
+      decoded as RefreshTokenPayload;
 
     const user = await ShowUserService(id);
 
@@ -37,11 +39,32 @@ export const RefreshTokenService = async (
       throw new AppError("ERR_SESSION_EXPIRED", 401);
     }
 
-    const newToken = createAccessToken(user);
-    const refreshToken = createRefreshToken(user);
+    if (Number(homeInToken) !== user.companyId) {
+      res.clearCookie("jrt");
+      throw new AppError("ERR_SESSION_EXPIRED", 401);
+    }
 
-    return { user, newToken, refreshToken };
-  } catch (err) {
+    const effectiveCompanyId =
+      supportTargetCompanyId !== undefined && supportTargetCompanyId !== null
+        ? supportTargetCompanyId
+        : user.companyId;
+
+    const newToken =
+      supportTargetCompanyId !== undefined && supportTargetCompanyId !== null
+        ? createAccessToken(user, { supportTargetCompanyId })
+        : createAccessToken(user);
+
+    const newRefresh = createRefreshToken(user, {
+      supportTargetCompanyId:
+        supportTargetCompanyId !== undefined && supportTargetCompanyId !== null
+          ? supportTargetCompanyId
+          : null
+    });
+
+    const serializedUser = await serializeUserForSession(user, effectiveCompanyId);
+
+    return { newToken, refreshToken: newRefresh, serializedUser };
+  } catch {
     res.clearCookie("jrt");
     throw new AppError("ERR_SESSION_EXPIRED", 401);
   }

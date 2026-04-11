@@ -5,6 +5,10 @@ dist
 .env
 .env.test
 
+# Backups gerados localmente (conteúdo sensível)
+backups/*
+!backups/.gitkeep
+
 package-lock.json
 yarn.lock
 yarn-error.log

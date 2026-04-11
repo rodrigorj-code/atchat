@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef, useContext } from "react";
+import { useHistory, useLocation } from "react-router-dom";
 import {
   makeStyles,
   Box,
@@ -26,6 +27,7 @@ import { useTheme, alpha } from "@material-ui/core/styles";
 import SearchIcon from "@material-ui/icons/Search";
 import EditOutlined from "@material-ui/icons/EditOutlined";
 import DeleteOutline from "@material-ui/icons/DeleteOutline";
+import SupportAgent from "@material-ui/icons/SupportAgent";
 import { Formik, Form, Field } from "formik";
 import ConfirmationModal from "../ConfirmationModal";
 
@@ -39,6 +41,7 @@ import { useDate } from "../../hooks/useDate";
 
 import moment from "moment";
 import { i18n } from "../../translate/i18n";
+import { AuthContext } from "../../context/Auth/AuthContext";
 import { getIanaTimezones } from "../../utils/ianaTimezones";
 
 import {
@@ -826,7 +829,7 @@ export function CompanyForm(props) {
 }
 
 export function CompaniesManagerGrid(props) {
-  const { records, onSelect, selectedId, onNewCompany } = props;
+  const { records, onSelect, selectedId, onNewCompany, onAccessCompany } = props;
   const classes = useStyles();
   const theme = useTheme();
   const { dateToClient } = useDate();
@@ -950,7 +953,7 @@ export function CompaniesManagerGrid(props) {
         <Table className={classes.fullWidth} size="small" aria-label="companies">
           <TableHead>
             <TableRow>
-              <TableCell align="center" className={classes.tableHeadCell} style={{ width: 56 }}>
+              <TableCell align="center" className={classes.tableHeadCell} style={{ minWidth: 100 }}>
                 {i18n.t("platform.companies.actionsColumn")}
               </TableCell>
               <TableCell align="left" className={classes.tableHeadCell}>
@@ -1003,16 +1006,30 @@ export function CompaniesManagerGrid(props) {
                   selected={isSelected}
                 >
                   <TableCell align="center" onClick={(e) => e.stopPropagation()}>
-                    <Tooltip title={i18n.t("platform.companies.editRow")} arrow enterDelay={300}>
-                      <IconButton
-                        size="small"
-                        color="primary"
-                        onClick={() => onSelect(row)}
-                        aria-label={i18n.t("platform.companies.editRow")}
-                      >
-                        <EditOutlined fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
+                    <Box display="flex" justifyContent="center" alignItems="center" flexWrap="wrap" style={{ gap: 2 }}>
+                      {typeof onAccessCompany === "function" ? (
+                        <Tooltip title={i18n.t("platform.companies.accessCompany")} arrow enterDelay={300}>
+                          <IconButton
+                            size="small"
+                            style={{ color: theme.palette.secondary.main }}
+                            onClick={() => onAccessCompany(row)}
+                            aria-label={i18n.t("platform.companies.accessCompany")}
+                          >
+                            <SupportAgent fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      ) : null}
+                      <Tooltip title={i18n.t("platform.companies.editRow")} arrow enterDelay={300}>
+                        <IconButton
+                          size="small"
+                          color="primary"
+                          onClick={() => onSelect(row)}
+                          aria-label={i18n.t("platform.companies.editRow")}
+                        >
+                          <EditOutlined fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    </Box>
                   </TableCell>
                   <TableCell align="left">{row.name || "-"}</TableCell>
                   <TableCell align="left">
@@ -1061,6 +1078,7 @@ export function CompaniesManagerGrid(props) {
 export default function CompaniesManager() {
   const classes = useStyles();
   const { list, save, update, remove } = useCompanies();
+  const { user, enterSupportMode } = useContext(AuthContext);
 
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
@@ -1198,6 +1216,23 @@ export default function CompaniesManager() {
     setFormOpen(true);
   };
 
+  const history = useHistory();
+  const location = useLocation();
+  const handleSelectRef = useRef(() => {});
+  handleSelectRef.current = handleSelect;
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const fid = params.get("focus");
+    if (!fid || records.length === 0) return;
+    const id = Number(fid);
+    if (Number.isNaN(id)) return;
+    const row = records.find((r) => r.id === id);
+    if (!row) return;
+    handleSelectRef.current(row);
+    history.replace({ pathname: "/platform/companies" });
+  }, [location.search, records, history]);
+
   return (
     <Box className={classes.pageStack}>
       <CompaniesManagerGrid
@@ -1205,6 +1240,9 @@ export default function CompaniesManager() {
         onSelect={handleSelect}
         selectedId={record.id}
         onNewCompany={handleNewCompany}
+        onAccessCompany={
+          user?.super && !user?.supportMode ? (row) => enterSupportMode(row.id) : undefined
+        }
       />
       {formOpen ? (
         <>

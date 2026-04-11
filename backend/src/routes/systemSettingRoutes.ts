@@ -39,7 +39,8 @@ systemSettingRoutes.post(
   isSuper,
   brandingUpload.fields([
     { name: "loginLogo", maxCount: 1 },
-    { name: "menuLogo", maxCount: 1 }
+    { name: "menuLogo", maxCount: 1 },
+    { name: "favicon", maxCount: 1 }
   ]),
   SystemSettingController.updateBrandingMultipart
 );

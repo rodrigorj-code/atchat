@@ -47,6 +47,7 @@ import RatingTemplate from "../models/RatingTemplate";
 import FlowExecutionLog from "../models/FlowExecutionLog";
 import OpenAiUsage from "../models/OpenAiUsage";
 import SystemSetting from "../models/SystemSetting";
+import SupportAccessLog from "../models/SupportAccessLog";
 
 // eslint-disable-next-line
 const dbConfig = require("../config/database");
@@ -103,6 +104,7 @@ const models = [
   FlowExecutionLog,
   OpenAiUsage,
   SystemSetting,
+  SupportAccessLog,
 ];
 
 sequelize.addModels(models);

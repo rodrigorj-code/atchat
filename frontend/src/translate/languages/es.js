@@ -50,6 +50,10 @@ const messages = {
           submit: "Entrar",
           register: "¡Regístrate ahora mismo!",
         },
+        whatsApp: {
+          badge: "Soporte disponible",
+          ariaLabel: "Abrir WhatsApp",
+        },
       },
       resetPassword: {
         title: "Restablecer Contraseña",
@@ -1159,6 +1163,8 @@ const messages = {
           superAdmins: "Super Admins",
           myAccount: "Mi cuenta",
           branding: "Marca",
+          financial: "Finanzas",
+          backup: "Copia de seguridad",
         },
         dashboard: {
           title: "Panel de la plataforma",
@@ -1211,6 +1217,13 @@ const messages = {
             "Pulse una fila o Editar para cargar el formulario abajo. Use Nueva empresa para crear.",
           registeredListSubtitle:
             "Lista principal: busque, ordene y elija una fila para editar, o cree una cuenta nueva.",
+          accessCompany: "Abrir empresa (modo soporte)",
+        },
+        support: {
+          entered: "Modo soporte activado.",
+          exited: "Salió del modo soporte.",
+          banner: "Está viendo la empresa {{name}} en modo soporte.",
+          exitButton: "Volver al Super Admin",
         },
         branding: {
           title: "Marca global",
@@ -1225,10 +1238,123 @@ const messages = {
             "Formatos admitidos: PNG, JPG, WebP.\nRecomendado: imagen horizontal (proporción 3:1 o 4:1).\nEjemplo: 300x100, 400x100, 600x150.\nPreferiblemente con fondo transparente.",
           menuLogoHint:
             "Formatos admitidos: PNG, JPG, WebP.\nRecomendado: imagen horizontal compacta (proporción 2:1 o 3:1).\nEjemplo: 200x80, 240x80.\nEvite imágenes muy altas o cuadradas.",
+          favicon: "Favicon del sistema",
+          uploadHintFavicon: "PNG, ICO, SVG o JPG hasta 1 MB. Sin archivo nuevo, se conserva el icono actual.",
+          faviconHint:
+            "Formatos admitidos: PNG, ICO, SVG.\nRecomendado: imagen cuadrada (proporción 1:1).\nEjemplo: 32x32, 64x64 o 128x128.",
           chooseFile: "Elegir imagen",
           restoreDefault: "Usar logo predeterminado",
           saved: "Marca actualizada correctamente.",
           save: "Guardar",
+          loginWhatsAppSection: "Botón de WhatsApp en la página de login",
+          loginWhatsAppSectionSubtitle:
+            "Número público para el botón flotante. Déjelo vacío para ocultar el botón.",
+          loginWhatsAppNumber: "Número de WhatsApp",
+          loginWhatsAppNumberHint:
+            "Formato internacional, solo dígitos — ej.: 5527999999999 (sin espacios, guiones ni paréntesis).",
+          loginWhatsAppMessage: "Mensaje inicial (opcional)",
+          loginWhatsAppMessagePlaceholder: "¡Hola! Vengo desde la página de login.",
+          loginWhatsAppMessageHint:
+            "Si lo completa, el enlace de WhatsApp incluye este texto como mensaje inicial (parámetro text).",
+        },
+        finance: {
+          title: "Finanzas de la plataforma",
+          subtitle:
+            "Vista consolidada por empresa: planes, vencimientos y estado operativo. Lectura rápida — sin cobro automático.",
+          kpiSection: "Indicadores",
+          kpiTotal: "Total de empresas",
+          kpiEmDia: "Al día",
+          kpiEmDiaHint:
+            "Cuentas activas sin vencimiento vencido (incluye “vence pronto” y “sin vencimiento”).",
+          kpiInadimplente: "Morosas",
+          kpiSoon: "Vence pronto",
+          kpiSoonHint: "Vencimiento en los próximos 30 días",
+          kpiInactive: "Inactivas",
+          kpiRevenue: "Ingreso previsto",
+          kpiRevenueHint: "Estimación: suma de los importes de plan de empresas activas.",
+          tableSection: "Cartera de empresas",
+          searchLabel: "Búsqueda",
+          searchPlaceholder: "Nombre o correo…",
+          filterFinanceLabel: "Situación financiera",
+          filterFinanceAll: "Todas",
+          filterFinanceOk: "Al día",
+          filterFinanceSoon: "Vence pronto",
+          filterFinanceOverdue: "Morosa",
+          filterFinanceNoDue: "Sin vencimiento",
+          filterFinanceInactive: "Inactiva (cuenta)",
+          filterCompanyLabel: "Estado de la empresa",
+          filterCompanyAll: "Todas",
+          filterCompanyActive: "Activas",
+          filterCompanyInactive: "Inactivas",
+          loading: "Cargando datos…",
+          emptyTitle: "Ninguna empresa en este filtro",
+          emptySubtitle: "Ajuste la situación financiera, el estado o la búsqueda.",
+          colCompany: "Empresa",
+          colPlan: "Plan",
+          colPlanValue: "Importe del plan",
+          colDue: "Vencimiento",
+          colRecurrence: "Recurrencia",
+          colFinance: "Situación financiera",
+          colCompanyStatus: "Estado de la empresa",
+          colActions: "Acciones",
+          actionEdit: "Abrir empresa",
+          companyStatus: {
+            active: "Activa",
+            inactive: "Inactiva",
+          },
+          status: {
+            inactive: "Inactiva",
+            overdue: "Morosa",
+            soon: "Vence pronto",
+            ok: "Al día",
+            noDue: "Sin vencimiento",
+          },
+        },
+        backup: {
+          title: "Copia de seguridad y restauración",
+          subtitle:
+            "Genera un ZIP con el volcado SQL y la carpeta public (subidas, marca, adjuntos). Requiere mysqldump o pg_dump en el servidor. La restauración sustituye la BD y los archivos públicos; antes se crea una copia de seguridad.",
+          sectionGenerate: "Generar copia",
+          sectionGenerateHint:
+            "La duración depende del tamaño. El cliente MySQL/PostgreSQL debe estar instalado en el servidor.",
+          generate: "Generar copia ahora",
+          generateHint:
+            "Cada copia incluye manifest.json, database.sql y public/. No incluye .env, Redis, colas Bull ni proxy.",
+          sectionList: "Copias en este servidor",
+          loading: "Cargando lista…",
+          empty: "Aún no hay copias",
+          emptyHint: "Use “Generar copia ahora” para crear la primera.",
+          colDate: "Fecha",
+          colFile: "Archivo",
+          colSize: "Tamaño",
+          colStatus: "Estado",
+          colActions: "Acciones",
+          statusOk: "Válido",
+          statusInvalid: "Inválido",
+          download: "Descargar",
+          sectionRestore: "Restaurar desde archivo",
+          restoreIntro:
+            "Suba un ZIP generado por esta app. El motor del backup debe coincidir con el servidor (MySQL o PostgreSQL).",
+          selectFile: "Elegir archivo .zip",
+          previewTitle: "Vista previa",
+          previewDb: "Base en la copia: {{name}}",
+          previewDialect: "Motor: {{d}}",
+          previewVersion: "Versión de la app: {{v}}",
+          confirmLabel: "Confirmación",
+          confirmHelper: "Para confirmar, escriba: RESTAURAR",
+          restoreButton: "Restaurar (sobrescribe la BD actual)",
+          restoreConfirmError: "Escriba exactamente RESTAURAR para continuar.",
+          modalTitle: "Confirmar restauración",
+          modalBody:
+            "Esta operación sustituye la base de datos y la carpeta public. Antes se crea una copia de seguridad. Reinicie el backend tras el éxito.",
+          modalConfirm: "Sí, restaurar",
+          toasts: {
+            generated: "Copia creada correctamente.",
+            uploadValidated: "Archivo aceptado. Confirme para restaurar.",
+            restored: "Restauración completada.",
+          },
+          futureHint:
+            "Siguiente fase: programación local, retención y envío a la nube — la carpeta de copias y el manifest ya permiten ampliar.",
         },
         superAdmins: {
           title: "Super Admins",
@@ -2316,6 +2442,8 @@ const messages = {
         ERR_LAST_SUPER_ADMIN:
             "No puede quitarse el último superadministrador de la plataforma. Promueva a otro usuario primero.",
         ERR_EMAIL_IN_USE: "Este correo ya está en uso por otra cuenta.",
+        FAVICON_TOO_LARGE: "Favicon: tamaño máximo 1 MB.",
+        INVALID_FAVICON_TYPE: "Favicon: use PNG, JPG, ICO o SVG.",
       },
     }
   }
