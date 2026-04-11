@@ -27,7 +27,7 @@ import { useTheme, alpha } from "@material-ui/core/styles";
 import SearchIcon from "@material-ui/icons/Search";
 import EditOutlined from "@material-ui/icons/EditOutlined";
 import DeleteOutline from "@material-ui/icons/DeleteOutline";
-import SupportAgent from "@material-ui/icons/SupportAgent";
+import HeadsetMic from "@material-ui/icons/HeadsetMic";
 import { Formik, Form, Field } from "formik";
 import ConfirmationModal from "../ConfirmationModal";
 
@@ -1015,7 +1015,7 @@ export function CompaniesManagerGrid(props) {
                             onClick={() => onAccessCompany(row)}
                             aria-label={i18n.t("platform.companies.accessCompany")}
                           >
-                            <SupportAgent fontSize="small" />
+                            <HeadsetMic fontSize="small" />
                           </IconButton>
                         </Tooltip>
                       ) : null}
