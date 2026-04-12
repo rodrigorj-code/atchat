@@ -209,6 +209,10 @@ const messages = {
           no: "No",
           money: "$",
         },
+        table: {
+          companies: "Empresas",
+          aria: "Tabla de planes",
+        },
       },
       kanban: {
         toasts: {
@@ -1160,11 +1164,33 @@ const messages = {
         tabs: {
           dashboard: "Panel de la plataforma",
           companies: "Empresas",
+          plans: "Planes",
           superAdmins: "Super Admins",
           myAccount: "Mi cuenta",
           branding: "Marca",
           financial: "Finanzas",
           backup: "Copia de seguridad",
+          helps: "Ayuda (contenidos)",
+          announcements: "Informativos",
+        },
+        announcements: {
+          title: "Informativos globales",
+          subtitle:
+            "Avisos y comunicados mostrados a los usuarios según las reglas del sistema. Gestión central de la plataforma.",
+        },
+        helps: {
+          title: "Contenidos de ayuda",
+          subtitle:
+            "Tutoriales y enlaces mostrados en el área de ayuda para todos los usuarios. Contenido global de la plataforma.",
+        },
+        plans: {
+          title: "Planes del producto",
+          subtitle:
+            "Defina el catálogo de planes (límites y módulos). Cada empresa usa un plan; los ajustes por empresa siguen en Plataforma → Empresas.",
+          intro:
+            "Estos planes son el modelo por defecto de la plataforma. Las empresas pueden tener permisos de módulos sobrescritos (Super Admin → Empresas).",
+          formSectionTitle: "Crear o editar plan",
+          listSectionTitle: "Catálogo de planes",
         },
         dashboard: {
           title: "Panel de la plataforma",
@@ -1320,6 +1346,56 @@ const messages = {
           generate: "Generar copia ahora",
           generateHint:
             "Cada copia incluye manifest.json, database.sql y public/. No incluye .env, Redis, colas Bull ni proxy.",
+          sectionAuto: "Copias automáticas",
+          sectionAutoHint:
+            "Programación en el servidor (node-cron). Los archivos van a la misma carpeta que las copias manuales. La retención solo afecta a copias automáticas.",
+          autoEnabled: "Activar copia automática",
+          autoFrequency: "Frecuencia",
+          freqDaily: "Diaria",
+          freqWeekly: "Semanal",
+          autoTime: "Hora de ejecución",
+          autoWeekday: "Día de la semana",
+          weekdays: {
+            0: "Domingo",
+            1: "Lunes",
+            2: "Martes",
+            3: "Miércoles",
+            4: "Jueves",
+            5: "Viernes",
+            6: "Sábado",
+          },
+          autoRetention: "Máximo de copias automáticas a conservar",
+          autoRetentionHint: "Las copias manuales y de seguridad antes de restaurar no se borran con esta regla.",
+          saveAuto: "Guardar programación",
+          summaryTitle: "Resumen de la programación",
+          summaryStatus: "Estado",
+          statusActive: "Activo",
+          statusInactive: "Inactivo",
+          summarySchedule: "Plan",
+          summaryRetentionShort: "Retención",
+          retentionValue: "{{n}} copias automáticas",
+          nextTitle: "Próxima copia automática",
+          nextDisabled: "Copia automática desactivada.",
+          nextUnknown: "No se pudo calcular la próxima ejecución con los datos actuales.",
+          nextEstimateHint:
+            "Estimación según el reloj de este navegador; la ejecución real sigue el reloj del servidor.",
+          nextLineToday: "Hoy a las {{time}}",
+          nextLineTomorrow: "Mañana a las {{time}}",
+          nextLineWeekday: "{{weekday}} a las {{time}}",
+          timezoneNote: "La hora programada sigue el reloj del servidor donde corre el backend.",
+          browserTz: "Zona horaria de este navegador (referencia): {{tz}}",
+          formTitle: "Editar programación",
+          formSubtitle: "Guarde para aplicar. El resumen se actualiza al guardar.",
+          nextCardTitle: "Próximo automático",
+          nextCardHint: "Estimación local; el servidor puede usar otra zona horaria.",
+          nextCardOff: "Active la programación para ver la previsión.",
+          lastTitle: "Última copia en la lista",
+          sectionListHint: "Orden de la más reciente a la más antigua.",
+          autoPendingHint:
+            "La programación está activa pero aún no hay copias marcadas como automáticas — la primera puede ser en el próximo horario.",
+          emptyHintAutoOn:
+            "Aún no hay archivos. Genere una copia manual ahora o espere la programación automática.",
+          badgeRecent: "Más reciente",
           sectionList: "Copias en este servidor",
           loading: "Cargando lista…",
           empty: "Aún no hay copias",
@@ -1327,8 +1403,21 @@ const messages = {
           colDate: "Fecha",
           colFile: "Archivo",
           colSize: "Tamaño",
+          colType: "Tipo",
           colStatus: "Estado",
           colActions: "Acciones",
+          type: {
+            manual: "Manual",
+            automatic: "Automático",
+            pre_restore: "Antes de restaurar",
+          },
+          delete: "Eliminar",
+          deleteTitle: "Eliminar copia",
+          deleteBody: "Esta acción borra el ZIP del servidor de forma permanente.",
+          deleteConfirmLabel: "Confirmación",
+          deleteConfirmHelper: "Para eliminar, escriba: EXCLUIR",
+          deleteConfirmButton: "Eliminar definitivamente",
+          deletePhraseError: "Escriba exactamente EXCLUIR para continuar.",
           statusOk: "Válido",
           statusInvalid: "Inválido",
           download: "Descargar",
@@ -1352,9 +1441,11 @@ const messages = {
             generated: "Copia creada correctamente.",
             uploadValidated: "Archivo aceptado. Confirme para restaurar.",
             restored: "Restauración completada.",
+            autoSaved: "Programación de copias guardada.",
+            deleted: "Copia eliminada del servidor.",
           },
           futureHint:
-            "Siguiente fase: programación local, retención y envío a la nube — la carpeta de copias y el manifest ya permiten ampliar.",
+            "El envío a la nube vendrá en una fase posterior. El manifest ya guarda el origen (manual, automático, antes de restaurar).",
         },
         superAdmins: {
           title: "Super Admins",
@@ -2077,9 +2168,23 @@ const messages = {
         schedulesUpdated: "Horarios actualizados con éxito.",
         success: "Configuración guardada con éxito.",
         pageSubtitle:
-          "Zona horaria, opciones de la empresa y áreas administrativas.",
+          "Opciones y horarios de esta empresa (zona horaria, WhatsApp, horario comercial). La gestión global está en Plataforma.",
         customPageIntro:
-          "Use las pestañas de abajo para opciones, horarios (cuando estén activos) y otras áreas según su permiso.",
+          "Esta página aplica a la empresa actual. Super Admins: empresas, planes, ayuda global y branding están en Plataforma.",
+        companiesRelocated:
+          "La gestión de empresas se trasladó a Plataforma → Empresas para concentrar el Super Admin en un solo lugar.",
+        companiesRelocatedAction: "Abrir Plataforma → Empresas",
+        plansRelocated:
+          "La gestión del catálogo de planes está centralizada en Plataforma → Planos para evitar duplicidad y mantener el panel Super Admin ordenado.",
+        plansRelocatedAction: "Abrir Plataforma → Planos",
+        helpsRelocated:
+          "Los contenidos de ayuda (tutoriales/enlaces globales) se gestionan en Plataforma → Ayuda (contenidos).",
+        helpsRelocatedAction: "Abrir Plataforma → Ayuda",
+        superPlatformCard: {
+          title: "Gestión global de la plataforma",
+          body:
+            "Empresas, planes, contenidos de ayuda e informativos se gestionan en Plataforma. Use los accesos directos abajo.",
+        },
         title: "Configuración",
         tabs: {
           options: "Opciones",

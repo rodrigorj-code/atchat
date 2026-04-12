@@ -60,7 +60,7 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
 };
 
 export const list = async (req: Request, res: Response): Promise<Response> => {
-  const plans: Plan[] = await FindAllPlanService();
+  const plans = await FindAllPlanService();
 
   return res.status(200).json(plans);
 };

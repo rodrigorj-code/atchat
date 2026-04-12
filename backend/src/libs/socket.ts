@@ -56,7 +56,14 @@ export const initIO = (httpServer: Server): SocketIO => {
       return io;
     }
 
-    socket.join(`company-${user.companyId}-mainchannel`);
+    /** Sala alinhada ao JWT (empresa efetiva), p.ex. modo suporte; não só user.companyId da BD. */
+    const jwtPayload = tokenData as { companyId?: number };
+    const effectiveCompanyIdForSocket =
+      jwtPayload.companyId !== undefined && jwtPayload.companyId !== null
+        ? Number(jwtPayload.companyId)
+        : user.companyId;
+
+    socket.join(`company-${effectiveCompanyIdForSocket}-mainchannel`);
     socket.join(`user-${user.id}`);
 
     socket.on("joinChatBox", async (ticketId: string) => {
@@ -65,7 +72,7 @@ export const initIO = (httpServer: Server): SocketIO => {
       }
       Ticket.findByPk(ticketId).then(
         (ticket) => {
-          if (ticket && ticket.companyId === user.companyId
+          if (ticket && ticket.companyId === effectiveCompanyIdForSocket
             && (ticket.userId === user.id || user.profile === "admin")) {
             let c: number;
             if ((c = counters.incrementCounter(`ticket-${ticketId}`)) === 1) {
@@ -100,7 +107,7 @@ export const initIO = (httpServer: Server): SocketIO => {
       let c: number;
       if ((c = counters.incrementCounter("notification")) === 1) {
         if (user.profile === "admin") {
-          socket.join(`company-${user.companyId}-notification`);
+          socket.join(`company-${effectiveCompanyIdForSocket}-notification`);
         } else {
           user.queues.forEach((queue) => {
             logger.debug(`User ${user.id} of company ${user.companyId} joined queue ${queue.id} channel.`);
@@ -119,7 +126,7 @@ export const initIO = (httpServer: Server): SocketIO => {
       let c: number;
       if ((c = counters.decrementCounter("notification")) === 0) {
         if (user.profile === "admin") {
-          socket.leave(`company-${user.companyId}-notification`);
+          socket.leave(`company-${effectiveCompanyIdForSocket}-notification`);
         } else {
           user.queues.forEach((queue) => {
             logger.debug(`User ${user.id} of company ${user.companyId} leaved queue ${queue.id} channel.`);
@@ -136,8 +143,8 @@ export const initIO = (httpServer: Server): SocketIO => {
     socket.on("joinTickets", (status: string) => {
       if (counters.incrementCounter(`status-${status}`) === 1) {
         if (user.profile === "admin") {
-          logger.debug(`Admin ${user.id} of company ${user.companyId} joined ${status} tickets channel.`);
-          socket.join(`company-${user.companyId}-${status}`);
+          logger.debug(`Admin ${user.id} of company ${effectiveCompanyIdForSocket} joined ${status} tickets channel.`);
+          socket.join(`company-${effectiveCompanyIdForSocket}-${status}`);
         } else if (status === "pending") {
           user.queues.forEach((queue) => {
             logger.debug(`User ${user.id} of company ${user.companyId} joined queue ${queue.id} pending tickets channel.`);
@@ -155,8 +162,8 @@ export const initIO = (httpServer: Server): SocketIO => {
     socket.on("leaveTickets", (status: string) => {
       if (counters.decrementCounter(`status-${status}`) === 0) {
         if (user.profile === "admin") {
-          logger.debug(`Admin ${user.id} of company ${user.companyId} leaved ${status} tickets channel.`);
-          socket.leave(`company-${user.companyId}-${status}`);
+          logger.debug(`Admin ${user.id} of company ${effectiveCompanyIdForSocket} leaved ${status} tickets channel.`);
+          socket.leave(`company-${effectiveCompanyIdForSocket}-${status}`);
         } else if (status === "pending") {
           user.queues.forEach((queue) => {
             logger.debug(`User ${user.id} of company ${user.companyId} leaved queue ${queue.id} pending tickets channel.`);

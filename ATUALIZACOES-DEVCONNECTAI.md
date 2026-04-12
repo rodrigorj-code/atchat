@@ -1,6 +1,6 @@
-# Atualizações do Atendechat baseadas no DevConnectAI (Atualizado)
+# Atualizações CoreFlow baseadas no DevConnectAI (Atualizado)
 
-Este documento descreve as mudanças aplicadas no **Atendechat** (backend na raiz) inspiradas no código do **DevConnectAI** (pasta `Atualizado`), para manter compatibilidade e estabilidade com o WhatsApp.
+Este documento descreve as mudanças aplicadas no **CoreFlow** (backend na raiz) inspiradas no código do **DevConnectAI** (pasta `Atualizado`), para manter compatibilidade e estabilidade com o WhatsApp.
 
 ---
 
@@ -39,13 +39,13 @@ Este documento descreve as mudanças aplicadas no **Atendechat** (backend na rai
 ## Possíveis próximas levas (não aplicadas)
 
 - **Baileys 7.x:** no futuro avaliar migração para `@whiskeysockets/baileys` 7.x (ver guia em https://whiskey.so/migrate-latest).
-- **Envio de mídia / download:** comparar `SendWhatsAppMedia` e helpers de download do Atendechat com o DevConnectAI para possíveis melhorias (thumb de vídeo, formatos, etc.).
+- **Envio de mídia / download:** comparar `SendWhatsAppMedia` e helpers de download do CoreFlow com o DevConnectAI para possíveis melhorias (thumb de vídeo, formatos, etc.).
 
 ---
 
 ## Como testar
 
-1. Subir o backend do Atendechat e conectar um WhatsApp por QR.
+1. Subir o backend do CoreFlow e conectar um WhatsApp por QR.
 2. Enviar mensagem com **botões** ou **lista** (bot/listas) e conferir se chega sem erro.
 3. Forçar desconexão (logout no celular ou sessão inválida) e verificar se o status vai para “PENDING” e se uma nova sessão é iniciada após ~2s.
 4. Conferir logs em `connection.update` (incluindo `connecting`) para garantir que não há erros ou loops.

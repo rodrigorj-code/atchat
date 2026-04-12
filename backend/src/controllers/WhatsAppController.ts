@@ -163,7 +163,7 @@ export const remove = async (
 
   await ShowWhatsAppService(whatsappId, companyId);
 
-  await DeleteWhatsAppService(whatsappId);
+  await DeleteWhatsAppService(whatsappId, companyId);
   removeWbot(+whatsappId);
 
   const io = getIO();

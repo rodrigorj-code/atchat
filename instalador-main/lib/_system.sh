@@ -32,14 +32,18 @@ EOF
 #######################################
 system_git_clone() {
   print_banner
-  printf "${WHITE} 💻 Fazendo download do código Atendechat...${GRAY_LIGHT}"
+  printf "${WHITE} 💻 Fazendo download do código CoreFlow...${GRAY_LIGHT}"
   printf "\n\n"
 
 
   sleep 2
 
   sudo su - deploy <<EOF
-  git clone https://atendechat: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@github.com/atendechat/codatendechat.git /home/deploy/${instancia_add}/
+  # Defina GIT_CLONE_URL (ex.: git@github.com:org/repo.git) ou use HTTPS com credenciais no ambiente.
+  git clone "${GIT_CLONE_URL:-https://github.com/atendechat/codatendechat.git}" /home/deploy/${instancia_add}/
+
+  sleep 2
+EOF
 
   sleep 2
 }
@@ -51,7 +55,7 @@ system_git_clone() {
 #######################################
 system_update() {
   print_banner
-  printf "${WHITE} 💻 Vamos atualizar o sistema do Atendechat...${GRAY_LIGHT}"
+  printf "${WHITE} 💻 Vamos atualizar o sistema CoreFlow...${GRAY_LIGHT}"
   printf "\n\n"
 
   sleep 2
@@ -73,7 +77,7 @@ EOF
 #######################################
 deletar_tudo() {
   print_banner
-  printf "${WHITE} 💻 Vamos deletar o Atendechat...${GRAY_LIGHT}"
+  printf "${WHITE} 💻 Vamos deletar a instância CoreFlow...${GRAY_LIGHT}"
   printf "\n\n"
 
   sleep 2
@@ -119,7 +123,7 @@ EOF
 #######################################
 configurar_bloqueio() {
   print_banner
-  printf "${WHITE} 💻 Vamos bloquear o Atendechat...${GRAY_LIGHT}"
+  printf "${WHITE} 💻 Vamos bloquear a instância CoreFlow...${GRAY_LIGHT}"
   printf "\n\n"
 
   sleep 2
@@ -146,7 +150,7 @@ EOF
 #######################################
 configurar_desbloqueio() {
   print_banner
-  printf "${WHITE} 💻 Vamos Desbloquear o Atendechat...${GRAY_LIGHT}"
+  printf "${WHITE} 💻 Vamos desbloquear a instância CoreFlow...${GRAY_LIGHT}"
   printf "\n\n"
 
   sleep 2
@@ -172,7 +176,7 @@ EOF
 #######################################
 configurar_dominio() {
   print_banner
-  printf "${WHITE} 💻 Vamos Alterar os Dominios do Atendechat...${GRAY_LIGHT}"
+  printf "${WHITE} 💻 Vamos alterar os domínios da instância CoreFlow...${GRAY_LIGHT}"
   printf "\n\n"
 
 sleep 2

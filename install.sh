@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 ###############################################################################
-# ATENDECHAT — install.sh (Ubuntu Server 20.04+)
+# CoreFlow — install.sh (Ubuntu Server 20.04+)
 #
 # Fluxo: git pull → ./install.sh → sistema funcional (sem editar .env na mão)
 #
@@ -22,6 +22,9 @@
 #   PROJETO_DIR=/caminho  — raiz do repo (senão = pasta onde está este install.sh)
 #   MINIMAL_UPDATE=1      — só dependências + build + restart (sem apt upgrade)
 #   DOMAIN + API_DOMAIN   — modo HTTPS com dois hosts (como antes)
+#   DB_NAME / DB_USER / DB_PASS — exportadas no shell têm prioridade sobre backend/.env
+#   Atualização na VPS: com backend/.env existente, DB_* são lidos desse ficheiro.
+#   Instalação nova (sem .env): defaults atendechat + CoreFlowDB2024!
 #
 set -euo pipefail
 
@@ -38,9 +41,57 @@ fi
 API_PORT="${API_PORT:-8080}"
 LINUX_USER="${LINUX_USER:-root}"
 
-DB_NAME="${DB_NAME:-atendechat}"
-DB_USER="${DB_USER:-atendechat}"
-DB_PASS="${DB_PASS:-AtendechatDB2024!}"
+###############################################################################
+# Credenciais PostgreSQL: instalação nova vs. atualização (git pull na VPS)
+# - Se backend/.env já existir, reutiliza DB_NAME / DB_USER / DB_PASS de lá
+#   (não sobrepõe o que o utilizador definiu no shell: DB_* exportado ganha).
+# - Só os defaults (atendechat / CoreFlowDB2024!) aplicam quando não há .env
+#   ou a chave está em falta no ficheiro.
+###############################################################################
+read_env_value_from_file() {
+  local file="$1" key="$2"
+  local line raw
+  line=$(grep -m1 "^${key}=" "$file" 2>/dev/null || true)
+  [[ -n "$line" ]] || return 1
+  raw="${line#*=}"
+  raw="${raw%$'\r'}"
+  if [[ "$raw" =~ ^\".*\"$ ]]; then
+    raw="${raw#\"}"
+    raw="${raw%\"}"
+  elif [[ "$raw" =~ ^\'.*\'$ ]]; then
+    raw="${raw#\'}"
+    raw="${raw%\'}"
+  fi
+  printf '%s' "$raw"
+}
+
+merge_postgres_from_existing_env() {
+  local env_file="${PROJETO_DIR}/backend/.env"
+  [[ -f "$env_file" ]] || return 0
+  local v
+  if ! [[ -v DB_NAME ]]; then
+    v=$(read_env_value_from_file "$env_file" DB_NAME || true)
+    if [[ -n "$v" ]]; then
+      DB_NAME="$v"
+      echo ">> Preservando DB_NAME do .env existente (${DB_NAME})"
+    fi
+  fi
+  if ! [[ -v DB_USER ]]; then
+    v=$(read_env_value_from_file "$env_file" DB_USER || true)
+    if [[ -n "$v" ]]; then
+      DB_USER="$v"
+      echo ">> Preservando DB_USER do .env existente (${DB_USER})"
+    fi
+  fi
+  if ! [[ -v DB_PASS ]]; then
+    v=$(read_env_value_from_file "$env_file" DB_PASS || true)
+    if [[ -n "$v" ]]; then
+      DB_PASS="$v"
+      echo ">> Preservando DB_PASS do .env existente (definido)"
+    fi
+  fi
+}
+
 REDIS_PASS="${REDIS_PASS:-}"
 DOMAIN="${DOMAIN:-}"
 API_DOMAIN="${API_DOMAIN:-}"
@@ -49,7 +100,7 @@ MINIMAL_UPDATE="${MINIMAL_UPDATE:-0}"
 
 echo ""
 echo "=============================================="
-echo "  Atendechat — instalação / atualização"
+echo "  CoreFlow — instalação / atualização"
 echo "=============================================="
 echo ""
 echo ">>> Diretório do projeto: ${PROJETO_DIR}"
@@ -59,6 +110,11 @@ if [[ ! -d "${PROJETO_DIR}/backend" || ! -d "${PROJETO_DIR}/frontend" ]]; then
   echo "   Defina PROJETO_DIR para a raiz do repositório ou coloque install.sh na raiz."
   exit 1
 fi
+
+merge_postgres_from_existing_env
+DB_NAME="${DB_NAME:-atendechat}"
+DB_USER="${DB_USER:-atendechat}"
+DB_PASS="${DB_PASS:-CoreFlowDB2024!}"
 
 ###############################################################################
 # IP / URLs públicas
@@ -339,7 +395,7 @@ fi
 echo "==> systemd: atendechat-backend"
 cat > /etc/systemd/system/atendechat-backend.service << EOF
 [Unit]
-Description=Atendechat Backend
+Description=CoreFlow Backend
 After=network.target postgresql.service redis-server.service
 
 [Service]

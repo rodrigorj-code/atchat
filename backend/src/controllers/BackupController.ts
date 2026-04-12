@@ -3,18 +3,21 @@ import path from "path";
 import fs from "fs";
 import AdmZip from "adm-zip";
 import AppError from "../errors/AppError";
-import { getBackupsRoot, getIncomingRestoresDir, BACKUP_CONFIRM_PHRASE } from "../config/backup";
+import {
+  getBackupsRoot,
+  getIncomingRestoresDir,
+  BACKUP_CONFIRM_PHRASE,
+  isSafeBackupZipFileName
+} from "../config/backup";
 import { createApplicationBackup } from "../services/BackupService/createApplicationBackup";
 import { listBackupFiles } from "../services/BackupService/listBackupFiles";
 import { restoreFromValidatedZipFile } from "../services/BackupService/restoreFromZipFile";
 import type { BackupManifest } from "../services/BackupService/createApplicationBackup";
-
-function safeBackupFileName(name: string): boolean {
-  if (!name || typeof name !== "string") return false;
-  const base = path.basename(name);
-  if (base !== name || base.includes("..")) return false;
-  return /^atendechat-backup-.+\.zip$/.test(base);
-}
+import {
+  getBackupAutoConfig,
+  upsertBackupAutoConfig,
+  type BackupAutoConfigPayload
+} from "../services/BackupService/backupAutoConfigService";
 
 export const list = async (_req: Request, res: Response): Promise<void> => {
   const items = await listBackupFiles();
@@ -23,7 +26,7 @@ export const list = async (_req: Request, res: Response): Promise<void> => {
 
 export const generate = async (_req: Request, res: Response): Promise<void> => {
   try {
-    const result = await createApplicationBackup();
+    const result = await createApplicationBackup({ backupSource: "manual" });
     res.status(201).json({
       ok: true,
       fileName: result.fileName,
@@ -45,7 +48,7 @@ export const generate = async (_req: Request, res: Response): Promise<void> => {
 
 export const download = async (req: Request, res: Response): Promise<void> => {
   const raw = req.params.fileName;
-  if (!safeBackupFileName(raw)) {
+  if (!isSafeBackupZipFileName(raw)) {
     throw new AppError("BACKUP_INVALID_NAME", 400);
   }
   const abs = path.join(getBackupsRoot(), path.basename(raw));
@@ -143,4 +146,63 @@ export const executeRestore = async (req: Request, res: Response): Promise<void>
     }
     throw err;
   }
+};
+
+export const remove = async (req: Request, res: Response): Promise<void> => {
+  const raw = req.params.fileName;
+  if (!isSafeBackupZipFileName(raw)) {
+    throw new AppError("BACKUP_INVALID_NAME", 400);
+  }
+  const base = path.basename(raw);
+  const abs = path.join(getBackupsRoot(), base);
+  if (!fs.existsSync(abs)) {
+    throw new AppError("BACKUP_NOT_FOUND", 404);
+  }
+  try {
+    await fs.promises.unlink(abs);
+  } catch {
+    throw new AppError("BACKUP_DELETE_FAILED", 500, "Não foi possível apagar o ficheiro.");
+  }
+  res.status(204).end();
+};
+
+export const getBackupConfig = async (_req: Request, res: Response): Promise<void> => {
+  const config = await getBackupAutoConfig();
+  res.json(config);
+};
+
+export const updateBackupConfig = async (req: Request, res: Response): Promise<void> => {
+  const body = req.body as Partial<BackupAutoConfigPayload>;
+  const partial: Partial<BackupAutoConfigPayload> = {};
+
+  if (body.backupAutoEnabled !== undefined) {
+    partial.backupAutoEnabled = Boolean(body.backupAutoEnabled);
+  }
+  if (body.backupAutoFrequency !== undefined) {
+    const f = String(body.backupAutoFrequency).toLowerCase();
+    if (f !== "daily" && f !== "weekly") {
+      throw new AppError("BACKUP_CONFIG_INVALID_FREQUENCY", 400);
+    }
+    partial.backupAutoFrequency = f;
+  }
+  if (body.backupAutoTime !== undefined) {
+    partial.backupAutoTime = String(body.backupAutoTime).trim();
+  }
+  if (body.backupAutoWeekday !== undefined) {
+    const w = Number(body.backupAutoWeekday);
+    if (Number.isNaN(w) || w < 0 || w > 6) {
+      throw new AppError("BACKUP_CONFIG_INVALID_WEEKDAY", 400);
+    }
+    partial.backupAutoWeekday = w;
+  }
+  if (body.backupAutoRetention !== undefined) {
+    const r = Number(body.backupAutoRetention);
+    if (Number.isNaN(r) || r < 1 || r > 365) {
+      throw new AppError("BACKUP_CONFIG_INVALID_RETENTION", 400);
+    }
+    partial.backupAutoRetention = r;
+  }
+
+  const config = await upsertBackupAutoConfig(partial);
+  res.json(config);
 };

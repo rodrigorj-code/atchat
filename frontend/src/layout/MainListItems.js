@@ -331,7 +331,7 @@ const MainListItems = (props) => {
   const selTarefas = path === "/todolist";
   const selAgendamentos = path === "/schedules";
   const selAvaliacao = path === "/avaliacao";
-  const selInformativos = path === "/announcements";
+  const selInformativos = path === "/announcements" || path.startsWith("/platform/informativos");
   const selArquivos = path === "/files";
   const selTags = path === "/tags";
   const selAjuda = path === "/helps";
@@ -390,7 +390,7 @@ const MainListItems = (props) => {
       />
       {user.super && (
         <ListItemLink
-          to="/announcements"
+          to="/platform/informativos"
           primary={i18n.t("mainDrawer.listItems.annoucements")}
           icon={<AnnouncementIcon />}
           listItemClassName={classes.listItem}

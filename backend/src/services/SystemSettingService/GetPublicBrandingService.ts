@@ -11,7 +11,7 @@ export const BRANDING_KEYS = {
 } as const;
 
 export const DEFAULT_BRANDING = {
-  systemName: "Atendechat",
+  systemName: "CoreFlow",
   loginLogoUrl: "",
   menuLogoUrl: "",
   faviconUrl: "",

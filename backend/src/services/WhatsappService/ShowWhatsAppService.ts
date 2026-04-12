@@ -30,11 +30,9 @@ const ShowWhatsAppService = async (
     findOptions.attributes = { exclude: ["session"] };
   }
 
-  const whatsapp = await Whatsapp.findByPk(id, findOptions);
+  findOptions.where = { id, companyId };
 
-  if (whatsapp?.companyId !== companyId) {
-    throw new AppError("Não é possível acessar registros de outra empresa");
-  }
+  const whatsapp = await Whatsapp.findOne(findOptions);
 
   if (!whatsapp) {
     throw new AppError("ERR_NO_WAPP_FOUND", 404);

@@ -19,7 +19,7 @@ function defaultFaviconAbsoluteHref() {
 }
 
 const defaultBranding = {
-  systemName: packageName || "Atendechat",
+  systemName: packageName || "CoreFlow",
   loginLogoUrl: "",
   menuLogoUrl: "",
   faviconUrl: "",

@@ -7,6 +7,7 @@ import Company from "./models/Company";
 import { startQueueProcess } from "./queues";
 import { TransferTicketQueue } from "./wbotTransferTicketQueue";
 import cron from "node-cron";
+import { startBackupAutoScheduler } from "./jobs/backupAutoScheduler";
 
 const server = app.listen(process.env.PORT, async () => {
   const companies = await Company.findAll();
@@ -20,6 +21,7 @@ const server = app.listen(process.env.PORT, async () => {
     startQueueProcess();
   });
   logger.info(`Server started on port: ${process.env.PORT}`);
+  startBackupAutoScheduler();
 });
 
 cron.schedule("* * * * *", async () => {

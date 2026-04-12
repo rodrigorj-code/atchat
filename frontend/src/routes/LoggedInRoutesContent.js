@@ -29,7 +29,6 @@ import Schedules from "../pages/Schedules";
 import Campaigns from "../pages/Campaigns";
 import CampaignsConfig from "../pages/CampaignsConfig";
 import CampaignReport from "../pages/CampaignReport";
-import Annoucements from "../pages/Annoucements";
 import Chat from "../pages/Chat";
 import ToDoList from "../pages/ToDoList/";
 import Subscription from "../pages/Subscription/";
@@ -373,11 +372,14 @@ export default function LoggedInRoutesContent() {
   const platformPaths = [
     "/platform",
     "/platform/companies",
+    "/platform/planos",
     "/platform/branding",
     "/platform/super-admins",
     "/platform/account",
     "/platform/financeiro",
     "/platform/backup",
+    "/platform/helps",
+    "/platform/informativos",
   ];
 
   return (
@@ -444,7 +446,11 @@ export default function LoggedInRoutesContent() {
       <Route exact path="/tags" component={Tags} />
       <Route exact path="/files" component={Files} />
       <Route exact path="/helps" component={Helps} />
-      <Route exact path="/announcements" component={Annoucements} />
+      <Route
+        exact
+        path="/announcements"
+        render={() => <Redirect to="/platform/informativos" />}
+      />
       <Route exact path="/subscription" component={Subscription} />
 
       <Route render={() => <Redirect to="/tickets" />} />

@@ -24,11 +24,26 @@ const restoreUpload = multer({
 
 backupRoutes.get("/platform/backups", isAuth, isSuper, BackupController.list);
 
+backupRoutes.get("/platform/backup-config", isAuth, isSuper, BackupController.getBackupConfig);
+
+backupRoutes.put("/platform/backup-config", isAuth, isSuper, BackupController.updateBackupConfig);
+
 backupRoutes.post(
   "/platform/backups/generate",
   isAuth,
   isSuper,
   BackupController.generate
+);
+
+backupRoutes.delete(
+  "/platform/backups/:fileName",
+  isAuth,
+  isSuper,
+  (req, _res, next) => {
+    req.params.fileName = path.basename(req.params.fileName || "");
+    next();
+  },
+  BackupController.remove
 );
 
 backupRoutes.get(

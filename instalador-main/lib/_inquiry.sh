@@ -195,14 +195,14 @@ software_dominio() {
 inquiry_options() {
   
   print_banner
-  printf "${WHITE} 💻 Bem vindo(a) ao Gerenciador Atendechat, Selecione abaixo a proxima ação!${GRAY_LIGHT}"
+  printf "${WHITE} 💻 Bem-vindo(a) ao gerenciador CoreFlow. Selecione abaixo a próxima ação!${GRAY_LIGHT}"
   printf "\n\n"
-  printf "   [0] Instalar Atendechat\n"
-  printf "   [1] Atualizar Atendechat\n"
-  printf "   [2] Deletar Atendechat\n"
-  printf "   [3] Bloquear Atendechat\n"
-  printf "   [4] Desbloquear Atendechat\n"
-  printf "   [5] Alter. dominio Atendechat\n"
+  printf "   [0] Instalar CoreFlow\n"
+  printf "   [1] Atualizar CoreFlow\n"
+  printf "   [2] Deletar instância\n"
+  printf "   [3] Bloquear instância\n"
+  printf "   [4] Desbloquear instância\n"
+  printf "   [5] Alterar domínio\n"
   printf "\n"
   read -p "> " option
 

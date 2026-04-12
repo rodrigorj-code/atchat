@@ -23,5 +23,27 @@ export function ensureBackupDirs(): void {
   if (!fs.existsSync(incoming)) fs.mkdirSync(incoming, { recursive: true });
 }
 
-export const BACKUP_FILENAME_PREFIX = "atendechat-backup-";
+/** Novos ficheiros gerados pela app. */
+export const BACKUP_FILENAME_PREFIX = "coreflow-backup-";
+/** Backups antigos (antes da renomeação interna) — mantido para listagem/restauro. */
+export const LEGACY_BACKUP_FILENAME_PREFIX = "atendechat-backup-";
+
 export const BACKUP_CONFIRM_PHRASE = "RESTAURAR";
+export const BACKUP_DELETE_CONFIRM_PHRASE = "EXCLUIR";
+
+/** ZIP gerado por esta aplicação (prefixo atual ou legado). */
+export function isAppGeneratedBackupZipBaseName(base: string): boolean {
+  if (!base || base.includes("..")) return false;
+  return (
+    base.startsWith(BACKUP_FILENAME_PREFIX) ||
+    base.startsWith(LEGACY_BACKUP_FILENAME_PREFIX)
+  );
+}
+
+/** Nomes de ZIP permitidos na pasta de backups (gerados pela app). */
+export function isSafeBackupZipFileName(name: string): boolean {
+  if (!name || typeof name !== "string") return false;
+  const base = path.basename(name);
+  if (base !== name || base.includes("..")) return false;
+  return /^(coreflow-backup-|atendechat-backup-).+\.zip$/.test(base);
+}

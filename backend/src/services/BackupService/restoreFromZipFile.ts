@@ -54,8 +54,8 @@ export async function restoreFromValidatedZipFile(zipAbsolutePath: string): Prom
   }
 
   // Backup de segurança do estado atual (ZIP completo).
-  const safety = await createApplicationBackup();
-  const safetyName = `atendechat-backup-antes-restauro-${Date.now()}.zip`;
+  const safety = await createApplicationBackup({ backupSource: "pre_restore" });
+  const safetyName = `coreflow-backup-antes-restauro-${Date.now()}.zip`;
   const safetyDest = path.join(getBackupsRoot(), safetyName);
   await fs.promises.rename(safety.absolutePath, safetyDest);
 

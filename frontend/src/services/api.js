@@ -16,7 +16,7 @@ function attachBackendInterceptor(client) {
 			warnedEmptyBackend = true;
 			// eslint-disable-next-line no-console
 			console.error(
-				"[atendechat] URL do backend vazia. Defina REACT_APP_BACKEND_URL ou use host + REACT_APP_BACKEND_PORT."
+				"[coreflow] URL do backend vazia. Defina REACT_APP_BACKEND_URL ou use host + REACT_APP_BACKEND_PORT."
 			);
 		}
 		return config;

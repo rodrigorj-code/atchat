@@ -1,10 +1,25 @@
 import Plan from "../../models/Plan";
+import Company from "../../models/Company";
 
-const FindAllPlanService = async (): Promise<Plan[]> => {
-  const plan = await Plan.findAll({
+/** Lista planos com `companiesCount` (empresas com `planId` igual). */
+const FindAllPlanService = async (): Promise<Array<Record<string, unknown>>> => {
+  const plans = await Plan.findAll({
     order: [["name", "ASC"]]
   });
-  return plan;
+
+  const withCounts = await Promise.all(
+    plans.map(async (plan) => {
+      const companiesCount = await Company.count({
+        where: { planId: plan.id }
+      });
+      return {
+        ...plan.toJSON(),
+        companiesCount
+      };
+    })
+  );
+
+  return withCounts;
 };
 
 export default FindAllPlanService;

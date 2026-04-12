@@ -1,4 +1,4 @@
-# Resumo Técnico do Projeto - Atendechat
+# Resumo Técnico do Projeto - CoreFlow
 
 ## 1. Stack do Projeto
 

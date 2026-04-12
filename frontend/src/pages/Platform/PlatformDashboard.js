@@ -233,7 +233,7 @@ export default function PlatformDashboard() {
       <AppSecondaryButton component={Link} to="/platform/companies">
         {i18n.t("platform.dashboard.actionNewCompany")}
       </AppSecondaryButton>
-      <AppSecondaryButton component={Link} to="/settings?tab=plans">
+      <AppSecondaryButton component={Link} to="/platform/planos">
         {i18n.t("platform.dashboard.actionPlans")}
       </AppSecondaryButton>
       <AppPrimaryButton component={Link} to="/platform/branding">

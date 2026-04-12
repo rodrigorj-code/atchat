@@ -13,7 +13,8 @@ import {
     FormControl,
     InputLabel,
     MenuItem,
-    Select
+    Select,
+    Typography,
 } from "@material-ui/core";
 import { Formik, Form, Field } from 'formik';
 import ButtonWithSpinner from "../ButtonWithSpinner";
@@ -24,6 +25,7 @@ import { Edit as EditIcon } from "@material-ui/icons";
 import { toast } from "react-toastify";
 import usePlans from "../../hooks/usePlans";
 import { i18n } from "../../translate/i18n";
+import { AppSectionCard, AppTableContainer } from "../../ui";
 
 
 const useStyles = makeStyles(theme => ({
@@ -324,8 +326,8 @@ export function PlanManagerForm(props) {
 }
 
 export function PlansManagerGrid(props) {
-    const { records, onSelect } = props
-    const classes = useStyles()
+    const { records, onSelect, variant = "settings" } = props;
+    const classes = useStyles();
     
     const renderCampaigns = (row) => {
         return row.useCampaigns === false ? `${i18n.t("plans.form.no")}` : `${i18n.t("plans.form.yes")}`;
@@ -355,18 +357,18 @@ export function PlansManagerGrid(props) {
         return row.useIntegrations === false ? `${i18n.t("plans.form.no")}` : `${i18n.t("plans.form.yes")}`;
     };
 
-    return (
-        <Paper className={classes.tableContainer}>
+    const table = (
             <Table
                 className={classes.fullWidth}
-                // size="small"
                 padding="none"
-                aria-label="a dense table"
+                size={variant === "platform" ? "small" : "medium"}
+                aria-label={i18n.t("plans.table.aria")}
             >
                 <TableHead>
                     <TableRow>
                         <TableCell align="center" style={{ width: '1%' }}>#</TableCell>
                         <TableCell align="left">{i18n.t("plans.form.name")}</TableCell>
+                        <TableCell align="center">{i18n.t("plans.table.companies")}</TableCell>
                         <TableCell align="center">{i18n.t("plans.form.users")}</TableCell>
                         <TableCell align="center">{i18n.t("plans.form.connections")}</TableCell>
                         <TableCell align="center">{i18n.t("plans.form.queues")}</TableCell>
@@ -384,11 +386,14 @@ export function PlansManagerGrid(props) {
                     {records.map((row) => (
                         <TableRow key={row.id}>
                             <TableCell align="center" style={{ width: '1%' }}>
-                                <IconButton onClick={() => onSelect(row)} aria-label="delete">
+                                <IconButton onClick={() => onSelect(row)} aria-label="edit">
                                     <EditIcon />
                                 </IconButton>
                             </TableCell>
                             <TableCell align="left">{row.name || '-'}</TableCell>
+                            <TableCell align="center">
+                                {row.companiesCount != null ? row.companiesCount : "—"}
+                            </TableCell>
                             <TableCell align="center">{row.users || '-'}</TableCell>
                             <TableCell align="center">{row.connections || '-'}</TableCell>
                             <TableCell align="center">{row.queues || '-'}</TableCell>
@@ -404,13 +409,18 @@ export function PlansManagerGrid(props) {
                     ))}
                 </TableBody>
             </Table>
-        </Paper>
-    )
+    );
+
+    if (variant === "platform") {
+        return <AppTableContainer nested>{table}</AppTableContainer>;
+    }
+
+    return <Paper className={classes.tableContainer}>{table}</Paper>;
 }
 
-export default function PlansManager() {
-    const classes = useStyles()
-    const { list, save, update, remove } = usePlans()
+export default function PlansManager({ variant = "settings" }) {
+    const classes = useStyles();
+    const { list, save, update, remove } = usePlans();
 
     const [showConfirmDialog, setShowConfirmDialog] = useState(false)
     const [loading, setLoading] = useState(false)
@@ -431,12 +441,9 @@ export default function PlansManager() {
     })
 
     useEffect(() => {
-        async function fetchData() {
-            await loadPlans()
-        }
-        fetchData()
+        loadPlans();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [record])
+    }, []);
 
     const loadPlans = async () => {
         setLoading(true)
@@ -451,7 +458,6 @@ export default function PlansManager() {
 
     const handleSubmit = async (data) => {
         setLoading(true)
-        console.log(data)
         try {
             if (data.id !== undefined) {
                 await update(data)
@@ -529,10 +535,7 @@ export default function PlansManager() {
         })
     }
 
-    return (
-        <Paper className={classes.mainPaper} elevation={0}>
-            <Grid spacing={2} container>
-                <Grid xs={12} item>
+    const formBlock = (
                     <PlanManagerForm
                         initialValue={record}
                         onDelete={handleOpenDeleteDialog}
@@ -540,12 +543,45 @@ export default function PlansManager() {
                         onCancel={handleCancel}
                         loading={loading}
                     />
-                </Grid>
-                <Grid xs={12} item>
+    );
+
+    const gridBlock = (
                     <PlansManagerGrid
                         records={records}
                         onSelect={handleSelect}
+                        variant={variant}
                     />
+    );
+
+    return (
+        <Paper
+            className={variant === "platform" ? classes.platformRoot : classes.mainPaper}
+            elevation={0}
+        >
+            <Grid spacing={variant === "platform" ? 3 : 2} container>
+                <Grid xs={12} item>
+                    {variant === "platform" ? (
+                        <AppSectionCard>
+                            <Typography className={classes.platformSectionTitle} component="h2">
+                                {i18n.t("platform.plans.formSectionTitle")}
+                            </Typography>
+                            {formBlock}
+                        </AppSectionCard>
+                    ) : (
+                        formBlock
+                    )}
+                </Grid>
+                <Grid xs={12} item>
+                    {variant === "platform" ? (
+                        <AppSectionCard>
+                            <Typography className={classes.platformSectionTitle} component="h2">
+                                {i18n.t("platform.plans.listSectionTitle")}
+                            </Typography>
+                            {gridBlock}
+                        </AppSectionCard>
+                    ) : (
+                        gridBlock
+                    )}
                 </Grid>
             </Grid>
             <ConfirmationModal

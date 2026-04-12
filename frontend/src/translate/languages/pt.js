@@ -265,6 +265,10 @@ const messages = {
           no: "Não",
           money: "R$",
         },
+        table: {
+          companies: "Empresas",
+          aria: "Tabela de planos",
+        },
       },
       kanban: {
         toasts: {
@@ -1232,11 +1236,33 @@ const messages = {
         tabs: {
           dashboard: "Dashboard da plataforma",
           companies: "Empresas",
+          plans: "Planos",
           superAdmins: "Super Admins",
           myAccount: "Minha conta",
           branding: "Branding",
           financial: "Financeiro",
           backup: "Backup",
+          helps: "Ajuda (conteúdos)",
+          announcements: "Informativos",
+        },
+        announcements: {
+          title: "Informativos globais",
+          subtitle:
+            "Avisos e comunicados exibidos aos utilizadores conforme as regras do sistema. Gestão central da plataforma.",
+        },
+        helps: {
+          title: "Conteúdos de ajuda",
+          subtitle:
+            "Tutoriais e links exibidos na área de ajuda da aplicação para todos os utilizadores. Conteúdo global da plataforma.",
+        },
+        plans: {
+          title: "Planos do produto",
+          subtitle:
+            "Defina o catálogo de planos (limites e módulos). Cada empresa escolhe um plano; ajustes por empresa continuam em Plataforma → Empresas.",
+          intro:
+            "Estes planos são o modelo padrão da plataforma. As empresas podem ter o campo de módulos sobrescrito individualmente (Super Admin → Empresas).",
+          formSectionTitle: "Criar ou editar plano",
+          listSectionTitle: "Catálogo de planos",
         },
         dashboard: {
           title: "Dashboard da plataforma",
@@ -1391,6 +1417,56 @@ const messages = {
           generate: "Gerar backup agora",
           generateHint:
             "Cada backup inclui manifest.json (metadados), database.sql e a árvore public/. Não inclui .env, Redis, filas Bull nem configuração do proxy.",
+          sectionAuto: "Backups automáticos",
+          sectionAutoHint:
+            "Agendamento no servidor (node-cron). Os ficheiros ficam na mesma pasta dos backups manuais. A retenção aplica-se só a cópias automáticas.",
+          autoEnabled: "Ativar backup automático",
+          autoFrequency: "Frequência",
+          freqDaily: "Diário",
+          freqWeekly: "Semanal",
+          autoTime: "Horário de execução",
+          autoWeekday: "Dia da semana",
+          weekdays: {
+            0: "Domingo",
+            1: "Segunda",
+            2: "Terça",
+            3: "Quarta",
+            4: "Quinta",
+            5: "Sexta",
+            6: "Sábado",
+          },
+          autoRetention: "Máximo de backups automáticos a manter",
+          autoRetentionHint: "Backups manuais e de pré-restauração não são apagados por esta regra.",
+          saveAuto: "Guardar agendamento",
+          summaryTitle: "Resumo do agendamento",
+          summaryStatus: "Estado",
+          statusActive: "Ativo",
+          statusInactive: "Inativo",
+          summarySchedule: "Plano",
+          summaryRetentionShort: "Retenção",
+          retentionValue: "{{n}} backups automáticos",
+          nextTitle: "Próximo backup automático",
+          nextDisabled: "Backup automático desativado.",
+          nextUnknown: "Não foi possível calcular a próxima execução com os dados atuais.",
+          nextEstimateHint:
+            "Estimativa com base no relógio deste navegador; a execução real segue o relógio do servidor.",
+          nextLineToday: "Hoje às {{time}}",
+          nextLineTomorrow: "Amanhã às {{time}}",
+          nextLineWeekday: "{{weekday}} às {{time}}",
+          timezoneNote: "O horário de execução configurado segue o relógio do servidor onde o backend corre.",
+          browserTz: "Fuso deste navegador (referência): {{tz}}",
+          formTitle: "Editar agendamento",
+          formSubtitle: "Guarde para aplicar. O resumo ao lado atualiza após guardar.",
+          nextCardTitle: "Próximo automático",
+          nextCardHint: "Estimativa local; o servidor pode diferir no fuso.",
+          nextCardOff: "Ative o agendamento para ver a previsão.",
+          lastTitle: "Último backup na lista",
+          sectionListHint: "Lista ordenada do mais recente para o mais antigo.",
+          autoPendingHint:
+            "O agendamento está ativo mas ainda não há backups marcados como automáticos na lista — a primeira execução pode ser no próximo horário.",
+          emptyHintAutoOn:
+            "Ainda não há ficheiros. Pode gerar um backup manual agora ou aguardar o agendamento automático.",
+          badgeRecent: "Mais recente",
           sectionList: "Backups disponíveis no servidor",
           loading: "A carregar lista…",
           empty: "Ainda não há backups",
@@ -1398,8 +1474,21 @@ const messages = {
           colDate: "Data",
           colFile: "Ficheiro",
           colSize: "Tamanho",
+          colType: "Tipo",
           colStatus: "Estado",
           colActions: "Ações",
+          type: {
+            manual: "Manual",
+            automatic: "Automático",
+            pre_restore: "Pré-restauração",
+          },
+          delete: "Excluir",
+          deleteTitle: "Excluir backup",
+          deleteBody: "Esta ação remove o ficheiro ZIP do servidor de forma permanente.",
+          deleteConfirmLabel: "Confirmação",
+          deleteConfirmHelper: "Para apagar, escreva: EXCLUIR",
+          deleteConfirmButton: "Excluir definitivamente",
+          deletePhraseError: "Escreva exatamente EXCLUIR para continuar.",
           statusOk: "Válido",
           statusInvalid: "Inválido",
           download: "Descarregar",
@@ -1423,9 +1512,11 @@ const messages = {
             generated: "Backup criado com sucesso.",
             uploadValidated: "Ficheiro reconhecido. Confirme para restaurar.",
             restored: "Restauração concluída.",
+            autoSaved: "Agendamento de backup guardado.",
+            deleted: "Backup removido do servidor.",
           },
           futureHint:
-            "Fase seguinte (planeado): agendamento local, retenção e envio para armazenamento em nuvem (S3, Drive, etc.) — a pasta de backups e o manifest já suportam evolução.",
+            "Envio para nuvem (S3, Drive, etc.) ficará para uma fase seguinte. O manifest já inclui o tipo de origem (manual, automático, pré-restauração).",
         },
         superAdmins: {
           title: "Super Admins",
@@ -2283,9 +2374,23 @@ const messages = {
         schedulesUpdated: "Horários atualizados com sucesso.",
         success: "Configurações salvas com sucesso.",
         pageSubtitle:
-          "Fuso horário, opções da empresa e áreas administrativas.",
+          "Opções e horários desta empresa (fuso, WhatsApp, expediente). Gestão global do sistema está em Plataforma.",
         customPageIntro:
-          "Use as abas abaixo para opções, horários (quando ativos) e outras áreas conforme sua permissão.",
+          "Esta página aplica-se à empresa atual. Super Admins: empresas, planos, ajuda global e branding estão em Plataforma.",
+        companiesRelocated:
+          "A gestão de empresas foi movida para Plataforma → Empresas para concentrar o painel Super Admin num só sítio.",
+        companiesRelocatedAction: "Abrir Plataforma → Empresas",
+        plansRelocated:
+          "A gestão do catálogo de planos foi centralizada em Plataforma → Planos para evitar duplicidade e manter o painel Super Admin organizado.",
+        plansRelocatedAction: "Abrir Plataforma → Planos",
+        helpsRelocated:
+          "Os conteúdos de ajuda (tutoriais/links globais) passaram a ser geridos em Plataforma → Ajuda (conteúdos).",
+        helpsRelocatedAction: "Abrir Plataforma → Ajuda",
+        superPlatformCard: {
+          title: "Gestão global da plataforma",
+          body:
+            "Empresas, planos, conteúdos de ajuda e informativos são geridos em Plataforma. Use os atalhos abaixo.",
+        },
         title: "Configurações",
         tabs: {
           options: "Opções",

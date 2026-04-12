@@ -208,6 +208,10 @@ const messages = {
 					no: "No",
 					money: "$",
 				},
+				table: {
+					companies: "Companies",
+					aria: "Plans table",
+				},
 			},
 			kanban: {
 				toasts: {
@@ -1160,11 +1164,33 @@ const messages = {
 				tabs: {
 					dashboard: "Platform dashboard",
 					companies: "Companies",
+					plans: "Plans",
 					superAdmins: "Super Admins",
 					myAccount: "My account",
 					branding: "Branding",
 					financial: "Financial",
 					backup: "Backup",
+					helps: "Help content",
+					announcements: "Announcements",
+				},
+				announcements: {
+					title: "Global announcements",
+					subtitle:
+						"Notices and messages shown to users according to system rules. Central platform management.",
+				},
+				helps: {
+					title: "Help content",
+					subtitle:
+						"Tutorials and links shown in the in-app help area for all users. Global platform content.",
+				},
+				plans: {
+					title: "Product plans",
+					subtitle:
+						"Manage the plan catalog (limits and modules). Each company uses one plan; per-company overrides stay under Platform → Companies.",
+					intro:
+						"These plans are the platform defaults. Companies can still have module overrides individually (Super Admin → Companies).",
+					formSectionTitle: "Create or edit plan",
+					listSectionTitle: "Plan catalog",
 				},
 				dashboard: {
 					title: "Platform dashboard",
@@ -1320,6 +1346,56 @@ const messages = {
 					generate: "Generate backup now",
 					generateHint:
 						"Each backup includes manifest.json (metadata), database.sql, and the public/ tree. Does not include .env, Redis, Bull queues, or proxy config.",
+					sectionAuto: "Automatic backups",
+					sectionAutoHint:
+						"Scheduled on the server (node-cron). Files use the same folder as manual backups. Retention applies only to automatic copies.",
+					autoEnabled: "Enable automatic backup",
+					autoFrequency: "Frequency",
+					freqDaily: "Daily",
+					freqWeekly: "Weekly",
+					autoTime: "Run time",
+					autoWeekday: "Weekday",
+					weekdays: {
+						0: "Sunday",
+						1: "Monday",
+						2: "Tuesday",
+						3: "Wednesday",
+						4: "Thursday",
+						5: "Friday",
+						6: "Saturday",
+					},
+					autoRetention: "Max automatic backups to keep",
+					autoRetentionHint: "Manual and pre-restore safety backups are not removed by this rule.",
+					saveAuto: "Save schedule",
+					summaryTitle: "Schedule overview",
+					summaryStatus: "Status",
+					statusActive: "Active",
+					statusInactive: "Inactive",
+					summarySchedule: "Plan",
+					summaryRetentionShort: "Retention",
+					retentionValue: "{{n}} automatic backups",
+					nextTitle: "Next automatic backup",
+					nextDisabled: "Automatic backup is turned off.",
+					nextUnknown: "Could not estimate the next run from the current settings.",
+					nextEstimateHint:
+						"Estimate uses this browser’s clock; the real run follows the server clock.",
+					nextLineToday: "Today at {{time}}",
+					nextLineTomorrow: "Tomorrow at {{time}}",
+					nextLineWeekday: "{{weekday}} at {{time}}",
+					timezoneNote: "The scheduled time follows the server clock where the backend runs.",
+					browserTz: "This browser’s timezone (reference): {{tz}}",
+					formTitle: "Edit schedule",
+					formSubtitle: "Save to apply. The summary updates after saving.",
+					nextCardTitle: "Next automatic",
+					nextCardHint: "Local estimate; the server may use a different timezone.",
+					nextCardOff: "Enable scheduling to see the forecast.",
+					lastTitle: "Latest backup in the list",
+					sectionListHint: "Newest first.",
+					autoPendingHint:
+						"Scheduling is on but no automatic backups appear yet — the first run may be at the next scheduled time.",
+					emptyHintAutoOn:
+						"No files yet. Generate a manual backup now or wait for the automatic schedule.",
+					badgeRecent: "Latest",
 					sectionList: "Backups on this server",
 					loading: "Loading list…",
 					empty: "No backups yet",
@@ -1327,8 +1403,21 @@ const messages = {
 					colDate: "Date",
 					colFile: "File",
 					colSize: "Size",
+					colType: "Type",
 					colStatus: "Status",
 					colActions: "Actions",
+					type: {
+						manual: "Manual",
+						automatic: "Automatic",
+						pre_restore: "Pre-restore",
+					},
+					delete: "Delete",
+					deleteTitle: "Delete backup",
+					deleteBody: "This permanently removes the ZIP file from the server.",
+					deleteConfirmLabel: "Confirmation",
+					deleteConfirmHelper: "To delete, type: EXCLUIR",
+					deleteConfirmButton: "Delete permanently",
+					deletePhraseError: "Type exactly EXCLUIR to continue.",
 					statusOk: "Valid",
 					statusInvalid: "Invalid",
 					download: "Download",
@@ -1352,9 +1441,11 @@ const messages = {
 						generated: "Backup created successfully.",
 						uploadValidated: "File accepted. Confirm to restore.",
 						restored: "Restore completed.",
+						autoSaved: "Backup schedule saved.",
+						deleted: "Backup removed from the server.",
 					},
 					futureHint:
-						"Next phase (planned): local scheduling, retention, cloud upload (S3, Drive, etc.) — backup folder and manifest are ready to extend.",
+						"Cloud upload (S3, Drive, etc.) will come in a later phase. The manifest already stores the backup origin (manual, automatic, pre-restore).",
 				},
 				superAdmins: {
 					title: "Super Admins",
@@ -2177,9 +2268,24 @@ const messages = {
 			settings: {
 				schedulesUpdated: "Schedules updated successfully.",
 				success: "Settings saved successfully.",
-				pageSubtitle: "Timezone, company options, and admin areas.",
+				pageSubtitle:
+					"Options and schedules for this company (timezone, WhatsApp, business hours). Global management is under Platform.",
 				customPageIntro:
-					"Use the tabs below for options, schedules (when enabled), and other areas according to your permissions.",
+					"This page applies to the current company. Super Admins: companies, plans, global help, and branding are under Platform.",
+				companiesRelocated:
+					"Company management has moved to Platform → Companies to keep the Super Admin experience in one place.",
+				companiesRelocatedAction: "Open Platform → Companies",
+				plansRelocated:
+					"Plan catalog management is now under Platform → Plans to avoid duplication and keep the Super Admin panel organized.",
+				plansRelocatedAction: "Open Platform → Plans",
+				helpsRelocated:
+					"Global help content (tutorials/links) is now managed under Platform → Help content.",
+				helpsRelocatedAction: "Open Platform → Help content",
+				superPlatformCard: {
+					title: "Global platform management",
+					body:
+						"Companies, plans, help content, and announcements are managed under Platform. Use the shortcuts below.",
+				},
 				title: "Settings",
 				tabs: {
 					options: "Options",

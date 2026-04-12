@@ -1,10 +1,10 @@
-# Atendechat
+# CoreFlow
 
-O Atendechat é uma empresa distribuidora de White Label que possui uma solução de atendimentos via Whatsapp que aumenta a produtividade e organização das equipes
+Plataforma de atendimento via WhatsApp (multiempresa). Nome interno técnico **CoreFlow**; o nome comercial exibido aos utilizadores é configurável em **Plataforma → Branding** (`systemName`).
 
 ## 🚀 Começando
 
-O repositório do Atendechat possui 3 pastas importantes:
+O repositório possui 3 pastas importantes:
 - backend
 - frontend
 - instalador
@@ -178,6 +178,4 @@ Versão 1.0.0
 
 Este projeto está sob a licença
 
-⌨️ com ❤️ por [Atendechat](https://atendechat.com) 😊
-
-Todos os direitos reservados a https://atendechat.com
+CoreFlow — base de código interna. Nome e marca visível ao cliente via branding.

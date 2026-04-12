@@ -1,6 +1,8 @@
 # Deploy no Ubuntu Server 20.04 (VPS)
 
-Este guia descreve **passo a passo** como preparar e rodar o Atendechat em uma VPS com **Ubuntu 20.04**, usando **PostgreSQL** e **Redis** instalados localmente no servidor.
+Este guia descreve **passo a passo** como preparar e rodar o **CoreFlow** em uma VPS com **Ubuntu 20.04**, usando **PostgreSQL** e **Redis** instalados localmente no servidor.
+
+> Os caminhos de exemplo (`/var/www/atendechat`, utilizador `atendechat`, serviço `atendechat-backend`) são **legados** e mantidos para não quebrar instalações existentes; pode renomear localmente se preferir.
 
 ---
 
@@ -266,7 +268,7 @@ Conteúdo (ajuste `SEU_USUARIO` e o caminho `PROJETO`):
 
 ```ini
 [Unit]
-Description=Atendechat Backend
+Description=CoreFlow Backend
 After=network.target postgresql.service redis-server.service
 
 [Service]

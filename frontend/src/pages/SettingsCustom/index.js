@@ -1,16 +1,13 @@
 import React, { useState, useEffect, useContext } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useHistory, Link as RouterLink } from "react-router-dom";
 import MainContainer from "../../components/MainContainer";
-import { Box, makeStyles, Paper, Tabs, Tab, Typography } from "@material-ui/core";
-import { AppPageHeader } from "../../ui";
+import { Box, Button, makeStyles, Paper, Tabs, Tab, Typography } from "@material-ui/core";
+import { AppPageHeader, AppSectionCard } from "../../ui";
 import Alert from "@material-ui/lab/Alert";
 
 import TabPanel from "../../components/TabPanel";
 
 import SchedulesForm from "../../components/SchedulesForm";
-import CompaniesManager from "../../components/CompaniesManager";
-import PlansManager from "../../components/PlansManager";
-import HelpsManager from "../../components/HelpsManager";
 import Options from "../../components/Settings/Options";
 
 import { i18n } from "../../translate/i18n.js";
@@ -22,6 +19,13 @@ import useSettings from "../../hooks/useSettings";
 
 import OnlyForSuperUser from "../../components/OnlyForSuperUser";
 import CompanyTimezoneSettings from "../../components/CompanyTimezoneSettings";
+
+const PLATFORM_QUICK_LINKS = [
+  { to: "/platform/companies", labelKey: "platform.tabs.companies" },
+  { to: "/platform/planos", labelKey: "platform.tabs.plans" },
+  { to: "/platform/helps", labelKey: "platform.tabs.helps" },
+  { to: "/platform/informativos", labelKey: "platform.tabs.announcements" },
+];
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -56,12 +60,6 @@ const useStyles = makeStyles((theme) => ({
     width: "100%",
     maxHeight: "100%",
   },
-  control: {
-    padding: theme.spacing(1),
-  },
-  textfield: {
-    width: "100%",
-  },
   pageContextWrap: {
     paddingLeft: theme.spacing(2),
     paddingRight: theme.spacing(2),
@@ -74,11 +72,23 @@ const useStyles = makeStyles((theme) => ({
       width: "100%",
     },
   },
+  superLinks: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: theme.spacing(1),
+    marginTop: theme.spacing(1.5),
+  },
+  superCardTitle: {
+    fontWeight: 600,
+    fontSize: "1rem",
+    marginBottom: theme.spacing(0.5),
+  },
 }));
 
 const SettingsCustom = () => {
   const classes = useStyles();
   const location = useLocation();
+  const history = useHistory();
   const [tab, setTab] = useState("options");
   const [schedules, setSchedules] = useState([]);
   const [company, setCompany] = useState({});
@@ -122,19 +132,23 @@ const SettingsCustom = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const isSuperUser = Boolean(currentUser?.super);
+  /** URLs antigas ?tab=companies|plans|helps: limpar query sem quebrar navegação */
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const t = params.get("tab");
+    if (t === "companies" || t === "plans" || t === "helps") {
+      history.replace("/settings");
+    }
+  }, [location.search, history]);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const t = params.get("tab");
     if (!t) return;
-    const allowed = ["options", "schedules", "companies", "plans", "helps"];
+    const allowed = ["options", "schedules"];
     if (!allowed.includes(t)) return;
-    if ((t === "plans" || t === "companies" || t === "helps") && !isSuperUser) {
-      return;
-    }
     setTab(t);
-  }, [location.search, isSuperUser]);
+  }, [location.search]);
 
   const handleTabChange = (event, newValue) => {
       async function findData() {
@@ -181,10 +195,6 @@ const SettingsCustom = () => {
     setLoading(false);
   };
 
-  const isSuper = () => {
-    return currentUser.super;
-  };
-
   return (
     <MainContainer className={classes.root}>
       <AppPageHeader
@@ -215,6 +225,37 @@ const SettingsCustom = () => {
             </Typography>
           </Alert>
         </Box>
+
+        <OnlyForSuperUser
+          user={currentUser}
+          yes={() => (
+            <Box className={classes.pageContextWrap} paddingBottom={1}>
+              <AppSectionCard>
+                <Typography className={classes.superCardTitle} component="h2">
+                  {i18n.t("settings.superPlatformCard.title")}
+                </Typography>
+                <Typography variant="body2" color="textSecondary" style={{ lineHeight: 1.5, margin: 0 }}>
+                  {i18n.t("settings.superPlatformCard.body")}
+                </Typography>
+                <Box className={classes.superLinks}>
+                  {PLATFORM_QUICK_LINKS.map((link) => (
+                    <Button
+                      key={link.to}
+                      variant="outlined"
+                      color="primary"
+                      size="small"
+                      component={RouterLink}
+                      to={link.to}
+                    >
+                      {i18n.t(link.labelKey)}
+                    </Button>
+                  ))}
+                </Box>
+              </AppSectionCard>
+            </Box>
+          )}
+        />
+
         <Tabs
           value={tab}
           indicatorColor="primary"
@@ -226,9 +267,6 @@ const SettingsCustom = () => {
         >
           <Tab label={i18n.t("settings.tabs.options")} value={"options"} />
           {schedulesEnabled && <Tab label={i18n.t("settings.tabs.schedules")} value={"schedules"} />}
-          {isSuper() ? <Tab label={i18n.t("settings.tabs.companies")} value={"companies"} /> : null}
-          {isSuper() ? <Tab label={i18n.t("settings.tabs.plans")} value={"plans"} /> : null}
-          {isSuper() ? <Tab label={i18n.t("settings.tabs.helps")} value={"helps"} /> : null}
         </Tabs>
         <Paper className={classes.paper} elevation={0}>
           <TabPanel
@@ -242,42 +280,6 @@ const SettingsCustom = () => {
               initialValues={schedules}
             />
           </TabPanel>
-          <OnlyForSuperUser
-            user={currentUser}
-            yes={() => (
-              <TabPanel
-                className={classes.container}
-                value={tab}
-                name={"companies"}
-              >
-                <CompaniesManager />
-              </TabPanel>
-            )}
-          />
-          <OnlyForSuperUser
-            user={currentUser}
-            yes={() => (
-              <TabPanel
-                className={classes.container}
-                value={tab}
-                name={"plans"}
-              >
-                <PlansManager />
-              </TabPanel>
-            )}
-          />
-          <OnlyForSuperUser
-            user={currentUser}
-            yes={() => (
-              <TabPanel
-                className={classes.container}
-                value={tab}
-                name={"helps"}
-              >
-                <HelpsManager />
-              </TabPanel>
-            )}
-          />
           <TabPanel className={classes.container} value={tab} name={"options"}>
             <Options
               settings={settings}

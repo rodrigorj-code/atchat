@@ -21,6 +21,7 @@ import EditIcon from "@material-ui/icons/Edit";
 import MainContainer from "../../components/MainContainer";
 import MainHeader from "../../components/MainHeader";
 import Title from "../../components/Title";
+import PlatformPageHeader from "../Platform/PlatformPageHeader";
 
 import api from "../../services/api";
 import { i18n } from "../../translate/i18n";
@@ -91,7 +92,7 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const Announcements = () => {
+const Announcements = ({ variant }) => {
   const classes = useStyles();
   const history = useHistory();
 
@@ -226,6 +227,57 @@ const Announcements = () => {
     }
   };
 
+  const searchAndAdd = (
+    <>
+      <Grid xs={12} sm={6} item>
+        <TextField
+          fullWidth
+          placeholder={i18n.t("announcements.searchPlaceholder")}
+          type="search"
+          value={searchParam}
+          onChange={handleSearch}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon style={{ color: "gray" }} />
+              </InputAdornment>
+            ),
+          }}
+        />
+      </Grid>
+      <Grid xs={12} sm={6} item>
+        <Button
+          fullWidth
+          variant="contained"
+          onClick={handleOpenAnnouncementModal}
+          color="primary"
+        >
+          {i18n.t("announcements.buttons.add")}
+        </Button>
+      </Grid>
+    </>
+  );
+
+  const toolbarGrid =
+    variant === "platform" ? (
+      <Grid style={{ width: "100%" }} container spacing={2}>
+        {searchAndAdd}
+      </Grid>
+    ) : (
+      <Grid style={{ width: "99.6%" }} container>
+        <Grid xs={12} sm={8} item>
+          <Title>
+            {i18n.t("announcements.title")} ({announcements.length})
+          </Title>
+        </Grid>
+        <Grid xs={12} sm={4} item>
+          <Grid spacing={2} container>
+            {searchAndAdd}
+          </Grid>
+        </Grid>
+      </Grid>
+    );
+
   return (
     <MainContainer >
       <ConfirmationModal
@@ -250,43 +302,17 @@ const Announcements = () => {
         aria-labelledby="form-dialog-title"
         announcementId={selectedAnnouncement && selectedAnnouncement.id}
       />
-      <MainHeader>
-        <Grid style={{ width: "99.6%" }} container>
-          <Grid xs={12} sm={8} item>
-            <Title>{i18n.t("announcements.title")} ({announcements.length})</Title>
-          </Grid>
-          <Grid xs={12} sm={4} item>
-            <Grid spacing={2} container>
-              <Grid xs={6} sm={6} item>
-                <TextField
-                  fullWidth
-                  placeholder={i18n.t("announcements.searchPlaceholder")}
-                  type="search"
-                  value={searchParam}
-                  onChange={handleSearch}
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <SearchIcon style={{ color: "gray" }} />
-                      </InputAdornment>
-                    ),
-                  }}
-                />
-              </Grid>
-              <Grid xs={6} sm={6} item>
-                <Button
-                  fullWidth
-                  variant="contained"
-                  onClick={handleOpenAnnouncementModal}
-                  color="primary"
-                >
-                  {i18n.t("announcements.buttons.add")}
-                </Button>
-              </Grid>
-            </Grid>
-          </Grid>
-        </Grid>
-      </MainHeader>
+      {variant === "platform" ? (
+        <>
+          <PlatformPageHeader
+            titleKey="platform.announcements.title"
+            subtitleKey="platform.announcements.subtitle"
+          />
+          <MainHeader>{toolbarGrid}</MainHeader>
+        </>
+      ) : (
+        <MainHeader>{toolbarGrid}</MainHeader>
+      )}
       <Paper
         className={classes.mainPaper}
         variant="outlined"

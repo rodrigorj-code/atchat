@@ -9,8 +9,8 @@ echo -e "${YELLOW}🎨 Atualizando nome da página...${NC}"
 
 # Verifica se a variável de ambiente está definida
 if [[ -z "$REACT_APP_TAB_NAME" ]]; then
-    echo -e "${YELLOW}⚠️  REACT_APP_TAB_NAME não definida, usando valor padrão: Atendechat${NC}"
-    TAB_NAME="Atendechat"
+    echo -e "${YELLOW}⚠️  REACT_APP_TAB_NAME não definida, usando valor padrão: CoreFlow${NC}"
+    TAB_NAME="CoreFlow"
 else
     TAB_NAME="$REACT_APP_TAB_NAME"
 fi
@@ -23,9 +23,8 @@ if [[ ! -f "public/index.html" ]]; then
     exit 1
 fi
 
-# Faz o replace no arquivo index.html
-# Substitui todas as ocorrências de "Atendechat" pelo novo nome
-sed -i "s/Atendechat/$TAB_NAME/g" public/index.html
+# Substitui o título placeholder (CoreFlow) pelo nome da aba
+sed -i "s/CoreFlow/$TAB_NAME/g" public/index.html
 
 # Verifica se o replace foi bem-sucedido no index.html
 if grep -q "$TAB_NAME" public/index.html; then
@@ -37,8 +36,8 @@ fi
 
 # Faz o replace no arquivo manifest.json
 if [[ -f "public/manifest.json" ]]; then
-    sed -i "s/Atendechat/$TAB_NAME/g" public/manifest.json
-    
+    sed -i "s/CoreFlow/$TAB_NAME/g" public/manifest.json
+
     # Verifica se o replace foi bem-sucedido no manifest.json
     if grep -q "$TAB_NAME" public/manifest.json; then
         echo -e "${GREEN}✅ Nome da página atualizado com sucesso no manifest.json!${NC}"
@@ -49,4 +48,4 @@ else
     echo -e "${YELLOW}⚠️  Arquivo public/manifest.json não encontrado${NC}"
 fi
 
-echo -e "${GREEN}🎉 Script de atualização do nome da página concluído!${NC}" 
+echo -e "${GREEN}🎉 Script de atualização do nome da página concluído!${NC}"

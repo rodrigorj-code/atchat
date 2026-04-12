@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 ###############################################################################
-# Atualização completa do Atendechat no servidor (após git pull ou sozinho).
+# Atualização completa do CoreFlow no servidor (após git pull ou sozinho).
 #
 # Uso:
 #   sudo ./update-server-ip.sh              # detecta IP; faz git pull se for repositório
@@ -42,7 +42,7 @@ fi
 
 echo ""
 echo "=============================================="
-echo "  Atendechat — atualização (IP: ${NEW_IP})"
+echo "  CoreFlow — atualização (IP: ${NEW_IP})"
 echo "  Pasta: ${PROJETO_DIR}"
 echo "=============================================="
 echo ""

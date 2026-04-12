@@ -1,6 +1,6 @@
-# 🔐 Configuração SSL/HTTPS - Atendechat
+# 🔐 Configuração SSL/HTTPS - CoreFlow
 
-Este documento explica como configurar SSL/HTTPS para suas instâncias do Atendechat usando Nginx e Certbot.
+Este documento explica como configurar SSL/HTTPS para instâncias usando Nginx e Certbot.
 
 ## 🚀 Inicialização Automática
 

@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # Entrypoint script para o backend
-# Autor: Atendechat
+# Autor: CoreFlow
 # Versão: 2.0
 
 set -e
