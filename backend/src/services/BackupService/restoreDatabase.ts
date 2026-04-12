@@ -1,5 +1,5 @@
 import { spawn } from "child_process";
-import { createReadStream } from "fs";
+import fs, { createReadStream } from "fs";
 import path from "path";
 import { pipeline } from "stream/promises";
 
@@ -86,15 +86,31 @@ export async function restorePostgresFromSqlFile(sqlPath: string): Promise<void>
   await exitPromise;
 }
 
+function resolveSequelizeCliEntry(backendRoot: string): string {
+  const candidates = [
+    path.join(backendRoot, "node_modules", "sequelize-cli", "lib", "sequelize.js"),
+    path.join(backendRoot, "node_modules", "sequelize-cli", "lib", "sequelize")
+  ];
+  for (const p of candidates) {
+    if (fs.existsSync(p)) return p;
+  }
+  throw new Error(
+    "RESTORE_MIGRATE_FAILED: sequelize-cli não encontrado em node_modules. No servidor, execute: cd /caminho/backend && npm install"
+  );
+}
+
 /**
  * Após importar o SQL, aplica migrations pendentes (ex.: tabelas novas vs backup antigo).
- * Deve correr com cwd na raiz do backend para o sequelize-cli ler .sequelizerc.
+ * Usa o mesmo binário Node do processo e o sequelize-cli local — evita depender de `npx` no PATH
+ * (systemd costuma não incluir /usr/bin completo e o restauro falhava com 500).
  */
 export async function runSequelizeDbMigrateAfterRestore(): Promise<void> {
   const root = getBackendRootForCli();
-  const npxCmd = process.platform === "win32" ? "npx.cmd" : "npx";
+  const cliEntry = resolveSequelizeCliEntry(root);
+  const nodeBin = process.execPath;
+
   await new Promise<void>((resolve, reject) => {
-    const child = spawn(npxCmd, ["sequelize", "db:migrate"], {
+    const child = spawn(nodeBin, [cliEntry, "db:migrate"], {
       cwd: root,
       env: { ...process.env },
       stdio: ["ignore", "pipe", "pipe"]
@@ -107,7 +123,13 @@ export async function runSequelizeDbMigrateAfterRestore(): Promise<void> {
     child.stderr?.on("data", (c: Buffer) => {
       errBuf += c.toString();
     });
-    child.on("error", reject);
+    child.on("error", (e) => {
+      reject(
+        new Error(
+          `RESTORE_MIGRATE_FAILED: não foi possível executar migrations (${(e as Error).message}). Verifique Node e sequelize-cli em ${root}.`
+        )
+      );
+    });
     child.on("close", (code) => {
       const log = `${outBuf}${errBuf}`.trim();
       if (log) {

@@ -152,7 +152,7 @@ export const executeRestore = async (req: Request, res: Response): Promise<void>
     ) {
       throw new AppError("BACKUP_RESTORE_FAILED", 500, msg);
     }
-    throw err;
+    throw new AppError("BACKUP_RESTORE_FAILED", 500, msg);
   }
 };
 
