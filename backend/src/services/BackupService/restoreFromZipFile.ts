@@ -4,7 +4,12 @@ import AdmZip from "adm-zip";
 import uploadConfig from "../../config/upload";
 import { getBackupsRoot, ensureBackupDirs } from "../../config/backup";
 import { createApplicationBackup } from "./createApplicationBackup";
-import { restoreMysqlFromSqlFile, restorePostgresFromSqlFile } from "./restoreDatabase";
+import {
+  restoreMysqlFromSqlFile,
+  restorePostgresFromSqlFile,
+  runSequelizeDbMigrateAfterRestore,
+  verifyRestoredSchemaCoreTables
+} from "./restoreDatabase";
 import type { BackupManifest } from "./createApplicationBackup";
 
 /**
@@ -65,6 +70,9 @@ export async function restoreFromValidatedZipFile(zipAbsolutePath: string): Prom
     } else {
       await restoreMysqlFromSqlFile(sqlPath);
     }
+
+    await runSequelizeDbMigrateAfterRestore();
+    await verifyRestoredSchemaCoreTables();
 
     const publicTarget = uploadConfig.directory;
     if (fs.existsSync(publicExtracted)) {

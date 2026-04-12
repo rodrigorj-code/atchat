@@ -144,6 +144,14 @@ export const executeRestore = async (req: Request, res: Response): Promise<void>
     if (msg.startsWith("BACKUP_")) {
       throw new AppError(msg, 400);
     }
+    if (
+      msg.startsWith("RESTORE_SCHEMA_INCOMPLETE") ||
+      msg.startsWith("RESTORE_MIGRATE_FAILED") ||
+      msg.includes("psql import failed") ||
+      msg.includes("mysql import failed")
+    ) {
+      throw new AppError("BACKUP_RESTORE_FAILED", 500, msg);
+    }
     throw err;
   }
 };
