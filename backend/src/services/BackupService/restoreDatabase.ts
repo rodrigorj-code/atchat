@@ -87,6 +87,19 @@ export async function restorePostgresFromSqlFile(sqlPath: string): Promise<void>
 }
 
 function resolveSequelizeCliEntry(backendRoot: string): string {
+  const pkgPath = path.join(backendRoot, "node_modules", "sequelize-cli", "package.json");
+  if (fs.existsSync(pkgPath)) {
+    try {
+      const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf8")) as {
+        bin?: { sequelize?: string };
+      };
+      const rel = (pkg.bin?.sequelize || "./lib/sequelize").replace(/^\.\//, "");
+      const abs = path.join(path.dirname(pkgPath), rel);
+      if (fs.existsSync(abs)) return abs;
+    } catch {
+      /* continuar com candidatos */
+    }
+  }
   const candidates = [
     path.join(backendRoot, "node_modules", "sequelize-cli", "lib", "sequelize.js"),
     path.join(backendRoot, "node_modules", "sequelize-cli", "lib", "sequelize")
@@ -95,7 +108,7 @@ function resolveSequelizeCliEntry(backendRoot: string): string {
     if (fs.existsSync(p)) return p;
   }
   throw new Error(
-    "RESTORE_MIGRATE_FAILED: sequelize-cli não encontrado em node_modules. No servidor, execute: cd /caminho/backend && npm install"
+    "RESTORE_MIGRATE_FAILED: sequelize-cli não encontrado em node_modules. No servidor: cd backend && npm install"
   );
 }
 

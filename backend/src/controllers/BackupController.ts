@@ -140,8 +140,16 @@ export const executeRestore = async (req: Request, res: Response): Promise<void>
         "Restauração concluída. Foi criado um backup de segurança antes da operação. Recomenda-se reiniciar o backend e reconectar sessões."
     });
   } catch (err: unknown) {
+    if (err instanceof AppError) {
+      throw err;
+    }
     const msg = err instanceof Error ? err.message : String(err);
-    if (msg.startsWith("BACKUP_")) {
+    // Códigos de validação (400) — não confundir com BACKUP_RESTORE_FAILED (500)
+    if (
+      msg.startsWith("BACKUP_") &&
+      !msg.startsWith("BACKUP_RESTORE_FAILED") &&
+      !msg.includes("RESTORE_")
+    ) {
       throw new AppError(msg, 400);
     }
     if (

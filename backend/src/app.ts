@@ -51,7 +51,16 @@ app.use(async (err: Error, req: Request, res: Response, _: NextFunction) => {
   }
 
   logger.error(err);
-  return res.status(500).json({ error: "ERR_INTERNAL_SERVER_ERROR" });
+  const detail =
+    err instanceof Error ? err.message : String(err);
+  const pathStr = req.originalUrl || req.url || "";
+  const exposeDetail =
+    pathStr.includes("/platform/backups/execute-restore") ||
+    pathStr.includes("/platform/backups/generate");
+  return res.status(500).json({
+    error: "ERR_INTERNAL_SERVER_ERROR",
+    ...(exposeDetail && detail ? { message: detail } : {})
+  });
 });
 
 export default app;
