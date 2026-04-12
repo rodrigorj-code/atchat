@@ -21,7 +21,11 @@
 #   SERVER_IP=1.2.3.4     — IP público (senão pergunta ou detecta)
 #   PROJETO_DIR=/caminho  — raiz do repo (senão = pasta onde está este install.sh)
 #   MINIMAL_UPDATE=1      — só dependências + build + restart (sem apt upgrade)
-#   DOMAIN + API_DOMAIN   — modo HTTPS com dois hosts (como antes)
+#   DOMAIN + API_DOMAIN   — hostnames completos (legado); ex.: app.exemplo.com + api.exemplo.com
+#   INSTALL_MODE=ip|domain — força modo sem/com domínio (não-interativo)
+#   BASE_DOMAIN=exemplo.com — com modo domínio interativo gera app. e api.
+#   SSL_EMAIL=...           — e-mail Let's Encrypt (modo domínio)
+#   SKIP_DNS_CHECK=1      — não validar DNS antes de continuar (CI / legado)
 #   DB_NAME / DB_USER / DB_PASS — exportadas no shell têm prioridade sobre backend/.env
 #   Atualização na VPS: com backend/.env existente, DB_* são lidos desse ficheiro.
 #   Instalação nova (sem .env): defaults atendechat + CoreFlowDB2024!
@@ -29,6 +33,51 @@
 set -euo pipefail
 
 export DEBIAN_FRONTEND=noninteractive
+
+# Saída por etapas (instalação completa; MINIMAL_UPDATE não usa contador longo)
+INST_TOTAL=8
+_inst_step() {
+  echo ""
+  echo "[$1/${INST_TOTAL}] $2"
+}
+_inst_item() { echo "  • $*"; }
+_inst_ok() { echo "  [OK] $*"; }
+# Uso: _inst_warn "linha única"  ou  _inst_warn "linha1" "linha2" (várias linhas [AVISO])
+_inst_warn() {
+  local a
+  for a in "$@"; do
+    echo "  [AVISO] ${a}"
+  done
+}
+# etapa: número 1–8 | "" = pré-instalação | "-" = MINIMAL_UPDATE
+# _inst_error_block ETAPA "Ação" "Detalhe" "Próximo passo"
+_inst_error_block() {
+  local etapa="${1:-}"
+  local acao="${2:-}"
+  local detalhe="${3:-}"
+  local proximo="${4:-}"
+  echo ""
+  case "${etapa}" in
+    "")
+      echo "  [ERRO] Etapa: Pré-instalação"
+      ;;
+    "-")
+      echo "  [ERRO] Etapa: MINIMAL_UPDATE"
+      ;;
+    *)
+      echo "  [ERRO] Etapa: [${etapa}/${INST_TOTAL}]"
+      ;;
+  esac
+  echo "  [ERRO] Ação: ${acao}"
+  echo "  [ERRO] Detalhe: ${detalhe}"
+  echo "  [ERRO] Próximo passo: ${proximo}"
+}
+
+# Nomes alternativos (documentação / consistência com outras ferramentas)
+print_step() { _inst_step "$@"; }
+print_ok() { _inst_ok "$@"; }
+print_warn() { _inst_warn "$@"; }
+print_error_block() { _inst_error_block "$@"; }
 
 ###############################################################################
 # Raiz do projeto (pasta que contém backend/ e frontend/)
@@ -95,6 +144,12 @@ merge_postgres_from_existing_env() {
 REDIS_PASS="${REDIS_PASS:-}"
 DOMAIN="${DOMAIN:-}"
 API_DOMAIN="${API_DOMAIN:-}"
+BASE_DOMAIN="${BASE_DOMAIN:-}"
+SSL_EMAIL="${SSL_EMAIL:-}"
+SKIP_DNS_CHECK="${SKIP_DNS_CHECK:-0}"
+INSTALL_MODE="${INSTALL_MODE:-}"
+# Preenchido no modo domínio interactivo (resumo final)
+DNS_SUMMARY_NOTE=""
 
 MINIMAL_UPDATE="${MINIMAL_UPDATE:-0}"
 
@@ -106,8 +161,7 @@ echo ""
 echo ">>> Diretório do projeto: ${PROJETO_DIR}"
 
 if [[ ! -d "${PROJETO_DIR}/backend" || ! -d "${PROJETO_DIR}/frontend" ]]; then
-  echo ">> ERRO: Esperado ${PROJETO_DIR}/backend e ${PROJETO_DIR}/frontend"
-  echo "   Defina PROJETO_DIR para a raiz do repositório ou coloque install.sh na raiz."
+  _inst_error_block "" "Validar estrutura do repositório" "Esperadas as pastas ${PROJETO_DIR}/backend e ${PROJETO_DIR}/frontend." "Defina PROJETO_DIR para a raiz do clone Git ou execute install.sh a partir da raiz do projecto."
   exit 1
 fi
 
@@ -117,61 +171,288 @@ DB_USER="${DB_USER:-atendechat}"
 DB_PASS="${DB_PASS:-CoreFlowDB2024!}"
 
 ###############################################################################
-# IP / URLs públicas
+# IP público + modo instalação (só IP vs domínio + SSL)
 ###############################################################################
-if [[ -z "${SERVER_IP:-}" ]]; then
-  if [[ -t 0 ]]; then
-    echo "Qual é o IP ou hostname que os utilizadores usam no browser?"
-    echo "(ex.: 89.117.79.221 — Enter para detetar automaticamente)"
+detect_public_ip() {
+  local ip=""
+  ip=$(curl -fsS --max-time 4 ifconfig.me 2>/dev/null || true)
+  if [[ -z "$ip" ]]; then
+    ip=$(curl -fsS --max-time 4 icanhazip.com 2>/dev/null || true)
+  fi
+  if [[ -z "$ip" ]]; then
+    ip=$(hostname -I 2>/dev/null | awk '{print $1}')
+  fi
+  if [[ -z "$ip" ]]; then
+    ip=$(ip route get 1.1.1.1 2>/dev/null | awk '{print $7; exit}')
+  fi
+  printf '%s' "$ip"
+}
+
+dns_a_record_for() {
+  local host="$1"
+  local r=""
+  if command -v dig >/dev/null 2>&1; then
+    r=$(dig +short "$host" @1.1.1.1 2>/dev/null | grep -E '^[0-9.]+$' | head -n1)
+    [[ -z "$r" ]] && r=$(dig +short "$host" @8.8.8.8 2>/dev/null | grep -E '^[0-9.]+$' | head -n1)
+  fi
+  if [[ -z "$r" ]]; then
+    r=$(getent ahostsv4 "$host" 2>/dev/null | awk '{print $1; exit}')
+  fi
+  printf '%s' "$r"
+}
+
+validate_domain_dns() {
+  local expected_ip="$1"
+  local app_host="$2"
+  local api_host="$3"
+  local a_app a_api
+  a_app=$(dns_a_record_for "$app_host")
+  a_api=$(dns_a_record_for "$api_host")
+
+  echo ""
+  echo "  Verificação DNS (registo A IPv4 público):"
+  echo "  ─────────────────────────────────────────────────────────────"
+  printf '  • %s\n' "${app_host}"
+  echo "      esperado (IP deste servidor): ${expected_ip}"
+  echo "      encontrado (resolução atual):  ${a_app:-não encontrado}"
+  printf '  • %s\n' "${api_host}"
+  echo "      esperado (IP deste servidor): ${expected_ip}"
+  echo "      encontrado (resolução atual):  ${a_api:-não encontrado}"
+  echo "  ─────────────────────────────────────────────────────────────"
+
+  if [[ -z "$a_app" || -z "$a_api" ]]; then
     echo ""
-    read -r -p "IP [Enter = auto]: " SERVER_IP
+    _inst_warn "Não foi possível obter endereço IPv4 para app ou api (ou ambos)." "Causas frequentes: propagação DNS (TTL), registo A em falta ou nome incorrecto no painel do domínio."
+    return 1
+  fi
+  if [[ "$a_app" != "$expected_ip" ]] || [[ "$a_api" != "$expected_ip" ]]; then
+    echo ""
+    _inst_warn "O IP devolvido pelo DNS não coincide com o IP público deste servidor (${expected_ip})." "Confirme no painel que os registos A de app e api apontam para este IP; após alterações, aguarde a propagação."
+    return 1
+  fi
+  return 0
+}
+
+apply_url_vars_from_mode() {
+  if [[ "${INSTALL_MODE}" == "domain" ]] && [[ -n "${DOMAIN:-}" && -n "${API_DOMAIN:-}" ]]; then
+    FRONTEND_URL_VALUE="https://${DOMAIN}"
+    API_PUBLIC_URL="https://${API_DOMAIN}"
+    BACKEND_URL_VALUE="${API_PUBLIC_URL}"
+  else
+    INSTALL_MODE="ip"
+    FRONTEND_URL_VALUE="http://${SERVER_IP}"
+    API_PUBLIC_URL="http://${SERVER_IP}:${API_PORT}"
+    BACKEND_URL_VALUE="${API_PUBLIC_URL}"
+  fi
+}
+
+# --- MINIMAL_UPDATE: sem perguntas; usar env ---
+if [[ "${MINIMAL_UPDATE}" == "1" ]]; then
+  if [[ -z "${SERVER_IP:-}" ]]; then
+    SERVER_IP=$(detect_public_ip)
+  else
+    SERVER_IP=$(echo "$SERVER_IP" | xargs)
   fi
   if [[ -z "${SERVER_IP:-}" ]]; then
+    _inst_error_block "-" "Determinar IP do servidor (MINIMAL_UPDATE)" "SERVER_IP vazio e a deteção automática de IP falhou." "Exporte SERVER_IP com o IP público da VPS ou corrija conectividade (curl/ifconfig) e volte a executar."
+    exit 1
+  fi
+  if [[ -n "${DOMAIN:-}" && -n "${API_DOMAIN:-}" ]]; then
+    INSTALL_MODE="domain"
+  else
+    INSTALL_MODE="ip"
+  fi
+  apply_url_vars_from_mode
+  echo ""
+  echo ">>> [MINIMAL_UPDATE] Modo: ${INSTALL_MODE}"
+  echo ">>> Frontend: ${FRONTEND_URL_VALUE} | API: ${API_PUBLIC_URL}"
+  echo ""
+
+# --- Legado: DOMAIN e API_DOMAIN já exportados (hostnames completos) ---
+elif [[ -n "${DOMAIN:-}" && -n "${API_DOMAIN:-}" ]] && [[ -z "${INSTALL_MODE:-}" || "${INSTALL_MODE}" == "domain" ]]; then
+  INSTALL_MODE="domain"
+  if [[ -z "${SERVER_IP:-}" ]]; then
+    SERVER_IP=$(detect_public_ip)
+  else
+    SERVER_IP=$(echo "$SERVER_IP" | xargs)
+  fi
+  if [[ -z "${SERVER_IP:-}" ]]; then
+    _inst_error_block "" "Modo domínio: IP do servidor" "SERVER_IP não definido e a deteção automática não devolveu IP." "Defina SERVER_IP no ambiente ou corrija a deteção para validação DNS/firewall."
+    exit 1
+  fi
+  echo ">> Modo domínio (DOMAIN + API_DOMAIN no ambiente)."
+  apply_url_vars_from_mode
+  echo ""
+  echo ">>> Frontend: ${FRONTEND_URL_VALUE} | API: ${API_PUBLIC_URL}"
+  echo ""
+
+# --- INSTALL_MODE explícito (não-interativo) ---
+elif [[ -n "${INSTALL_MODE:-}" ]]; then
+  if [[ -z "${SERVER_IP:-}" ]]; then
+    SERVER_IP=$(detect_public_ip)
+  else
+    SERVER_IP=$(echo "$SERVER_IP" | xargs)
+  fi
+  if [[ "${INSTALL_MODE}" == "domain" ]]; then
+    if [[ -z "${DOMAIN:-}" || -z "${API_DOMAIN:-}" ]]; then
+      if [[ -z "${BASE_DOMAIN:-}" ]]; then
+        _inst_error_block "" "INSTALL_MODE=domain (não-interactivo)" "Faltam DOMAIN e API_DOMAIN e BASE_DOMAIN não foi definido." "Exporte DOMAIN e API_DOMAIN (hostnames completos) ou BASE_DOMAIN (ex.: empresa.com) antes de executar."
+        exit 1
+      fi
+      DOMAIN="app.${BASE_DOMAIN}"
+      API_DOMAIN="api.${BASE_DOMAIN}"
+    fi
+  fi
+  apply_url_vars_from_mode
+  echo ""
+  echo ">>> Modo (${INSTALL_MODE}): Frontend ${FRONTEND_URL_VALUE} | API ${API_PUBLIC_URL}"
+  echo ""
+
+# --- Interactivo ---
+elif [[ -t 0 ]]; then
+  echo "-------------------------------------------------------------------"
+  echo "  IP público do servidor (usado em firewall, DNS e modo sem domínio)"
+  echo "-------------------------------------------------------------------"
+  read -r -p "IP público [Enter = detetar automaticamente]: " SERVER_IP
+  SERVER_IP=$(echo "${SERVER_IP:-}" | xargs)
+  if [[ -z "${SERVER_IP:-}" ]]; then
     echo "==> A detetar IP público..."
-    SERVER_IP=$(curl -fsS --max-time 4 ifconfig.me 2>/dev/null || true)
-    if [[ -z "$SERVER_IP" ]]; then
-      SERVER_IP=$(curl -fsS --max-time 4 icanhazip.com 2>/dev/null || true)
-    fi
-    if [[ -z "$SERVER_IP" ]]; then
-      SERVER_IP=$(hostname -I 2>/dev/null | awk '{print $1}')
-    fi
-    if [[ -z "$SERVER_IP" ]]; then
-      SERVER_IP=$(ip route get 1.1.1.1 2>/dev/null | awk '{print $7; exit}')
-    fi
-    if [[ -z "$SERVER_IP" ]]; then
-      echo ">> ERRO: Não foi possível detetar o IP. Execute: SERVER_IP=x.x.x.x $0"
+    SERVER_IP=$(detect_public_ip)
+    if [[ -z "${SERVER_IP:-}" ]]; then
+      _inst_error_block "" "Deteção do IP público" "curl/hostname/route não devolveram um IP utilizável." "Execute manualmente: SERVER_IP=x.x.x.x ./install.sh (substitua pelo IP público da VPS)."
       exit 1
     fi
     echo "    IP detetado: ${SERVER_IP}"
   else
-    SERVER_IP=$(echo "$SERVER_IP" | xargs)
     echo "    IP informado: ${SERVER_IP}"
   fi
+
+  echo ""
+  read -r -p "Vai configurar domínio com SSL agora? (s/N): " _want_domain
+  _want_domain=$(echo "${_want_domain:-n}" | tr '[:upper:]' '[:lower:]')
+
+  if [[ "${_want_domain}" == "s" || "${_want_domain}" == "sim" || "${_want_domain}" == "y" || "${_want_domain}" == "yes" ]]; then
+    INSTALL_MODE="domain"
+    echo ""
+    read -r -p "Domínio principal (ex.: empresa.com, sem http): " BASE_DOMAIN
+    BASE_DOMAIN=$(echo "$BASE_DOMAIN" | xargs | sed 's|^https\?://||' | sed 's|/$||')
+    if [[ -z "${BASE_DOMAIN}" ]]; then
+      _inst_error_block "" "Domínio principal (modo interactivo)" "O domínio informado ficou vazio após normalização." "Indique um domínio válido (ex.: empresa.com, sem http://) e volte a correr o instalador."
+      exit 1
+    fi
+    DOMAIN="app.${BASE_DOMAIN}"
+    API_DOMAIN="api.${BASE_DOMAIN}"
+    echo ""
+    read -r -p "E-mail para registo Let's Encrypt (SSL): " SSL_EMAIL
+    SSL_EMAIL=$(echo "${SSL_EMAIL:-}" | xargs)
+    if [[ -z "${SSL_EMAIL}" ]]; then
+      _inst_error_block "" "E-mail Let's Encrypt (modo interactivo)" "SSL em modo domínio requer um e-mail para o registo ACME." "Indique um e-mail válido ou reinicie o instalador e escolha modo sem domínio (IP)."
+      exit 1
+    fi
+
+    echo ""
+    echo "================================================================"
+    echo "  DNS: crie estes registos (tipo A) a apontar para: ${SERVER_IP}"
+    echo "================================================================"
+    echo "    ${DOMAIN}   ->  ${SERVER_IP}"
+    echo "    ${API_DOMAIN}  ->  ${SERVER_IP}"
+    echo ""
+    read -r -p "Registos criados? Prima Enter para validar o DNS... " _
+
+    while true; do
+      if [[ "${SKIP_DNS_CHECK}" == "1" ]]; then
+        _inst_warn "SKIP_DNS_CHECK=1 — validação DNS omitida (variável de ambiente)." "O Let's Encrypt pode falhar se os registos A ainda não apontarem para este servidor."
+        DNS_SUMMARY_NOTE="validacao_DNS=omitida (SKIP_DNS_CHECK=1)"
+        break
+      fi
+      echo ""
+      echo "==> Validação DNS"
+      if validate_domain_dns "${SERVER_IP}" "${DOMAIN}" "${API_DOMAIN}"; then
+        echo ""
+        _inst_ok "Validação DNS: ambos os nomes resolvem para o IP deste servidor."
+        DNS_SUMMARY_NOTE="validacao_DNS=concluída"
+        break
+      fi
+      echo ""
+      echo "----------------------------------------------------------------------"
+      echo "  Escolha uma opção:"
+      echo "    T — Tentar novamente (depois de corrigir DNS ou aguardar propagação)"
+      echo "    I — Ignorar validação e continuar (Certbot pode falhar se DNS estiver incorreto)"
+      echo "    S — Sair do instalador"
+      echo "----------------------------------------------------------------------"
+      read -r -p "Opção [T/i/s]: " _dns_choice
+      _dns_choice=$(echo "${_dns_choice:-T}" | tr '[:upper:]' '[:lower:]')
+      case "${_dns_choice}" in
+        t | "")
+          echo ">> A repetir validação..."
+          ;;
+        i | ignorar)
+          _inst_warn "A continuar sem validação DNS (opção I — escolha do utilizador)." "O SSL (Let's Encrypt) pode falhar até os registos A estarem correctos e propagados."
+          DNS_SUMMARY_NOTE="validacao_DNS=ignorada pelo utilizador (opção I)"
+          break
+          ;;
+        s | sair)
+          echo ">> Instalação cancelada pelo utilizador."
+          exit 1
+          ;;
+        *)
+          echo ">> Opção não reconhecida. Indique T, I ou S."
+          ;;
+      esac
+    done
+
+    apply_url_vars_from_mode
+  else
+    INSTALL_MODE="ip"
+    apply_url_vars_from_mode
+  fi
+
+  echo ""
+  echo ">>> Modo: ${INSTALL_MODE}"
+  echo ">>> Frontend (browser):  ${FRONTEND_URL_VALUE}"
+  echo ">>> API Node (axios):     ${API_PUBLIC_URL}"
+  echo ">>> Porta interna Node:   ${API_PORT}"
+  echo ""
+
+# --- Não-interactivo (cron, pipe): modo IP por defeito ---
 else
-  SERVER_IP=$(echo "$SERVER_IP" | xargs)
-  echo "    SERVER_IP (env): ${SERVER_IP}"
+  if [[ -z "${SERVER_IP:-}" ]]; then
+    SERVER_IP=$(detect_public_ip)
+  else
+    SERVER_IP=$(echo "$SERVER_IP" | xargs)
+  fi
+  if [[ -z "${SERVER_IP:-}" ]]; then
+    _inst_error_block "" "Modo não-interactivo (stdin não disponível)" "SERVER_IP não está definido — obrigatório sem prompts." "Exporte SERVER_IP=x.x.x.x antes de executar ./install.sh."
+    exit 1
+  fi
+  INSTALL_MODE="ip"
+  apply_url_vars_from_mode
+  echo ""
+  echo ">>> [não-interactivo] Modo IP | Frontend ${FRONTEND_URL_VALUE} | API ${API_PUBLIC_URL}"
+  echo ""
 fi
 
-# URLs finais
-if [[ -n "$DOMAIN" && -n "$API_DOMAIN" ]]; then
-  FRONTEND_URL_VALUE="https://${DOMAIN}"
-  # API pública: subdomínio dedicado (Nginx faz proxy para 127.0.0.1:API_PORT)
-  API_PUBLIC_URL="https://${API_DOMAIN}"
-  BACKEND_URL_VALUE="${API_PUBLIC_URL}"
-else
-  # Modo IP: utilizador abre http://IP:80 ; API em http://IP:API_PORT (directo; Nginx não faz proxy da API)
-  FRONTEND_URL_VALUE="http://${SERVER_IP}"
-  API_PUBLIC_URL="http://${SERVER_IP}:${API_PORT}"
-  BACKEND_URL_VALUE="${API_PUBLIC_URL}"
+if [[ "${MINIMAL_UPDATE}" != "1" ]]; then
+  _inst_step 1 "Coletando informações da instalação"
+  _inst_item "Modo: ${INSTALL_MODE:-ip}"
+  _inst_item "APP_URL: ${FRONTEND_URL_VALUE}"
+  _inst_item "API_URL: ${API_PUBLIC_URL}"
+  _inst_ok "Parâmetros da instalação definidos"
+  _inst_step 2 "Validando DNS"
+  if [[ "${INSTALL_MODE:-}" == "ip" ]]; then
+    _inst_item "Modo IP — sem registos DNS app/api a validar"
+    _inst_ok "Etapa não aplicável"
+  elif [[ -n "${DNS_SUMMARY_NOTE:-}" ]]; then
+    _inst_item "${DNS_SUMMARY_NOTE}"
+    _inst_ok "Estado DNS registado"
+  else
+    _inst_item "Domínio via ambiente — validação interactiva de DNS não executada nesta execução"
+    _inst_ok "Continuação"
+  fi
 fi
-
-echo ""
-echo ">>> Frontend (browser):  ${FRONTEND_URL_VALUE}"
-echo ">>> API Node (axios):      ${API_PUBLIC_URL}"
-echo ">>> Porta interna Node:    ${API_PORT}"
-echo ""
 
 if [[ "${MINIMAL_UPDATE}" != "1" ]] && [[ -t 0 ]]; then
+  echo ""
   echo "A continuar em 3 s... (Ctrl+C para cancelar)"
   sleep 3
 fi
@@ -256,33 +537,46 @@ build_frontend() {
 # MINIMAL_UPDATE: só rebuild + serviços
 ###############################################################################
 if [[ "${MINIMAL_UPDATE}" == "1" ]]; then
-  echo "==> MINIMAL_UPDATE=1 — a saltar apt/postgres/redis/nginx base"
+  echo ""
+  echo "──────── Atualização mínima (MINIMAL_UPDATE=1) ────────"
+  _inst_item "Sem apt / PostgreSQL / Redis / instalação base do Nginx"
   if [[ -n "$REDIS_PASS" ]]; then
     REDIS_URI_EFFECTIVE="redis://:${REDIS_PASS}@127.0.0.1:6379"
   else
     REDIS_URI_EFFECTIVE="redis://127.0.0.1:6379"
   fi
+  _inst_item "Atualizando .env e pastas runtime"
   write_backend_env
   ensure_runtime_dirs
   cd "${PROJETO_DIR}/backend"
-  npm install --production=false
-  npm run build
-  npx sequelize db:migrate
-  build_frontend
+  _inst_item "Backend: npm install e build"
+  npm install --production=false || { _inst_error_block "-" "npm install no backend (MINIMAL_UPDATE)" "O comando npm terminou com código de erro (ver saída acima)." "Verifique rede, espaço em disco e permissões em ${PROJETO_DIR}/backend; corrija e execute MINIMAL_UPDATE=1 ./install.sh de novo."; exit 1; }
+  npm run build || { _inst_error_block "-" "Build do backend — npm run build (MINIMAL_UPDATE)" "Compilação TypeScript/webpack falhou." "Corrija os erros npm/TypeScript indicados acima e volte a executar MINIMAL_UPDATE=1 ./install.sh."; exit 1; }
+  _inst_item "Migrations (Sequelize)"
+  npx sequelize db:migrate || { _inst_error_block "-" "Migrations Sequelize (MINIMAL_UPDATE)" "db:migrate retornou erro (PostgreSQL ou schema)." "Confirme que o PostgreSQL está activo e que DB_* em backend/.env estão correctos; volte a executar."; exit 1; }
+  _inst_item "Frontend: build"
+  build_frontend || { _inst_error_block "-" "Build do frontend (MINIMAL_UPDATE)" "npm run build no frontend falhou." "Verifique o directório frontend, variáveis REACT_APP_* e a saída npm acima; corrija e reexecute MINIMAL_UPDATE=1 ./install.sh."; exit 1; }
+  _inst_item "Reiniciar backend e recarregar Nginx"
   systemctl restart atendechat-backend 2>/dev/null || true
-  nginx -t && systemctl reload nginx 2>/dev/null || true
-  echo ">> MINIMAL_UPDATE concluído."
+  if nginx -t && systemctl reload nginx 2>/dev/null; then
+    _inst_ok "Serviços atualizados"
+  else
+    _inst_warn "Nginx não foi recarregado após MINIMAL_UPDATE." "Analise a saída de nginx -t acima e execute: systemctl status nginx --no-pager"
+  fi
+  echo ""
+  _inst_ok "MINIMAL_UPDATE concluído"
   exit 0
 fi
 
 ###############################################################################
-# Sistema base
+# Etapa 3 — sistema, dados, firewall e backend (app)
 ###############################################################################
-echo "==> Atualização de pacotes (apt)"
+_inst_step 3 "Preparando ambiente do backend"
+_inst_item "Atualização de pacotes (apt)"
 apt-get update -y
 apt-get upgrade -y
 
-echo "==> Pacotes base (git, curl, timezone, libs Puppeteer)"
+_inst_item "Pacotes base (git, curl, timezone, libs Puppeteer)"
 apt-get install -y git curl ca-certificates gnupg tzdata \
   libxshmfence-dev libgbm-dev libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 \
   libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 \
@@ -292,16 +586,16 @@ if timedatectl list-timezones 2>/dev/null | grep -q "America/Sao_Paulo"; then
   timedatectl set-timezone America/Sao_Paulo 2>/dev/null || true
 fi
 
-echo "==> Node.js 20"
+_inst_item "Node.js 20 (LTS)"
 if ! command -v node >/dev/null 2>&1 || [[ "$(node -v | cut -d. -f1 | tr -d v)" -lt 18 ]]; then
   curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
   apt-get install -y nodejs build-essential
 fi
 
-echo "==> PM2 (opcional)"
+_inst_item "PM2 global (opcional)"
 npm install -g pm2@latest || true
 
-echo "==> PostgreSQL"
+_inst_item "PostgreSQL e extensões"
 apt-get install -y postgresql postgresql-contrib
 if ! command -v pg_dump >/dev/null 2>&1 || ! command -v psql >/dev/null 2>&1; then
   apt-get install -y postgresql-client || true
@@ -309,7 +603,6 @@ fi
 systemctl enable postgresql
 systemctl start postgresql
 
-echo "==> Utilizador e base de dados PostgreSQL"
 sudo -u postgres psql -tc "SELECT 1 FROM pg_roles WHERE rolname='${DB_USER}'" | grep -q 1 || \
   sudo -u postgres psql -c "CREATE USER ${DB_USER} WITH PASSWORD '${DB_PASS}';"
 
@@ -321,7 +614,7 @@ sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE ${DB_NAME} TO ${DB_US
 sudo -u postgres psql -d "${DB_NAME}" -c 'CREATE EXTENSION IF NOT EXISTS "uuid-ossp";'
 sudo -u postgres psql -d "${DB_NAME}" -c 'CREATE EXTENSION IF NOT EXISTS "pgcrypto";' 2>/dev/null || true
 
-echo "==> Redis"
+_inst_item "Redis"
 apt-get install -y redis-server
 if [[ -f /etc/redis/redis.conf ]] && grep -q '^supervised no' /etc/redis/redis.conf; then
   sed -i 's/^supervised no/supervised systemd/' /etc/redis/redis.conf
@@ -337,62 +630,66 @@ else
   REDIS_URI_EFFECTIVE="redis://127.0.0.1:6379"
 fi
 
-echo "==> Nginx (limite upload — alinhado a restore ZIP na API; aplica-se também ao proxy DOMAIN+API_DOMAIN)"
+_inst_item "Nginx (pacote base, limite de upload 4G para API/restauro)"
 apt-get install -y nginx
 mkdir -p /etc/nginx/conf.d
 printf '%s\n' 'client_max_body_size 4G;' > /etc/nginx/conf.d/atendechat-limits.conf
 systemctl enable nginx
 systemctl start nginx
 
-###############################################################################
-# Firewall (idempotente)
-###############################################################################
 if command -v ufw >/dev/null 2>&1; then
-  echo "==> Firewall (ufw): 22, 80, ${API_PORT}"
+  _inst_item "Firewall (ufw: 22, 80, ${API_PORT}$([[ "${INSTALL_MODE:-}" == "domain" ]] && echo ', 443'))"
   ufw allow 22/tcp >/dev/null 2>&1 || true
   ufw allow 80/tcp >/dev/null 2>&1 || true
   ufw allow "${API_PORT}/tcp" >/dev/null 2>&1 || true
-  # Não forçamos "ufw enable" para não bloquear SSH em VPS já configuradas
+  if [[ "${INSTALL_MODE:-}" == "domain" ]]; then
+    ufw allow 443/tcp >/dev/null 2>&1 || true
+  fi
 fi
 
-###############################################################################
-# Backend: .env, build, migrate
-###############################################################################
-echo "==> Backend: .env"
+_inst_item "Ficheiro .env do backend e pastas runtime"
 write_backend_env
 ensure_runtime_dirs
 
-echo "==> Backend: npm install + build"
+_inst_item "Backend: npm install e build"
 cd "${PROJETO_DIR}/backend"
-npm install --production=false
-npm run build
+npm install --production=false || { _inst_error_block "3" "npm install no backend" "O comando npm terminou com código de erro." "Verifique rede, espaço em disco e permissões em ${PROJETO_DIR}/backend; corrija e execute ./install.sh novamente."; exit 1; }
+npm run build || { _inst_error_block "3" "Build do backend — npm run build" "A compilação do backend falhou (TypeScript ou dependências)." "Corrija os erros indicados na saída npm acima e volte a executar o instalador."; exit 1; }
 
 if [[ ! -f dist/server.js ]]; then
-  echo ">> ERRO: dist/server.js não encontrado após build."
+  _inst_error_block "3" "Verificar artefacto do build backend" "Não existe dist/server.js após npm run build." "Confirme que o build terminou sem erros; em caso de dúvida, execute npm run build manualmente em backend/ e analise o log."
   exit 1
 fi
 
-echo "==> Sequelize migrate"
-npx sequelize db:migrate
+_inst_item "Migrations e seeds (Sequelize)"
+npx sequelize db:migrate || { _inst_error_block "3" "Migrations Sequelize (db:migrate)" "O comando sequelize db:migrate falhou." "Garanta PostgreSQL activo, base e utilizador criados, e credenciais DB_* correctas em backend/.env."; exit 1; }
+if npx sequelize db:seed:all; then
+  :
+else
+  _inst_warn "Seeds ignorados ou duplicados — situação normal se a base já tinha dados."
+fi
 
-echo "==> Sequelize seed (pode avisar se já existir dados)"
-npx sequelize db:seed:all || echo "    [AVISO] seeds ignorados ou duplicados — OK"
+_inst_ok "Backend preparado com sucesso"
 
 ###############################################################################
-# Frontend: build com REACT_APP_* na altura certa
+# Etapa 4 — frontend
 ###############################################################################
-echo "==> Frontend: build (REACT_APP_BACKEND_URL=${API_PUBLIC_URL})"
-build_frontend
+_inst_step 4 "Preparando ambiente do frontend"
+_inst_item "Build React (REACT_APP_BACKEND_URL=${API_PUBLIC_URL})"
+build_frontend || { _inst_error_block "4" "Build do frontend — npm run build" "A compilação React falhou (ver saída npm acima)." "Verifique ${PROJETO_DIR}/frontend, variáveis REACT_APP_* e corrija erros de build antes de repetir o instalador."; exit 1; }
 
 if [[ ! -f "${PROJETO_DIR}/frontend/build/index.html" ]]; then
-  echo ">> ERRO: frontend/build/index.html não encontrado."
+  _inst_error_block "4" "Verificar artefacto do build frontend" "Não foi encontrado frontend/build/index.html." "Confirme que npm run build no frontend concluiu com sucesso e que não há erros na pasta build/."
   exit 1
 fi
 
+_inst_ok "Frontend preparado com sucesso"
+
 ###############################################################################
-# systemd — backend
+# Etapa 5 — serviço backend (systemd)
 ###############################################################################
-echo "==> systemd: atendechat-backend"
+_inst_step 5 "Iniciando serviços"
+_inst_item "Criar e activar unit systemd atendechat-backend"
 cat > /etc/systemd/system/atendechat-backend.service << EOF
 [Unit]
 Description=CoreFlow Backend
@@ -416,19 +713,28 @@ systemctl daemon-reload
 systemctl enable atendechat-backend
 systemctl restart atendechat-backend
 
+BACKEND_SERVICE_STATE="desconhecido"
+if systemctl is-active --quiet atendechat-backend 2>/dev/null; then
+  BACKEND_SERVICE_STATE="em execução (systemd: active)"
+  _inst_ok "Backend em execução (systemd)"
+else
+  BACKEND_SERVICE_STATE="não ativo — investigue: systemctl status atendechat-backend"
+  _inst_warn "O serviço systemd atendechat-backend não ficou activo após o arranque." "Verifique: systemctl status atendechat-backend — journalctl -u atendechat-backend -n 80 --no-pager"
+fi
+
 ###############################################################################
-# Nginx — só SPA estático
+# Etapa 6 — Nginx (SPA; proxy API em modo domínio)
 # A API fica em API_PORT; o axios/socket apontam para API_PUBLIC_URL (com :8080).
-# Isto elimina POST na :80 que o Nginx respondia com 405 (proxy incompleto).
 ###############################################################################
-echo "==> Nginx: site estático"
+_inst_step 6 "Configurando Nginx"
+_inst_item "Virtual hosts (ficheiros estáticos do frontend e, se aplicável, proxy da API)"
 
 if [[ -n "$DOMAIN" && -n "$API_DOMAIN" ]]; then
   rm -f /etc/nginx/sites-enabled/default 2>/dev/null || true
   cat > /etc/nginx/sites-available/atendechat-frontend << EOF
 server {
     listen 80;
-    server_name ${DOMAIN} www.${DOMAIN};
+    server_name ${DOMAIN};
     root ${PROJETO_DIR}/frontend/build;
     index index.html;
     location / {
@@ -473,27 +779,113 @@ EOF
   ln -sf /etc/nginx/sites-available/atendechat /etc/nginx/sites-enabled/
 fi
 
-nginx -t
+_inst_item "Validar configuração e reiniciar Nginx"
+nginx -t || { _inst_error_block "6" "Validar configuração Nginx (nginx -t)" "A sintaxe ou os caminhos dos ficheiros de configuração são inválidos." "Revise /etc/nginx/sites-enabled/, os root/proxy_pass e caminhos para ${PROJETO_DIR}; corrija e execute nginx -t antes de voltar ao instalador."; exit 1; }
 systemctl restart nginx
 
+NGINX_SERVICE_STATE="desconhecido"
+if systemctl is-active --quiet nginx 2>/dev/null; then
+  NGINX_SERVICE_STATE="em execução (configuração aplicada)"
+  _inst_ok "Nginx configurado e em execução"
+else
+  NGINX_SERVICE_STATE="não ativo — investigue: systemctl status nginx"
+  _inst_warn "O serviço nginx não ficou activo após restart." "Verifique: systemctl status nginx — nginx -t"
+fi
+
+SSL_LINE="SSL=não aplicável"
+SSL_ISSUED_LINE="Certificado SSL: n/a"
+if [[ "${INSTALL_MODE:-}" == "domain" ]] && [[ "${MINIMAL_UPDATE:-}" != "1" ]]; then
+  _inst_step 7 "Emitindo certificado SSL"
+  if [[ -z "${SSL_EMAIL:-}" ]]; then
+    SSL_LINE="SSL=não emitido (falta SSL_EMAIL no ambiente)"
+    SSL_ISSUED_LINE="Certificado SSL: não executado"
+    _inst_warn "SSL_EMAIL não definido no ambiente — Certbot não foi executado." "A instalação base em HTTP pode estar concluída; HTTPS ficará para emissão manual." "Quando tiver e-mail e DNS estáveis: certbot --nginx -d ${DOMAIN} -d ${API_DOMAIN}"
+  else
+    _inst_item "Certbot (Let's Encrypt) para ${DOMAIN} e ${API_DOMAIN}"
+    apt-get install -y certbot python3-certbot-nginx
+    if certbot --nginx -d "${DOMAIN}" -d "${API_DOMAIN}" -m "${SSL_EMAIL}" \
+        --agree-tos --no-eff-email --non-interactive --redirect 2>&1; then
+      SSL_LINE="SSL=ativo"
+      SSL_ISSUED_LINE="Certificado SSL: emitido com sucesso (Let's Encrypt)"
+      systemctl reload nginx 2>/dev/null || true
+      _inst_ok "Certificado emitido — HTTPS com redireccionamento HTTP→HTTPS"
+    else
+      SSL_LINE="SSL=falhou"
+      SSL_ISSUED_LINE="Certificado SSL: emissão falhou"
+      _inst_warn "Certbot não emitiu o certificado Let's Encrypt (Node/PostgreSQL/Nginx HTTP podem estar OK)." "Causas frequentes: DNS a propagar, registos A incorrectos, porta 80 bloqueada externamente." "Corrija DNS/firewall e execute: certbot --nginx -d ${DOMAIN} -d ${API_DOMAIN}"
+    fi
+  fi
+elif [[ "${INSTALL_MODE:-}" == "ip" ]]; then
+  _inst_step 7 "Emitindo certificado SSL"
+  _inst_item "Modo IP — Let's Encrypt não aplicável (use domínio e DNS para HTTPS)"
+  SSL_LINE="SSL=não configurado"
+  SSL_ISSUED_LINE="Certificado SSL: não aplicável (modo IP)"
+  _inst_ok "Etapa concluída (sem Certbot)"
+else
+  _inst_step 7 "Emitindo certificado SSL"
+  _inst_item "Certbot não executado (modo: ${INSTALL_MODE:-não definido})"
+fi
+
+_inst_step 8 "Finalizando instalação"
+_inst_ok "Pronto para o resumo"
+
+BACKEND_UNIT=$(systemctl is-active atendechat-backend 2>/dev/null || echo "unknown")
+NGINX_UNIT=$(systemctl is-active nginx 2>/dev/null || echo "unknown")
+
+###############################################################################
+# Resumo final (apresentação — não altera lógica de instalação)
 ###############################################################################
 echo ""
-echo "=============================================="
-echo "  Concluído"
-echo "=============================================="
+echo "============================================================"
+echo " CoreFlow Installer — Instalação concluída"
+echo "============================================================"
 echo ""
-echo "  Abrir no browser: ${FRONTEND_URL_VALUE}"
-echo "  API Node:         ${API_PUBLIC_URL}"
+echo "Modo de instalação"
+echo "  modo=${INSTALL_MODE:-ip}"
 echo ""
-echo "  Login padrão (se seed correu): admin@admin.com / 123456"
+echo "URLs finais"
+echo "  APP_URL=${FRONTEND_URL_VALUE}"
+echo "  API_URL=${API_PUBLIC_URL}"
 echo ""
-echo "  Backup / restauro: área Super Admin (ficheiros em backend/backups/)"
+echo "SSL / DNS"
+if [[ "${INSTALL_MODE:-}" == "domain" ]]; then
+  echo "  ${SSL_LINE}"
+  [[ -n "${DNS_SUMMARY_NOTE:-}" ]] && echo "  ${DNS_SUMMARY_NOTE}"
+  echo "  ${SSL_ISSUED_LINE}"
+else
+  echo "  ${SSL_LINE}"
+  echo "  ${SSL_ISSUED_LINE}"
+fi
 echo ""
-echo "  Atualizações rápidas após git pull:"
-echo "    MINIMAL_UPDATE=1 ./install.sh"
+echo "Estado dos serviços"
+echo "  Backend (systemd): ${BACKEND_UNIT}"
+echo "  Nginx:             ${NGINX_UNIT}"
 echo ""
-echo "  Logs backend:"
-echo "    journalctl -u atendechat-backend -f --no-pager"
+echo "Acesso rápido"
+echo "  Painel:  ${FRONTEND_URL_VALUE}"
+echo "  API:     ${API_PUBLIC_URL}"
 echo ""
-echo "=============================================="
+echo "Próximos passos"
+if [[ "${INSTALL_MODE:-}" == "domain" ]] && [[ "${SSL_LINE}" == "SSL=ativo" ]]; then
+  echo "  1. Abrir o painel (URL acima) e iniciar sessão."
+  echo "  2. Login inicial (se o seed correu): admin@admin.com / 123456 — alterar de seguida."
+  echo "  3. Rever backups e branding em Super Admin, se aplicável."
+elif [[ "${INSTALL_MODE:-}" == "ip" ]]; then
+  echo "  1. Abrir o painel em ${FRONTEND_URL_VALUE} (API: ${API_PUBLIC_URL})."
+  echo "  2. Login inicial (se o seed correu): admin@admin.com / 123456 — alterar de seguida."
+  echo "  3. Para HTTPS e domínio: executar de novo ./install.sh em modo interactivo (DNS app/api)."
+else
+  # domínio sem SSL emitido (falha Certbot ou SSL_EMAIL em falta)
+  echo "  1. A aplicação responde em HTTP; confirme DNS (app/api) e porta 80 aberta."
+  echo "  2. Emitir SSL: certbot --nginx -d ${DOMAIN} -d ${API_DOMAIN}"
+  echo "     (ou correr de novo o instalador após corrigir DNS/firewall)."
+  echo "  3. Login inicial (se o seed correu): admin@admin.com / 123456"
+fi
+echo ""
+echo "Manutenção"
+echo "  Atualização após git pull:  MINIMAL_UPDATE=1 ./install.sh"
+echo "  Logs do backend:            journalctl -u atendechat-backend -f --no-pager"
+echo "  Backup / restauro:          Super Admin (backend/backups/)"
+echo ""
+echo "============================================================"
 echo ""
