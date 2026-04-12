@@ -27,7 +27,9 @@
 #   SSL_EMAIL=...           — e-mail Let's Encrypt (modo domínio)
 #   SKIP_DNS_CHECK=1      — não validar DNS antes de continuar (CI / legado)
 #   DB_NAME / DB_USER / DB_PASS — exportadas no shell têm prioridade sobre backend/.env
-#   Atualização na VPS: com backend/.env existente, DB_* são lidos desse ficheiro.
+#   DB_IMPORT_USER / DB_IMPORT_PASS — opcional; sem export, o script lê backend/.env ou gera
+#     palavra-passe aleatória para postgres e grava em .env (restauro de backup via psql).
+#   Atualização na VPS: com backend/.env existente, DB_* e DB_IMPORT_* são lidos desse ficheiro.
 #   Instalação nova (sem .env): defaults atendechat + CoreFlowDB2024!
 #
 set -euo pipefail
@@ -141,6 +143,35 @@ merge_postgres_from_existing_env() {
   fi
 }
 
+# Restauro de backups (psql como superuser). Lido do .env existente ou gerado pelo install.sh.
+merge_db_import_from_existing_env() {
+  local env_file="${PROJETO_DIR}/backend/.env"
+  [[ -f "$env_file" ]] || return 0
+  local v
+  if ! [[ -v DB_IMPORT_USER ]]; then
+    v=$(read_env_value_from_file "$env_file" DB_IMPORT_USER || true)
+    [[ -n "$v" ]] && DB_IMPORT_USER="$v"
+  fi
+  if ! [[ -v DB_IMPORT_PASS ]]; then
+    v=$(read_env_value_from_file "$env_file" DB_IMPORT_PASS || true)
+    [[ -n "$v" ]] && DB_IMPORT_PASS="$v"
+  fi
+}
+
+# Define a palavra-passe do utilizador de import (postgres) no cluster, para o Node poder correr psql no restauro.
+sync_postgres_import_password() {
+  [[ -z "${DB_IMPORT_PASS:-}" ]] && return 0
+  command -v psql >/dev/null 2>&1 || return 0
+  local u esc
+  u="${DB_IMPORT_USER:-postgres}"
+  esc=$(printf '%s' "${DB_IMPORT_PASS}" | sed "s/'/''/g")
+  if sudo -u postgres psql -c "ALTER USER ${u} WITH PASSWORD '${esc}';" 2>/dev/null; then
+    echo ">> DB_IMPORT_* : utilizador \"${u}\" pronto para importar restauros de backup (palavra-passe gravada no .env)."
+  else
+    echo ">> [AVISO] Não foi possível executar ALTER USER ${u} (restauro de backup pode pedir DB_IMPORT_* manual)."
+  fi
+}
+
 REDIS_PASS="${REDIS_PASS:-}"
 DOMAIN="${DOMAIN:-}"
 API_DOMAIN="${API_DOMAIN:-}"
@@ -166,9 +197,14 @@ if [[ ! -d "${PROJETO_DIR}/backend" || ! -d "${PROJETO_DIR}/frontend" ]]; then
 fi
 
 merge_postgres_from_existing_env
+merge_db_import_from_existing_env
 DB_NAME="${DB_NAME:-atendechat}"
 DB_USER="${DB_USER:-atendechat}"
 DB_PASS="${DB_PASS:-CoreFlowDB2024!}"
+DB_IMPORT_USER="${DB_IMPORT_USER:-postgres}"
+if [[ -z "${DB_IMPORT_PASS:-}" ]]; then
+  DB_IMPORT_PASS=$(openssl rand -base64 24 | tr -d '\n' | tr "'" "_")
+fi
 
 ###############################################################################
 # IP público + modo instalação (só IP vs domínio + SSL)
@@ -470,6 +506,7 @@ write_backend_env() {
   local keys=(
     NODE_ENV BACKEND_URL FRONTEND_URL PROXY_PORT PORT
     DB_DIALECT DB_HOST DB_PORT DB_USER DB_PASS DB_NAME
+    DB_IMPORT_USER DB_IMPORT_PASS
     REDIS_URI REDIS_OPT_LIMITER_MAX REDIS_OPT_LIMITER_DURATION
   )
   for key in "${keys[@]}"; do
@@ -492,6 +529,9 @@ DB_PORT=5432
 DB_USER=${DB_USER}
 DB_PASS=${DB_PASS}
 DB_NAME=${DB_NAME}
+# Restauro de backup: import psql (extensões uuid-ossp, etc.) — gerado/atualizado por install.sh
+DB_IMPORT_USER=${DB_IMPORT_USER}
+DB_IMPORT_PASS=${DB_IMPORT_PASS}
 
 REDIS_URI=${REDIS_URI_EFFECTIVE}
 REDIS_OPT_LIMITER_MAX=1
@@ -545,6 +585,8 @@ if [[ "${MINIMAL_UPDATE}" == "1" ]]; then
   else
     REDIS_URI_EFFECTIVE="redis://127.0.0.1:6379"
   fi
+  _inst_item "Sincronizar utilizador PostgreSQL para restauro de backups (DB_IMPORT_*)"
+  sync_postgres_import_password
   _inst_item "Atualizando .env e pastas runtime"
   write_backend_env
   ensure_runtime_dirs
@@ -602,6 +644,9 @@ if ! command -v pg_dump >/dev/null 2>&1 || ! command -v psql >/dev/null 2>&1; th
 fi
 systemctl enable postgresql
 systemctl start postgresql
+
+_inst_item "Utilizador PostgreSQL para import de restauro (DB_IMPORT_*)"
+sync_postgres_import_password
 
 sudo -u postgres psql -tc "SELECT 1 FROM pg_roles WHERE rolname='${DB_USER}'" | grep -q 1 || \
   sudo -u postgres psql -c "CREATE USER ${DB_USER} WITH PASSWORD '${DB_PASS}';"

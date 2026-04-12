@@ -26,6 +26,22 @@ function getEnv(): {
   };
 }
 
+/**
+ * Credenciais só para `psql` ao importar um dump (restauro).
+ * O dump pode incluir DROP/CREATE EXTENSION (ex.: uuid-ossp); o utilizador da app
+ * muitas vezes não é dono da extensão → erro "must be owner of extension".
+ * Defina DB_IMPORT_USER=postgres e DB_IMPORT_PASS no .env do servidor.
+ */
+function getPsqlImportCredentials(): { user: string; password: string } {
+  const base = getEnv();
+  const user = (process.env.DB_IMPORT_USER || "").trim() || base.user;
+  const password =
+    process.env.DB_IMPORT_PASS !== undefined
+      ? process.env.DB_IMPORT_PASS
+      : base.password;
+  return { user, password };
+}
+
 export async function restoreMysqlFromSqlFile(sqlPath: string): Promise<void> {
   const env = getEnv();
   let errBuf = "";
@@ -58,12 +74,29 @@ export async function restoreMysqlFromSqlFile(sqlPath: string): Promise<void> {
 
 export async function restorePostgresFromSqlFile(sqlPath: string): Promise<void> {
   const env = getEnv();
+  const cred = getPsqlImportCredentials();
+  if (cred.user !== env.user) {
+    console.log(
+      `[restore] psql import a usar DB_IMPORT_USER (${cred.user}) em vez de DB_USER (${env.user})`
+    );
+  }
   let errBuf = "";
   const child = spawn(
     "psql",
-    ["-h", env.host, "-p", env.port, "-U", env.user, "-d", env.database, "-v", "ON_ERROR_STOP=1"],
+    [
+      "-h",
+      env.host,
+      "-p",
+      env.port,
+      "-U",
+      cred.user,
+      "-d",
+      env.database,
+      "-v",
+      "ON_ERROR_STOP=1"
+    ],
     {
-      env: { ...process.env, PGPASSWORD: env.password },
+      env: { ...process.env, PGPASSWORD: cred.password },
       stdio: ["pipe", "pipe", "pipe"]
     }
   );
