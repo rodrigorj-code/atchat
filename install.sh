@@ -203,7 +203,18 @@ DB_USER="${DB_USER:-atendechat}"
 DB_PASS="${DB_PASS:-CoreFlowDB2024!}"
 DB_IMPORT_USER="${DB_IMPORT_USER:-postgres}"
 if [[ -z "${DB_IMPORT_PASS:-}" ]]; then
-  DB_IMPORT_PASS=$(openssl rand -base64 24 | tr -d '\n' | tr "'" "_")
+  # Não depender só de openssl (em falta ou pipeline com pipefail) — evita saída silenciosa com set -e
+  DB_IMPORT_PASS=""
+  if command -v openssl >/dev/null 2>&1; then
+    DB_IMPORT_PASS=$(openssl rand -base64 24 2>/dev/null | tr -d '\n' | tr "'" "_") || DB_IMPORT_PASS=""
+  fi
+  if [[ -z "${DB_IMPORT_PASS}" ]]; then
+    DB_IMPORT_PASS=$(head -c 24 /dev/urandom 2>/dev/null | base64 2>/dev/null | tr -d '\n' | tr "'" "_") || true
+  fi
+  if [[ -z "${DB_IMPORT_PASS}" ]]; then
+    echo "  [ERRO] Não foi possível gerar DB_IMPORT_PASS (openssl/base64). Instale openssl ou defina DB_IMPORT_PASS no ambiente." >&2
+    exit 1
+  fi
 fi
 
 ###############################################################################
@@ -281,6 +292,9 @@ apply_url_vars_from_mode() {
     BACKEND_URL_VALUE="${API_PUBLIC_URL}"
   fi
 }
+
+echo ">> A configurar IP / modo de instalação (pode demorar alguns segundos se detetar IP pela rede)..."
+echo "   (Se ficar parado aqui: modo interactivo — responda ao prompt de IP abaixo; ou use SERVER_IP=1.2.3.4 ./install.sh)"
 
 # --- MINIMAL_UPDATE: sem perguntas; usar env ---
 if [[ "${MINIMAL_UPDATE}" == "1" ]]; then
