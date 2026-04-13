@@ -150,12 +150,17 @@ merge_db_import_from_existing_env() {
   local v
   if ! [[ -v DB_IMPORT_USER ]]; then
     v=$(read_env_value_from_file "$env_file" DB_IMPORT_USER || true)
-    [[ -n "$v" ]] && DB_IMPORT_USER="$v"
+    if [[ -n "$v" ]]; then
+      DB_IMPORT_USER="$v"
+    fi
   fi
   if ! [[ -v DB_IMPORT_PASS ]]; then
     v=$(read_env_value_from_file "$env_file" DB_IMPORT_PASS || true)
-    [[ -n "$v" ]] && DB_IMPORT_PASS="$v"
+    if [[ -n "$v" ]]; then
+      DB_IMPORT_PASS="$v"
+    fi
   fi
+  return 0
 }
 
 # Define a palavra-passe do utilizador de import (postgres) no cluster, para o Node poder correr psql no restauro.
